@@ -31,6 +31,7 @@ BUILD_DIR = build
 # C sources
 C_SOURCES =  \
 App/Src/main.c \
+App/Src/ui_task.c \
 App/Src/synth_task.c \
 App/Src/cli_task.c \
 App/Src/cli_cmd.c \
@@ -58,6 +59,7 @@ Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_exti.c \
 Drivers/User_Drivers/Src/serial_driver.c \
 Drivers/User_Drivers/Src/spi_driver.c \
 Drivers/User_Drivers/Src/YM2612_driver.c \
+Drivers/User_Drivers/Src/encoder_driver.c \
 Lib/Src/printf.c \
 Lib/Src/circular_buffer.c \
 RTOS/FreeRTOS/Source/croutine.c \

@@ -13,6 +13,7 @@
 #include "task.h"
 
 #include "YM2612_driver.h"
+#include "encoder_driver.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -112,6 +113,9 @@ static void _synth_main( void *pvParameters )
 {
     /* Init YM2612 resources */
     YM2612_init();
+
+    /* Init encoder */
+    ENCODER_init(ENCODER_ID_0, NULL);
 
     /* Show init msg */
     cli_printf(SYNTH_TASK_NAME, "Init");

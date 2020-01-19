@@ -21,6 +21,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32g0xx_it.h"
+#include "encoder_driver.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -34,6 +35,7 @@
 extern DMA_HandleTypeDef hdma_usart2_rx;
 extern DMA_HandleTypeDef hdma_usart2_tx;
 extern UART_HandleTypeDef huart2;
+extern TIM_HandleTypeDef htim3;
 
 /******************************************************************************/
 /*           Cortex-M0+ Processor Interruption and Exception Handlers          */
@@ -85,6 +87,47 @@ void USART2_IRQHandler(void)
 
     /* Abort and retrigger reception */
     HAL_UART_Abort_IT(&huart2);
+  }
+}
+
+/**
+  * @brief This function handles TIM3 interrupt.
+  */
+void TIM3_IRQHandler(void)
+{
+  uint32_t u32tmpCout = (&htim3)->Instance->CNT;
+  HAL_TIM_IRQHandler(&htim3);
+  ENCODER_irq_handler(ENCODER_ID_0, u32tmpCout);
+}
+
+/**
+  * @brief This function handles exti interrupt.
+  */
+void EXTI4_15_IRQHandler(void)
+{
+  HAL_GPIO_EXTI_IRQHandler(ENCODER_0_SW_GPIO_PIN);
+}
+
+/* Global callbacks */
+
+/**
+  * @brief EXTI line detection callbacks
+  * @param GPIO_Pin: Specifies the pins connected EXTI line
+  * @retval None
+  */
+void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin)
+{
+  if (GPIO_Pin == ENCODER_0_SW_GPIO_PIN)
+  {
+    ENCODER_irqSwHandler(ENCODER_ID_0, ENCODER_SW_SET);
+  }
+}
+
+void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
+{
+  if (GPIO_Pin == ENCODER_0_SW_GPIO_PIN)
+  {
+    ENCODER_irqSwHandler(ENCODER_ID_0, ENCODER_SW_RESET);
   }
 }
 
