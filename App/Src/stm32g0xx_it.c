@@ -96,8 +96,25 @@ void USART2_IRQHandler(void)
 void TIM3_IRQHandler(void)
 {
   uint32_t u32tmpCout = (&htim3)->Instance->CNT;
-  HAL_TIM_IRQHandler(&htim3);
+  
+  /* Handle min value to prevent overflow */
+  if (u32tmpCout < ENCODER_0_MIN_TH)
+  {
+    (&htim3)->Instance->CNT = ENCODER_0_MIN_TH;
+    u32tmpCout = 0;
+  }
+  /* Handle max value to prevent overflow */
+  else if (u32tmpCout > ENCODER_0_MAX_TH)
+  {
+    (&htim3)->Instance->CNT = ENCODER_0_MAX_TH;
+    u32tmpCout = ENCODER_0_RANGE;
+  }
+  
+  /* Generate event */
   ENCODER_irq_handler(ENCODER_ID_0, u32tmpCout);
+
+  /* Clear flags */
+  HAL_TIM_IRQHandler(&htim3);
 }
 
 /**

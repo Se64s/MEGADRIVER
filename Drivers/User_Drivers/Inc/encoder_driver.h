@@ -21,13 +21,18 @@ extern "C"
 /* Private defines -----------------------------------------------------------*/
 
 /* GPIO definitions */
-#define ENCODER_0_ENC_GPIO_PIN    (GPIO_PIN_6 | GPIO_PIN_7)
-#define ENCODER_0_ENC_GPIO_PORT   GPIOC
-#define ENCODER_0_ENC_GPIO_CLK    __HAL_RCC_GPIOC_CLK_ENABLE
+#define ENCODER_0_ENC_GPIO_PIN      (GPIO_PIN_6 | GPIO_PIN_7)
+#define ENCODER_0_ENC_GPIO_PORT     GPIOC
+#define ENCODER_0_ENC_GPIO_CLK      __HAL_RCC_GPIOC_CLK_ENABLE
 
-#define ENCODER_0_SW_GPIO_PIN    GPIO_PIN_11
-#define ENCODER_0_SW_GPIO_PORT   GPIOA
-#define ENCODER_0_SW_GPIO_CLK    __HAL_RCC_GPIOA_CLK_ENABLE
+#define ENCODER_0_SW_GPIO_PIN       GPIO_PIN_11
+#define ENCODER_0_SW_GPIO_PORT      GPIOA
+#define ENCODER_0_SW_GPIO_CLK       __HAL_RCC_GPIOA_CLK_ENABLE
+
+/* Range defines */
+#define ENCODER_0_RANGE             255U
+#define ENCODER_0_MAX_TH            252U
+#define ENCODER_0_MIN_TH            3U
 
 /* Exported types ------------------------------------------------------------*/
 

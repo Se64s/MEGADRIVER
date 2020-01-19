@@ -97,7 +97,7 @@ static void __enc_0_low_level_init(void)
     htim3.Instance = TIM3;
     htim3.Init.Prescaler = 0;
     htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim3.Init.Period = 0xFFFF;
+    htim3.Init.Period = ENCODER_0_RANGE;
     htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
     htim3.Init.RepetitionCounter = 0;
     htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
