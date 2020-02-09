@@ -156,6 +156,7 @@ bool CLI_task_init(void)
 {
     bool retval = false;
 
+    /* Init HW resources */
     (void)SERIAL_init(SERIAL_1, _event_cb);
 
     /* Create mutex */
@@ -201,7 +202,7 @@ void cli_printf(const char *module_name, const char *Format, ...)
             SERIAL_send(SERIAL_1, (uint8_t *)print_output_buffer, len_data);
             while (ser_tx_done != true)
             {
-                vTaskDelay(1U);
+                vTaskDelay(1U / portTICK_PERIOD_MS);
             }
         }
 
@@ -218,7 +219,7 @@ void cli_printf(const char *module_name, const char *Format, ...)
             SERIAL_send(SERIAL_1, (uint8_t *)print_output_buffer, len_data);
             while (ser_tx_done != true)
             {
-                vTaskDelay(1U);
+                vTaskDelay(1U / portTICK_PERIOD_MS);
             }
         }
 
@@ -254,7 +255,7 @@ void cli_raw_printf(const char *Format, ...)
             SERIAL_send(SERIAL_1, (uint8_t *)print_output_buffer, len_data);
             while (ser_tx_done != true)
             {
-                vTaskDelay(1U);
+                __NOP();
             }
         }
 

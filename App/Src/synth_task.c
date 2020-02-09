@@ -13,7 +13,6 @@
 #include "task.h"
 
 #include "YM2612_driver.h"
-#include "encoder_driver.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -54,6 +53,8 @@ static void _synth_main(void *pvParameters);
 
 static void _init_setup(void)
 {
+    cli_printf(SYNTH_TASK_NAME, "Initial register setup");
+
     YM2612_write_reg(0x22, 0x00, 0); // LFO off
     YM2612_write_reg(0x27, 0x00, 0); // CH3 normal
     YM2612_write_reg(0x28, 0x00, 0); //All ch off
@@ -112,10 +113,7 @@ static void _init_key_off(void)
 static void _synth_main( void *pvParameters )
 {
     /* Init YM2612 resources */
-    YM2612_init();
-
-    /* Init encoder */
-    ENCODER_init(ENCODER_ID_0, NULL);
+    (void)YM2612_init();
 
     /* Show init msg */
     cli_printf(SYNTH_TASK_NAME, "Init");
@@ -127,11 +125,11 @@ static void _synth_main( void *pvParameters )
     {
       cli_printf(SYNTH_TASK_NAME, "Key ON");
       _init_key_on();
-      vTaskDelay(1000 / portTICK_PERIOD_MS);
+      vTaskDelay(3000 / portTICK_PERIOD_MS);
 
       cli_printf(SYNTH_TASK_NAME, "Key OFF");
       _init_key_off();
-      vTaskDelay(1000 / portTICK_PERIOD_MS);
+      vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 }
 

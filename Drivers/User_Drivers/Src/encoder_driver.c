@@ -106,12 +106,13 @@ static void __enc_0_low_level_init(void)
     sEncoder.IC1Polarity = TIM_ICPOLARITY_FALLING;
     sEncoder.IC1Selection = TIM_ICSELECTION_DIRECTTI;
     sEncoder.IC1Prescaler = TIM_ICPSC_DIV1;
-    sEncoder.IC1Filter = 15;
+    sEncoder.IC1Filter = 0x0FU;
+
     sEncoder.IC2Polarity = TIM_ICPOLARITY_FALLING;
     sEncoder.IC2Selection = TIM_ICSELECTION_DIRECTTI;
     sEncoder.IC2Prescaler = TIM_ICPSC_DIV1;
-    sEncoder.IC2Filter = 15;
-    
+    sEncoder.IC2Filter = 0x0FU;
+
     if (HAL_TIM_Encoder_Init(&htim3, &sEncoder) != HAL_OK)
     {
         __enc_error_handler();
@@ -173,7 +174,7 @@ encoder_status_t ENCODER_getCount(encoder_id_t xDevId, uint32_t * pu32CountVal)
 
     if (xDevId == ENCODER_ID_0)
     {
-        *pu32CountVal = u32Encoder0Count;
+        *pu32CountVal = ENCODER_0_RANGE - u32Encoder0Count;
         
         retval = ENCODER_STATUS_OK;
     }

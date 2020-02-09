@@ -32,8 +32,11 @@
 /* Private user code ---------------------------------------------------------*/
 /* External variables --------------------------------------------------------*/
 
+extern DMA_HandleTypeDef hdma_i2c1_rx;
+extern DMA_HandleTypeDef hdma_i2c1_tx;
 extern DMA_HandleTypeDef hdma_usart2_rx;
 extern DMA_HandleTypeDef hdma_usart2_tx;
+extern I2C_HandleTypeDef hi2c1;
 extern UART_HandleTypeDef huart2;
 extern TIM_HandleTypeDef htim3;
 
@@ -65,12 +68,36 @@ void HardFault_Handler(void)
 /******************************************************************************/
 
 /**
+  * @brief This function handles DMA1 channel 1 interrupt.
+  */
+void DMA1_Channel1_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(&hdma_i2c1_rx);
+}
+
+/**
+  * @brief This function handles DMA1 channel 2 and channel 3 interrupts.
+  */
+void DMA1_Channel2_3_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(&hdma_i2c1_tx);
+}
+
+/**
   * @brief This function handles DMA1 channel 4, channel 5, channel 6, channel 7 and DMAMUX1 interrupts.
   */
 void DMA1_Ch4_7_DMAMUX1_OVR_IRQHandler(void)
 {
   HAL_DMA_IRQHandler(&hdma_usart2_tx);
   HAL_DMA_IRQHandler(&hdma_usart2_rx);
+}
+
+/**
+  * @brief This function handles I2C1 interrupts.
+  */
+void I2C1_IRQHandler(void)
+{
+  HAL_I2C_EV_IRQHandler(&hi2c1);
 }
 
 /**

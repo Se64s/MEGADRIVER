@@ -13,6 +13,7 @@
 #include "task.h"
 
 #include "encoder_driver.h"
+#include "display_driver.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -94,12 +95,20 @@ void encoder_cb(encoder_event_t event, uint32_t eventData)
 static void __ui_main( void *pvParameters )
 {
     uint32_t tmp_event;
-
+    
+    vTaskDelay(250 / portTICK_PERIOD_MS);
+    
     /* Init encoder */
     ENCODER_init(ENCODER_ID_0, encoder_cb);
 
+    /* Init display */
+    DISPLAY_init(DISPLAY_0);
+
     /* Show init msg */
     cli_printf(UI_TASK_NAME, "Init");
+
+    /* Update display for first time */
+    DISPLAY_update(DISPLAY_0);
 
     for(;;)
     {
@@ -131,6 +140,8 @@ static void __ui_main( void *pvParameters )
                 cli_printf(UI_TASK_NAME, "Unknown event");
             }
         }
+
+        DISPLAY_update(DISPLAY_0);
     }
 }
 

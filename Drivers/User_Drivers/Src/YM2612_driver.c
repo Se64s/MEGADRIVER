@@ -10,6 +10,11 @@
 #include "YM2612_driver.h"
 #include "stm32g0xx_hal.h"
 
+#ifdef YM2612_USE_RTOS
+#include "FreeRTOS.h"
+#include "task.h"
+#endif
+
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -206,14 +211,22 @@ YM2612_status_t YM2612_init(void)
         retval = YM2612_STATUS_OK;
     }
 
+#ifdef YM2612_USE_RTOS
+    taskENTER_CRITICAL();
+#endif
+
     /* Reset register values */
     YM_SET_BIT(YM2612_RD_GPIO_PORT, YM2612_RD_GPIO_PIN);
     YM_SET_BIT(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
-
     _us_delay(10);
     YM_RESET_BIT(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
     _us_delay(10);
     YM_SET_BIT(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
+    _us_delay(100);
+
+#ifdef YM2612_USE_RTOS
+    taskEXIT_CRITICAL();
+#endif
 
     return (retval);
 }
@@ -229,6 +242,10 @@ YM2612_status_t YM2612_deinit(void)
 
 void YM2612_write_reg(uint8_t reg_addr, uint8_t reg_data, YM2612_bank_t bank)
 {
+#ifdef YM2612_USE_RTOS
+    taskENTER_CRITICAL();
+#endif
+
     /* Write address */
     if (bank == YM2612_BANK_0)
     {
@@ -266,6 +283,11 @@ void YM2612_write_reg(uint8_t reg_addr, uint8_t reg_data, YM2612_bank_t bank)
     YM_SET_BIT(YM2612_CS_GPIO_PORT, YM2612_CS_GPIO_PIN);
     YM_RESET_BIT(YM2612_A1_GPIO_PORT, YM2612_A1_GPIO_PIN);
     YM_RESET_BIT(YM2612_A0_GPIO_PORT, YM2612_A0_GPIO_PIN);
+    _us_delay(5);
+
+#ifdef YM2612_USE_RTOS
+    taskEXIT_CRITICAL();
+#endif
 }
 
 /*****END OF FILE****/

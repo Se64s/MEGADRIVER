@@ -20,6 +20,8 @@ extern "C"
 
 /* Private defines -----------------------------------------------------------*/
 
+#define YM2612_USE_RTOS
+
 /* GPIO definitions */
 #define YM2612_Dx_GPIO_PIN      (YM2612_D0_GPIO_PIN | YM2612_D1_GPIO_PIN | YM2612_D2_GPIO_PIN | YM2612_D3_GPIO_PIN | YM2612_D4_GPIO_PIN | YM2612_D5_GPIO_PIN | YM2612_D6_GPIO_PIN | YM2612_D7_GPIO_PIN)
 #define YM2612_Dx_GPIO_PORT     GPIOB
@@ -61,8 +63,7 @@ extern "C"
 #define YM2612_REG_GPIO_PORT    GPIOB
 #define YM2612_REG_GPIO_CLK     __HAL_RCC_GPIOB_CLK_ENABLE
 
-// #define YM2612_A1_GPIO_PIN      GPIO_PIN_15
-#define YM2612_A1_GPIO_PIN      GPIO_PIN_10 // only in nucleo board
+#define YM2612_A1_GPIO_PIN      GPIO_PIN_15
 #define YM2612_A1_GPIO_PORT     GPIOC
 #define YM2612_A1_GPIO_CLK      __HAL_RCC_GPIOC_CLK_ENABLE
 
@@ -70,8 +71,7 @@ extern "C"
 #define YM2612_A0_GPIO_PORT     GPIOF
 #define YM2612_A0_GPIO_CLK      __HAL_RCC_GPIOF_CLK_ENABLE
 
-// #define YM2612_RD_GPIO_PIN      GPIO_PIN_14
-#define YM2612_RD_GPIO_PIN      GPIO_PIN_11 // only in nucleo board
+#define YM2612_RD_GPIO_PIN      GPIO_PIN_14
 #define YM2612_RD_GPIO_PORT     GPIOC
 #define YM2612_RD_GPIO_CLK      __HAL_RCC_GPIOC_CLK_ENABLE
 

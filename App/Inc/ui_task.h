@@ -24,7 +24,7 @@ extern "C" {
 /* Task parameters */
 #define UI_TASK_NAME   "UI"
 #define UI_TASK_STACK  128U
-#define UI_TASK_PRIO   0
+#define UI_TASK_PRIO   1
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
