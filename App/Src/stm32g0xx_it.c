@@ -124,21 +124,19 @@ void TIM3_IRQHandler(void)
 {
   uint32_t u32tmpCout = (&htim3)->Instance->CNT;
   
-  /* Handle min value to prevent overflow */
+  /* Check encoder direction and generate event */
   if (u32tmpCout < ENCODER_0_MIN_TH)
   {
-    (&htim3)->Instance->CNT = ENCODER_0_MIN_TH;
-    u32tmpCout = 0;
+    (&htim3)->Instance->CNT = ENCODER_0_REF_VALUE;
+    u32tmpCout = ENCODER_0_VALUE_CW;
+    ENCODER_irq_handler(ENCODER_ID_0, u32tmpCout);
   }
-  /* Handle max value to prevent overflow */
   else if (u32tmpCout > ENCODER_0_MAX_TH)
   {
-    (&htim3)->Instance->CNT = ENCODER_0_MAX_TH;
-    u32tmpCout = ENCODER_0_RANGE;
+    (&htim3)->Instance->CNT = ENCODER_0_REF_VALUE;
+    u32tmpCout = ENCODER_0_VALUE_CCW;
+    ENCODER_irq_handler(ENCODER_ID_0, u32tmpCout);
   }
-  
-  /* Generate event */
-  ENCODER_irq_handler(ENCODER_ID_0, u32tmpCout);
 
   /* Clear flags */
   HAL_TIM_IRQHandler(&htim3);

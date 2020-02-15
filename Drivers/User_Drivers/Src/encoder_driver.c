@@ -131,6 +131,9 @@ static void __enc_0_low_level_init(void)
     {
         __enc_error_handler();
     }
+
+    /* Init encoder */
+    (&htim3)->Instance->CNT = ENCODER_0_REF_VALUE;
 }
 
 static void __enc_0_low_level_deinit(void)
@@ -142,8 +145,8 @@ static void __enc_0_low_level_deinit(void)
     HAL_GPIO_DeInit(ENCODER_0_SW_GPIO_PORT, ENCODER_0_SW_GPIO_PIN);
     HAL_GPIO_DeInit(ENCODER_0_ENC_GPIO_PIN, ENCODER_0_ENC_GPIO_PORT);
     /* Deinit irq */
-    HAL_NVIC_EnableIRQ(TIM3_IRQn);
-    HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
+    HAL_NVIC_DisableIRQ(TIM3_IRQn);
+    HAL_NVIC_DisableIRQ(EXTI4_15_IRQn);
 }
 
 /* Callback ------------------------------------------------------------------*/
@@ -174,7 +177,7 @@ encoder_status_t ENCODER_getCount(encoder_id_t xDevId, uint32_t * pu32CountVal)
 
     if (xDevId == ENCODER_ID_0)
     {
-        *pu32CountVal = ENCODER_0_RANGE - u32Encoder0Count;
+        *pu32CountVal = u32Encoder0Count;
         
         retval = ENCODER_STATUS_OK;
     }
@@ -218,12 +221,16 @@ void ENCODER_irq_handler(encoder_id_t xDevId, uint32_t u32EncCount)
 {
     if (xDevId == ENCODER_ID_0)
     {
+        HAL_NVIC_DisableIRQ(TIM3_IRQn);
+
         u32Encoder0Count = u32EncCount;
 
         if (encoder_0_event_cb != NULL)
         {
             encoder_0_event_cb(ENCODER_EVENT_UPDATE, u32EncCount);
         }
+
+        HAL_NVIC_EnableIRQ(TIM3_IRQn);
     }
 }
 

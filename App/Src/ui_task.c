@@ -14,26 +14,22 @@
 
 #include "encoder_driver.h"
 #include "display_driver.h"
+#include "ui_sys.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
-
-/* Check signals */
-#define CHECK_SIGNAL(VAR, SIG)          (((VAR) & (SIG)) == (SIG))
-
-/* UI signals */
-#define UI_SIGNAL_ENC_UPDATE_CCW        (1UL << 0U)
-#define UI_SIGNAL_ENC_UPDATE_CW         (1UL << 1U)
-#define UI_SIGNAL_ENC_UPDATE_SW_SET     (1UL << 2U)
-#define UI_SIGNAL_ENC_UPDATE_SW_RESET   (1UL << 3U)
-#define UI_SIGNAL_ERROR                 (1UL << 4U)
-
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 
 /* Task handler */
 TaskHandle_t ui_task_handle = NULL;
+
+/* Pointer to display lib handler */
+static u8g2_t xDisplayHandler = {0};
+
+/* UI menu structure */
+static ui_menu_t xUiMenuHandler = {0};
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -57,15 +53,14 @@ static void __ui_main(void *pvParameters);
 void encoder_cb(encoder_event_t event, uint32_t eventData)
 {
     BaseType_t wakeTask;
-    static uint32_t u32encoder0Count = 0;
 
     if (event == ENCODER_EVENT_UPDATE)
     {
-        if (u32encoder0Count > eventData)
+        if (eventData == ENCODER_0_VALUE_CW)
         {
             xTaskNotifyFromISR(ui_task_handle, UI_SIGNAL_ENC_UPDATE_CW, eSetBits, &wakeTask);
         }
-        else if (u32encoder0Count < eventData)
+        else if (eventData == ENCODER_0_VALUE_CCW)
         {
             xTaskNotifyFromISR(ui_task_handle, UI_SIGNAL_ENC_UPDATE_CCW, eSetBits, &wakeTask);
         }
@@ -73,7 +68,6 @@ void encoder_cb(encoder_event_t event, uint32_t eventData)
         {
             /* code */
         }
-        u32encoder0Count = eventData;
     }
     else if (event == ENCODER_EVENT_SW)
     {
@@ -102,46 +96,40 @@ static void __ui_main( void *pvParameters )
     ENCODER_init(ENCODER_ID_0, encoder_cb);
 
     /* Init display */
-    DISPLAY_init(DISPLAY_0);
+    if (DISPLAY_init(DISPLAY_0, &xDisplayHandler) != DISPLAY_STATUS_OK)
+    {
+        cli_printf(UI_TASK_NAME, "Display init ERROR");
+        while (1);
+    }
+
+    /* Init ui menu engine */
+    if (UI_init(&xUiMenuHandler) != UI_STATUS_OK)
+    {
+        cli_printf(UI_TASK_NAME, "UI engine init ERROR");
+        while (1);
+    }
 
     /* Show init msg */
     cli_printf(UI_TASK_NAME, "Init");
 
     /* Update display for first time */
-    DISPLAY_update(DISPLAY_0);
+    DISPLAY_update(DISPLAY_0, &xDisplayHandler);
+
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     for(;;)
     {
         BaseType_t event_wait = xTaskNotifyWait(0, 
                                 (UI_SIGNAL_ENC_UPDATE_CW | UI_SIGNAL_ENC_UPDATE_CCW | UI_SIGNAL_ENC_UPDATE_SW_RESET | UI_SIGNAL_ENC_UPDATE_SW_SET), 
                                 &tmp_event, 
-                                portMAX_DELAY);
+                                (100 / portTICK_PERIOD_MS));
 
         if (event_wait == pdPASS)
         {
-            if (CHECK_SIGNAL(tmp_event, UI_SIGNAL_ENC_UPDATE_CW))
-            {
-                uint32_t enc_count = 0;
-                ENCODER_getCount(ENCODER_ID_0, &enc_count);
-                cli_printf(UI_TASK_NAME, "Encoder CW event: %d", enc_count);
-            }
-            else if (CHECK_SIGNAL(tmp_event, UI_SIGNAL_ENC_UPDATE_CCW))
-            {
-                uint32_t enc_count = 0;
-                ENCODER_getCount(ENCODER_ID_0, &enc_count);
-                cli_printf(UI_TASK_NAME, "Encoder CCW event: %d", enc_count);
-            }
-            else if (CHECK_SIGNAL(tmp_event, UI_SIGNAL_ENC_UPDATE_SW_SET) || CHECK_SIGNAL(tmp_event, UI_SIGNAL_ENC_UPDATE_SW_RESET))
-            {
-                cli_printf(UI_TASK_NAME, "Encoder SW state %d", ENCODER_getSwState(ENCODER_ID_0));
-            }
-            else
-            {
-                cli_printf(UI_TASK_NAME, "Unknown event");
-            }
+            UI_action(&xUiMenuHandler, &tmp_event);
         }
 
-        DISPLAY_update(DISPLAY_0);
+        UI_render(&xDisplayHandler, &xUiMenuHandler);
     }
 }
 

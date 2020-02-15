@@ -17,6 +17,7 @@ extern "C"
 /* Includes ------------------------------------------------------------------*/
 
 #include "stm32g0xx_hal.h"
+#include "u8g2.h"
 
 /* Private defines -----------------------------------------------------------*/
 
@@ -48,9 +49,10 @@ typedef enum
 /**
   * @brief  Init display.
   * @param  dev interface number to init.
+  * @param  pxDisplayHandler pointer to display control structure.
   * @retval Operation status.
 */
-display_status_t DISPLAY_init(display_port_t dev);
+display_status_t DISPLAY_init(display_port_t dev, u8g2_t * pxDisplayHandler);
 
 /**
   * @brief  De-init display.
@@ -62,9 +64,10 @@ display_status_t DISPLAY_deinit(display_port_t dev);
 /**
   * @brief  Update display image.
   * @param  dev display number to update.
+  * @param  pxDisplayHandler pointer to display control structure.
   * @retval Operation status.
   */
-display_status_t DISPLAY_update(display_port_t dev);
+display_status_t DISPLAY_update(display_port_t dev, u8g2_t * pxDisplayHandler);
 
 #ifdef __cplusplus
 }

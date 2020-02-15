@@ -66,6 +66,9 @@ Drivers/User_Drivers/Src/encoder_driver.c \
 Drivers/User_Drivers/Src/display_driver.c \
 Lib/Src/printf.c \
 Lib/Src/circular_buffer.c \
+Lib/ui/ui_sys.c \
+Lib/ui/ui_menu_test.c \
+Lib/ui/ui_screen_test.c \
 Lib/u8g2/u8g2_bitmap.c \
 Lib/u8g2/u8g2_box.c \
 Lib/u8g2/u8g2_buffer.c \
@@ -174,6 +177,7 @@ C_INCLUDES =  \
 -IApp/Inc \
 -ILib/Inc \
 -ILib/u8g2 \
+-ILib/ui \
 -IDrivers/User_Drivers/Inc \
 -IDrivers/STM32G0xx_HAL_Driver/Inc \
 -IDrivers/STM32G0xx_HAL_Driver/Inc/Legacy \

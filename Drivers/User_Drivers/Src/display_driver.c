@@ -9,9 +9,6 @@
 
 #include "display_driver.h"
 #include "i2c_driver.h"
-#include "u8g2.h"
-#include "printf.h"
-#include "encoder_driver.h"
 
 #ifdef DISPLAY_USE_RTOS
 #include "FreeRTOS.h"
@@ -30,10 +27,6 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
-
-/* a structure which will contain all the data for one display */
-static u8g2_t u8g2;
-
 /* Private function prototypes -----------------------------------------------*/
 
 /**
@@ -95,7 +88,7 @@ static void __UsDelay(uint32_t u32UsCount)
 
 /* Public user code ----------------------------------------------------------*/
 
-display_status_t DISPLAY_init(display_port_t dev)
+display_status_t DISPLAY_init(display_port_t dev, u8g2_t * pxDisplayHandler)
 {
     display_status_t xRetval = DISPLAY_STATUS_NOTDEF;
 
@@ -104,14 +97,14 @@ display_status_t DISPLAY_init(display_port_t dev)
         __HardwareInit();
 
         // Set display I2C addr
-        u8g2_SetI2CAddress(&u8g2, DISPLAY_ADDRESS);
+        u8g2_SetI2CAddress(pxDisplayHandler, DISPLAY_ADDRESS);
 
         // Init grapfic library
-        u8g2_Setup_ssd1306_i2c_128x64_noname_2(&u8g2, U8G2_R0, u8x8_byte_hw_i2c, u8x8_gpio_and_delay);
+        u8g2_Setup_ssd1306_i2c_128x64_noname_2(pxDisplayHandler, U8G2_R0, u8x8_byte_hw_i2c, u8x8_gpio_and_delay);
 
         // Init sequence to display
-        u8g2_InitDisplay(&u8g2);
-        u8g2_SetPowerSave(&u8g2, 0U);
+        u8g2_InitDisplay(pxDisplayHandler);
+        u8g2_SetPowerSave(pxDisplayHandler, 0U);
 
         xRetval = DISPLAY_STATUS_OK;
     }
@@ -133,31 +126,18 @@ display_status_t DISPLAY_deinit(display_port_t dev)
     return xRetval;
 }
 
-display_status_t DISPLAY_update(display_port_t dev)
+display_status_t DISPLAY_update(display_port_t dev, u8g2_t * pxDisplayHandler)
 {
     display_status_t xRetval = DISPLAY_STATUS_NOTDEF;
 
     if (dev == DISPLAY_0)
     {
-        // Prepare data to write
-        uint32_t u32EncValue = 0U;
-        encoder_sw_state_t xSwState = ENCODER_SW_NOTDEF;
-        char pcStrLine0[12] = {0};
-        char pcStrLine1[12] = {0};
-
-        ENCODER_getCount(ENCODER_ID_0, &u32EncValue);
-        xSwState = ENCODER_getSwState(ENCODER_ID_0);
-
-        sprintf_(pcStrLine0, "ENC  %03d", (uint8_t)u32EncValue);
-        sprintf_(pcStrLine1, "SW   %02d", (uint8_t)xSwState);
-
         // Update display data
-        u8g2_FirstPage(&u8g2);
+        u8g2_FirstPage(pxDisplayHandler);
         do {
-            u8g2_SetFont(&u8g2, u8g2_font_ncenB14_tr);
-            u8g2_DrawStr(&u8g2, 32, 32, pcStrLine0);
-            u8g2_DrawStr(&u8g2, 32, 64, pcStrLine1);
-        } while (u8g2_NextPage(&u8g2));
+            u8g2_SetFont(pxDisplayHandler, u8g2_font_amstrad_cpc_extended_8r);
+            u8g2_DrawStr(pxDisplayHandler, 0, 10, "Synth FM v0.1");
+        } while (u8g2_NextPage(pxDisplayHandler));
 
         xRetval = DISPLAY_STATUS_OK;
     }

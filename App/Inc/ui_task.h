@@ -26,6 +26,16 @@ extern "C" {
 #define UI_TASK_STACK  128U
 #define UI_TASK_PRIO   1
 
+/* Check signals */
+#define CHECK_SIGNAL(VAR, SIG)          (((VAR) & (SIG)) == (SIG))
+
+/* UI signals */
+#define UI_SIGNAL_ENC_UPDATE_CCW        (1UL << 0U)
+#define UI_SIGNAL_ENC_UPDATE_CW         (1UL << 1U)
+#define UI_SIGNAL_ENC_UPDATE_SW_SET     (1UL << 2U)
+#define UI_SIGNAL_ENC_UPDATE_SW_RESET   (1UL << 3U)
+#define UI_SIGNAL_ERROR                 (1UL << 4U)
+
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/

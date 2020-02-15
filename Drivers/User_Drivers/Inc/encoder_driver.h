@@ -31,8 +31,12 @@ extern "C"
 
 /* Range defines */
 #define ENCODER_0_RANGE             255U
-#define ENCODER_0_MAX_TH            252U
-#define ENCODER_0_MIN_TH            3U
+#define ENCODER_0_TH                (2U)
+#define ENCODER_0_MAX_TH            (ENCODER_0_REF_VALUE + ENCODER_0_TH)
+#define ENCODER_0_MIN_TH            (ENCODER_0_REF_VALUE - ENCODER_0_TH)
+#define ENCODER_0_REF_VALUE         127U
+#define ENCODER_0_VALUE_CW          1U
+#define ENCODER_0_VALUE_CCW         0U
 
 /* Exported types ------------------------------------------------------------*/
 
