@@ -14,10 +14,6 @@
 #include "serial_driver.h"
 #include "printf.h"
 
-#include "FreeRTOS.h"
-#include "task.h"
-#include "semphr.h"
-
 #include "FreeRTOS_CLI.h"
 #include "cli_cmd.h"
 
@@ -264,6 +260,18 @@ void cli_raw_printf(const char *Format, ...)
             while(1);
         }
     }
+}
+
+bool cli_task_notify(uint32_t u32Event)
+{
+    bool bRetval = false;
+    /* Check if task has been init */
+    if (cli_task_handle != NULL)
+    {
+      xTaskNotify(cli_task_handle, u32Event, eSetBits);
+      bRetval = true;
+    }
+    return bRetval;
 }
 
 /*****END OF FILE****/

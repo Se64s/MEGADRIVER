@@ -18,6 +18,9 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* Private defines -----------------------------------------------------------*/
 
@@ -36,6 +39,13 @@ extern "C" {
   * @retval operation result, true for correct creation, false for error
   */
 bool SYNTH_task_init(void);
+
+/**
+  * @brief Notify event to a task.
+  * @param u32Event event to notify.
+  * @retval operation result, true for correct read, false for error
+  */
+bool SYNTH_task_notify(uint32_t u32Event);
 
 #ifdef __cplusplus
 }

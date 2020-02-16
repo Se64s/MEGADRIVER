@@ -15,6 +15,11 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 /* Private includes ----------------------------------------------------------*/
+
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
+
 /* Private defines -----------------------------------------------------------*/
 
 /* Task parameters */
@@ -50,6 +55,13 @@ void cli_printf(const char *module_name, const char *Format, ...);
   * @retval None.
   */
 void cli_raw_printf(const char *Format, ...);
+
+/**
+  * @brief Notify event to a task.
+  * @param u32Event event to notify.
+  * @retval operation result, true for correct read, false for error
+  */
+bool cli_task_notify(uint32_t u32Event);
 
 #ifdef __cplusplus
 }

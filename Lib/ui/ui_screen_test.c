@@ -67,14 +67,14 @@ char pcScreenTestName[] = "Test Screen Menu";
 
 ui_element_t xElementTestScreenElement[TEST_SCREEN_ELEMENT_LAST];
 
-char pcTestMainEncoderName[MAX_LEN_NAME];
-char pcTestMainSwitchName[MAX_LEN_NAME];
-char pcTestMainSynthName[MAX_LEN_NAME];
-char pcTestMainMidiName[MAX_LEN_NAME];
-char pcTestMainCv1Name[MAX_LEN_NAME];
-char pcTestMainCv2Name[MAX_LEN_NAME];
-char pcTestMainCv3Name[MAX_LEN_NAME];
-char pcTestMainCv4Name[MAX_LEN_NAME];
+char pcTestMainEncoderName[MAX_LEN_NAME] = {0};
+char pcTestMainSwitchName[MAX_LEN_NAME] = {0};
+char pcTestMainSynthName[MAX_LEN_NAME] = {0};
+char pcTestMainMidiName[MAX_LEN_NAME] = {0};
+char pcTestMainCv1Name[MAX_LEN_NAME] = {0};
+char pcTestMainCv2Name[MAX_LEN_NAME] = {0};
+char pcTestMainCv3Name[MAX_LEN_NAME] = {0};
+char pcTestMainCv4Name[MAX_LEN_NAME] = {0};
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -234,16 +234,6 @@ static void vElementSynthRender(void * pxDisplayHandler, void * pvScreen, void *
 
     if ((u32IndY < u8g2_GetDisplayHeight(pxDispHand)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
     {
-        uint32_t u32Arg = 0;
-        if (u32Arg != 0)
-        {
-            sprintf(pxElement->pcName, NAME_FORMAT_SYNTH, "ON");
-        }
-        else
-        {
-            sprintf(pxElement->pcName, NAME_FORMAT_SYNTH, "OFF");
-        }
-
         /* Print selection ico */
         vDrawSelectBox(pxDisplayHandler, pxElement->bSelected, (uint8_t)u32IndY);
 
@@ -436,7 +426,7 @@ static void vElementSwitchAction(void * pvScreen, void * pvElement, void * pvEve
     ui_screen_t * pxScreenHandler = pvScreen;
     ui_element_t * pxElementHandler = pvElement;
     uint32_t * pu32EventData = pvEventData;
-    
+
     if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET) || CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_RESET))
     {
         cli_printf(UI_TASK_NAME, "Encoder SW state %d", ENCODER_getSwState(ENCODER_ID_0));
@@ -448,6 +438,19 @@ static void vElementSynthAction(void * pvScreen, void * pvElement, void * pvEven
     ui_screen_t * pxScreenHandler = pvScreen;
     ui_element_t * pxElementHandler = pvElement;
     uint32_t * pu32EventData = pvEventData;
+    uint32_t u32EventData = *pu32EventData;
+
+    if (CHECK_SIGNAL(u32EventData, UI_SIGNAL_SYNTH_ON) || CHECK_SIGNAL(u32EventData, UI_SIGNAL_SYNTH_OFF))
+    {
+        if (CHECK_SIGNAL(u32EventData, UI_SIGNAL_SYNTH_ON))
+        {
+            sprintf(pxElementHandler->pcName, NAME_FORMAT_SYNTH, "ON");
+        }
+        else if (CHECK_SIGNAL(u32EventData, UI_SIGNAL_SYNTH_OFF))
+        {
+            sprintf(pxElementHandler->pcName, NAME_FORMAT_SYNTH, "OFF");
+        }
+    }
 }
 
 static void vElementMidiAction(void * pvScreen, void * pvElement, void * pvEventData)
@@ -500,6 +503,16 @@ ui_status_t UI_screen_test_init(ui_screen_t * pxScreenHandler)
         pxScreenHandler->pxElementList = xElementTestScreenElement;
         pxScreenHandler->u32ElementNumber = TEST_SCREEN_ELEMENT_LAST;
         pxScreenHandler->render_cb = vScreenTestRender;
+
+        /* Init name var */
+        sprintf(pcTestMainEncoderName, NAME_FORMAT_ENCODER, 0);
+        sprintf(pcTestMainSwitchName, NAME_FORMAT_SWITCH, 0);
+        sprintf(pcTestMainSynthName, NAME_FORMAT_SYNTH, "OFF");
+        sprintf(pcTestMainMidiName, NAME_FORMAT_MIDI, 0, 0, 0);
+        sprintf(pcTestMainCv1Name, NAME_FORMAT_CV1, 0);
+        sprintf(pcTestMainCv2Name, NAME_FORMAT_CV2, 0);
+        sprintf(pcTestMainCv3Name, NAME_FORMAT_CV3, 0);
+        sprintf(pcTestMainCv4Name, NAME_FORMAT_CV4, 0);
 
         /* Init elements */
         xElementTestScreenElement[TEST_SCREEN_ELEMENT_ENCODER].pcName = pcTestMainEncoderName;

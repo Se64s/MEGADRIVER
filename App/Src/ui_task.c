@@ -9,9 +9,6 @@
 #include "ui_task.h"
 #include "cli_task.h"
 
-#include "FreeRTOS.h"
-#include "task.h"
-
 #include "encoder_driver.h"
 #include "display_driver.h"
 #include "ui_sys.h"
@@ -88,8 +85,6 @@ void encoder_cb(encoder_event_t event, uint32_t eventData)
 
 static void __ui_main( void *pvParameters )
 {
-    uint32_t tmp_event;
-    
     vTaskDelay(250 / portTICK_PERIOD_MS);
     
     /* Init encoder */
@@ -119,14 +114,16 @@ static void __ui_main( void *pvParameters )
 
     for(;;)
     {
-        BaseType_t event_wait = xTaskNotifyWait(0, 
-                                (UI_SIGNAL_ENC_UPDATE_CW | UI_SIGNAL_ENC_UPDATE_CCW | UI_SIGNAL_ENC_UPDATE_SW_RESET | UI_SIGNAL_ENC_UPDATE_SW_SET), 
-                                &tmp_event, 
+        uint32_t u32TmpEvent;
+
+        BaseType_t xEventWait = xTaskNotifyWait(0, 
+                                (UI_SIGNAL_ENC_UPDATE_CW | UI_SIGNAL_ENC_UPDATE_CCW | UI_SIGNAL_ENC_UPDATE_SW_RESET | UI_SIGNAL_ENC_UPDATE_SW_SET | UI_SIGNAL_SYNTH_ON | UI_SIGNAL_SYNTH_OFF), 
+                                &u32TmpEvent, 
                                 (100 / portTICK_PERIOD_MS));
 
-        if (event_wait == pdPASS)
+        if (xEventWait == pdPASS)
         {
-            UI_action(&xUiMenuHandler, &tmp_event);
+            UI_action(&xUiMenuHandler, &u32TmpEvent);
         }
 
         UI_render(&xDisplayHandler, &xUiMenuHandler);
@@ -148,6 +145,18 @@ bool UI_task_init(void)
         retval = true;
     }
     return(retval);
+}
+
+bool UI_task_notify(uint32_t u32Event)
+{
+    bool bRetval = false;
+    /* Check if task has been init */
+    if (ui_task_handle != NULL)
+    {
+      xTaskNotify(ui_task_handle, u32Event, eSetBits);
+      bRetval = true;
+    }
+    return bRetval;
 }
 
 /*****END OF FILE****/

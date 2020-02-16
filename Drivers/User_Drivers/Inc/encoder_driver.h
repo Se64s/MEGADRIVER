@@ -30,13 +30,13 @@ extern "C"
 #define ENCODER_0_SW_GPIO_CLK       __HAL_RCC_GPIOA_CLK_ENABLE
 
 /* Range defines */
-#define ENCODER_0_RANGE             255U
+#define ENCODER_0_RANGE             (255U)
 #define ENCODER_0_TH                (2U)
 #define ENCODER_0_MAX_TH            (ENCODER_0_REF_VALUE + ENCODER_0_TH)
 #define ENCODER_0_MIN_TH            (ENCODER_0_REF_VALUE - ENCODER_0_TH)
-#define ENCODER_0_REF_VALUE         127U
-#define ENCODER_0_VALUE_CW          1U
-#define ENCODER_0_VALUE_CCW         0U
+#define ENCODER_0_REF_VALUE         (127U)
+#define ENCODER_0_VALUE_CW          (1U)
+#define ENCODER_0_VALUE_CCW         (0U)
 
 /* Exported types ------------------------------------------------------------*/
 
