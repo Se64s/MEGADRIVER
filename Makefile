@@ -39,6 +39,8 @@ App/Src/stm32g0xx_it.c \
 App/Src/stm32g0xx_hal_msp.c \
 App/Src/system_stm32g0xx.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_gpio.c \
+Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc.c \
+Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc_ex.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_tim.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_tim_ex.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_spi.c \
@@ -59,8 +61,8 @@ Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_cortex.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_exti.c \
 Drivers/User_Drivers/Src/serial_driver.c \
-Drivers/User_Drivers/Src/spi_driver.c \
 Drivers/User_Drivers/Src/i2c_driver.c \
+Drivers/User_Drivers/Src/adc_driver.c \
 Drivers/User_Drivers/Src/YM2612_driver.c \
 Drivers/User_Drivers/Src/encoder_driver.c \
 Drivers/User_Drivers/Src/display_driver.c \

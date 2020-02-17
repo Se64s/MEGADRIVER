@@ -19,7 +19,7 @@
 TIM_HandleTypeDef htim3;
 
 /* Counter value */
-volatile uint32_t u32Encoder0Count = 0;
+volatile uint32_t u32Encoder0Event = 0;
 
 /* Callback handler */
 static encoder_event_cb encoder_0_event_cb = NULL;
@@ -171,13 +171,13 @@ encoder_status_t ENCODER_init(encoder_id_t xDevId, encoder_event_cb xEventCb)
     return retval;
 }
 
-encoder_status_t ENCODER_getCount(encoder_id_t xDevId, uint32_t * pu32CountVal)
+encoder_status_t ENCODER_getEvent(encoder_id_t xDevId, uint32_t * pu32Event)
 {
     encoder_status_t retval = ENCODER_STATUS_NOTDEF;
 
     if (xDevId == ENCODER_ID_0)
     {
-        *pu32CountVal = u32Encoder0Count;
+        *pu32Event = u32Encoder0Event;
         
         retval = ENCODER_STATUS_OK;
     }
@@ -217,17 +217,17 @@ encoder_status_t ENCODER_deinit(encoder_id_t xDevId)
     return retval;
 }
 
-void ENCODER_irq_handler(encoder_id_t xDevId, uint32_t u32EncCount)
+void ENCODER_irqEncHandler(encoder_id_t xDevId, uint32_t u32EncEvent)
 {
     if (xDevId == ENCODER_ID_0)
     {
         HAL_NVIC_DisableIRQ(TIM3_IRQn);
 
-        u32Encoder0Count = u32EncCount;
+        u32Encoder0Event = u32EncEvent;
 
         if (encoder_0_event_cb != NULL)
         {
-            encoder_0_event_cb(ENCODER_EVENT_UPDATE, u32EncCount);
+            encoder_0_event_cb(ENCODER_EVENT_UPDATE, u32EncEvent);
         }
 
         HAL_NVIC_EnableIRQ(TIM3_IRQn);

@@ -9,7 +9,10 @@
 
 #include "ui_screen_test.h"
 
+#include "printf.h"
 #include "encoder_driver.h"
+#include "adc_driver.h"
+
 #include "ui_task.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -186,7 +189,7 @@ static void vElementEncoderRender(void * pxDisplayHandler, void * pvScreen, void
     {
         /* Get data to print */
         uint32_t u32EncData = 0U;
-        ENCODER_getCount(ENCODER_ID_0, &u32EncData);
+        ENCODER_getEvent(ENCODER_ID_0, &u32EncData);
 
         /* Prepare data on buffer */
         sprintf(pxElement->pcName, NAME_FORMAT_ENCODER, (uint8_t)u32EncData);
@@ -276,16 +279,20 @@ static void vElementCv1Render(void * pxDisplayHandler, void * pvScreen, void * p
     uint32_t u32IndY = UI_OFFSET_ELEMENT_Y;
 
     /* Compute element offset */
-    u32IndY += u32GetDrawIndexY(pxDisplayHandler, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
+    u32IndY += u32GetDrawIndexY(pxDispHand, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
 
     if ((u32IndY < u8g2_GetDisplayHeight(pxDispHand)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
     {
-        /* Prepare data on buffer */
-        uint16_t u16CvData = 1;
-        sprintf(pxElement->pcName, NAME_FORMAT_CV1, u16CvData);
-
         /* Print selection ico */
-        vDrawSelectBox(pxDisplayHandler, pxElement->bSelected, (uint8_t)u32IndY);
+        vDrawSelectBox(pxDispHand, pxElement->bSelected, (uint8_t)u32IndY);
+
+        /* Prepare data on buffer */
+        uint16_t u16CvData = 0U;
+        if (ADC_get_value(ADC_0, ADC_CH0, &u16CvData) != ADC_STATUS_OK)
+        {
+            u16CvData = 0xFFFFU;
+        }
+        sprintf(pxElement->pcName, NAME_FORMAT_CV1, u16CvData);
 
         u8g2_DrawStr(pxDispHand, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
     }
@@ -300,16 +307,20 @@ static void vElementCv2Render(void * pxDisplayHandler, void * pvScreen, void * p
     uint32_t u32IndY = UI_OFFSET_ELEMENT_Y;
 
     /* Compute element offset */
-    u32IndY += u32GetDrawIndexY(pxDisplayHandler, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
+    u32IndY += u32GetDrawIndexY(pxDispHand, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
 
     if ((u32IndY < u8g2_GetDisplayHeight(pxDispHand)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
     {
-        /* Prepare data on buffer */
-        uint16_t u16CvData = 2;
-        sprintf(pxElement->pcName, NAME_FORMAT_CV2, u16CvData);
-
         /* Print selection ico */
-        vDrawSelectBox(pxDisplayHandler, pxElement->bSelected, (uint8_t)u32IndY);
+        vDrawSelectBox(pxDispHand, pxElement->bSelected, (uint8_t)u32IndY);
+
+        /* Prepare data on buffer */
+        uint16_t u16CvData = 0U;
+        if (ADC_get_value(ADC_0, ADC_CH1, &u16CvData) != ADC_STATUS_OK)
+        {
+            u16CvData = 0xFFFFU;
+        }
+        sprintf(pxElement->pcName, NAME_FORMAT_CV2, u16CvData);
 
         u8g2_DrawStr(pxDispHand, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
     }
@@ -324,16 +335,20 @@ static void vElementCv3Render(void * pxDisplayHandler, void * pvScreen, void * p
     uint32_t u32IndY = UI_OFFSET_ELEMENT_Y;
 
     /* Compute element offset */
-    u32IndY += u32GetDrawIndexY(pxDisplayHandler, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
+    u32IndY += u32GetDrawIndexY(pxDispHand, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
 
     if ((u32IndY < u8g2_GetDisplayHeight(pxDispHand)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
     {
-        /* Prepare data on buffer */
-        uint16_t u16CvData = 3;
-        sprintf(pxElement->pcName, NAME_FORMAT_CV3, u16CvData);
-
         /* Print selection ico */
-        vDrawSelectBox(pxDisplayHandler, pxElement->bSelected, (uint8_t)u32IndY);
+        vDrawSelectBox(pxDispHand, pxElement->bSelected, (uint8_t)u32IndY);
+
+        /* Prepare data on buffer */
+        uint16_t u16CvData = 0U;
+        if (ADC_get_value(ADC_0, ADC_CH2, &u16CvData) != ADC_STATUS_OK)
+        {
+            u16CvData = 0xFFFFU;
+        }
+        sprintf(pxElement->pcName, NAME_FORMAT_CV3, u16CvData);
 
         u8g2_DrawStr(pxDispHand, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
     }
@@ -345,21 +360,23 @@ static void vElementCv4Render(void * pxDisplayHandler, void * pvScreen, void * p
     ui_element_t * pxElement = pvElement;
     ui_screen_t * pxScreen = pvScreen;
     uint32_t u32IndX = UI_OFFSET_ELEMENT_X;
-    uint32_t u32IndY = 0U;
+    uint32_t u32IndY = UI_OFFSET_ELEMENT_Y;
 
     /* Compute element offset */
-    u32IndY = u32GetDrawIndexY(pxDisplayHandler, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
+    u32IndY += u32GetDrawIndexY(pxDispHand, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
 
     if ((u32IndY < u8g2_GetDisplayHeight(pxDispHand)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
     {
-        u32IndY += UI_OFFSET_ELEMENT_Y;
+        /* Print selection ico */
+        vDrawSelectBox(pxDispHand, pxElement->bSelected, (uint8_t)u32IndY);
 
         /* Prepare data on buffer */
-        uint16_t u16CvData = 4;
+        uint16_t u16CvData = 0U;
+        if (ADC_get_value(ADC_0, ADC_CH3, &u16CvData) != ADC_STATUS_OK)
+        {
+            u16CvData = 0xFFFFU;
+        }
         sprintf(pxElement->pcName, NAME_FORMAT_CV4, u16CvData);
-
-        /* Print selection ico */
-        vDrawSelectBox(pxDisplayHandler, pxElement->bSelected, (uint8_t)u32IndY);
 
         u8g2_DrawStr(pxDispHand, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
     }
@@ -376,7 +393,7 @@ static void vElementEncoderAction(void * pvScreen, void * pvElement, void * pvEv
     if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_CW))
     {
         uint32_t enc_count = 0;
-        ENCODER_getCount(ENCODER_ID_0, &enc_count);
+        ENCODER_getEvent(ENCODER_ID_0, &enc_count);
         cli_printf(UI_TASK_NAME, "Encoder CW event: %d", enc_count);
 
         uint32_t u32ElementIndex = pxScreenHandler->u32ElementSelectionIndex;
@@ -399,7 +416,7 @@ static void vElementEncoderAction(void * pvScreen, void * pvElement, void * pvEv
     else if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_CCW))
     {
         uint32_t enc_count = 0;
-        ENCODER_getCount(ENCODER_ID_0, &enc_count);
+        ENCODER_getEvent(ENCODER_ID_0, &enc_count);
         cli_printf(UI_TASK_NAME, "Encoder CCW event: %d", enc_count);
 
         uint32_t u32ElementIndex = pxScreenHandler->u32ElementSelectionIndex;
@@ -465,6 +482,10 @@ static void vElementCv1Action(void * pvScreen, void * pvElement, void * pvEventD
     ui_screen_t * pxScreenHandler = pvScreen;
     ui_element_t * pxElementHandler = pvElement;
     uint32_t * pu32EventData = pvEventData;
+
+    if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ADC_UPDATE))
+    {
+    }
 }
 
 static void vElementCv2Action(void * pvScreen, void * pvElement, void * pvEventData)
@@ -472,6 +493,10 @@ static void vElementCv2Action(void * pvScreen, void * pvElement, void * pvEventD
     ui_screen_t * pxScreenHandler = pvScreen;
     ui_element_t * pxElementHandler = pvElement;
     uint32_t * pu32EventData = pvEventData;
+
+    if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ADC_UPDATE))
+    {
+    }
 }
 
 static void vElementCv3Action(void * pvScreen, void * pvElement, void * pvEventData)
@@ -479,6 +504,10 @@ static void vElementCv3Action(void * pvScreen, void * pvElement, void * pvEventD
     ui_screen_t * pxScreenHandler = pvScreen;
     ui_element_t * pxElementHandler = pvElement;
     uint32_t * pu32EventData = pvEventData;
+
+    if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ADC_UPDATE))
+    {
+    }
 }
 
 static void vElementCv4Action(void * pvScreen, void * pvElement, void * pvEventData)
@@ -486,6 +515,10 @@ static void vElementCv4Action(void * pvScreen, void * pvElement, void * pvEventD
     ui_screen_t * pxScreenHandler = pvScreen;
     ui_element_t * pxElementHandler = pvElement;
     uint32_t * pu32EventData = pvEventData;
+
+    if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ADC_UPDATE))
+    {
+    }
 }
 
 /* Public user code ----------------------------------------------------------*/

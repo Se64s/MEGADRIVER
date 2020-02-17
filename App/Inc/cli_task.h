@@ -24,7 +24,7 @@ extern "C" {
 
 /* Task parameters */
 #define CLI_TASK_NAME   "CLI"
-#define CLI_TASK_STACK  128U
+#define CLI_TASK_STACK  256U
 #define CLI_TASK_PRIO   0U
 
 /* Buffer sizes */

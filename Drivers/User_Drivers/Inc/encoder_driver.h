@@ -95,10 +95,10 @@ encoder_status_t ENCODER_deinit(encoder_id_t xDevId);
 /**
   * @brief  Get encoder count
   * @param  xDevId id of encoder.
-  * @param  pu32CountVal Pointer where store encoder count
+  * @param  pu32Event Pointer where store encoder last event.
   * @retval Operation status
 */
-encoder_status_t ENCODER_getCount(encoder_id_t xDevId, uint32_t * pu32CountVal);
+encoder_status_t ENCODER_getEvent(encoder_id_t xDevId, uint32_t * pu32Event);
 
 /**
   * @brief  Get switch state
@@ -110,10 +110,10 @@ encoder_sw_state_t ENCODER_getSwState(encoder_id_t xDevId);
 /**
   * @brief  Handle encoder count event.
   * @param  xDevId id of encoder.
-  * @param  u32EncCount number of counts detected.
+  * @param  u32EncEvent Encoder event generated.
   * @retval None
 */
-void ENCODER_irqEncHandler(encoder_id_t xDevId, uint32_t u32EncCount);
+void ENCODER_irqEncHandler(encoder_id_t xDevId, uint32_t u32EncEvent);
 
 /**
   * @brief  Handle switch event.

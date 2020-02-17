@@ -36,9 +36,11 @@ extern DMA_HandleTypeDef hdma_i2c1_rx;
 extern DMA_HandleTypeDef hdma_i2c1_tx;
 extern DMA_HandleTypeDef hdma_usart2_rx;
 extern DMA_HandleTypeDef hdma_usart2_tx;
+extern DMA_HandleTypeDef hdma_adc1;
 extern I2C_HandleTypeDef hi2c1;
 extern UART_HandleTypeDef huart2;
 extern TIM_HandleTypeDef htim3;
+extern ADC_HandleTypeDef hadc1;
 
 /******************************************************************************/
 /*           Cortex-M0+ Processor Interruption and Exception Handlers          */
@@ -90,6 +92,7 @@ void DMA1_Ch4_7_DMAMUX1_OVR_IRQHandler(void)
 {
   HAL_DMA_IRQHandler(&hdma_usart2_tx);
   HAL_DMA_IRQHandler(&hdma_usart2_rx);
+  HAL_DMA_IRQHandler(&hdma_adc1);
 }
 
 /**
@@ -128,14 +131,12 @@ void TIM3_IRQHandler(void)
   if (u32tmpCout < ENCODER_0_MIN_TH)
   {
     (&htim3)->Instance->CNT = ENCODER_0_REF_VALUE;
-    u32tmpCout = ENCODER_0_VALUE_CW;
-    ENCODER_irq_handler(ENCODER_ID_0, u32tmpCout);
+    ENCODER_irqEncHandler(ENCODER_ID_0, ENCODER_0_VALUE_CW);
   }
   else if (u32tmpCout > ENCODER_0_MAX_TH)
   {
     (&htim3)->Instance->CNT = ENCODER_0_REF_VALUE;
-    u32tmpCout = ENCODER_0_VALUE_CCW;
-    ENCODER_irq_handler(ENCODER_ID_0, u32tmpCout);
+    ENCODER_irqEncHandler(ENCODER_ID_0, ENCODER_0_VALUE_CCW);
   }
 
   /* Clear flags */
@@ -148,6 +149,24 @@ void TIM3_IRQHandler(void)
 void EXTI4_15_IRQHandler(void)
 {
   HAL_GPIO_EXTI_IRQHandler(ENCODER_0_SW_GPIO_PIN);
+}
+
+/**
+  * @brief This function handles ADC1 interrupt.
+  */
+void ADC1_IRQHandler(void)
+{
+  HAL_ADC_IRQHandler(&hadc1);
+}
+
+/**
+  * @brief  This function handles ADC interrupt request.
+  * @param  None
+  * @retval None
+  */
+void ADCx_IRQHandler(void)
+{
+  HAL_ADC_IRQHandler(&hadc1);
 }
 
 /* Global callbacks */

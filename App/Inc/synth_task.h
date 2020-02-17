@@ -26,7 +26,7 @@ extern "C" {
 
 /* Task parameters */
 #define SYNTH_TASK_NAME   "SYNTH"
-#define SYNTH_TASK_STACK  128U
+#define SYNTH_TASK_STACK  256U
 #define SYNTH_TASK_PRIO   2
 
 /* Exported types ------------------------------------------------------------*/

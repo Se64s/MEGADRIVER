@@ -26,7 +26,7 @@ extern "C" {
 
 /* Task parameters */
 #define UI_TASK_NAME   "UI"
-#define UI_TASK_STACK  128U
+#define UI_TASK_STACK  256U
 #define UI_TASK_PRIO   1
 
 /* Check signals */
@@ -39,7 +39,8 @@ extern "C" {
 #define UI_SIGNAL_ENC_UPDATE_SW_RESET   (1UL << 3U)
 #define UI_SIGNAL_SYNTH_ON              (1UL << 4U)
 #define UI_SIGNAL_SYNTH_OFF             (1UL << 5U)
-#define UI_SIGNAL_ERROR                 (1UL << 6U)
+#define UI_SIGNAL_ADC_UPDATE            (1UL << 6U)
+#define UI_SIGNAL_ERROR                 (1UL << 7U)
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
