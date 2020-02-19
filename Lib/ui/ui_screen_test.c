@@ -14,6 +14,7 @@
 #include "adc_driver.h"
 
 #include "ui_task.h"
+#include "midi_task.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -257,12 +258,6 @@ static void vElementMidiRender(void * pxDisplayHandler, void * pvScreen, void * 
 
     if ((u32IndY < u8g2_GetDisplayHeight(pxDispHand)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
     {
-        /* Prepare data on buffer */
-        uint8_t u8MidiStatus = 0xAA;
-        uint8_t u8MidiData1 = 0xBB;
-        uint8_t u8MidiData2 = 0xCC;
-        sprintf(pxElement->pcName, NAME_FORMAT_MIDI, u8MidiStatus, u8MidiData1, u8MidiData2);
-
         /* Print selection ico */
         vDrawSelectBox(pxDisplayHandler, pxElement->bSelected, (uint8_t)u32IndY);
 
@@ -470,11 +465,24 @@ static void vElementSynthAction(void * pvScreen, void * pvElement, void * pvEven
     }
 }
 
-static void vElementMidiAction(void * pvScreen, void * pvElement, void * pvEventData)
+static void vElementMidiAction(void *pvScreen, void *pvElement, void *pvEventData)
 {
-    ui_screen_t * pxScreenHandler = pvScreen;
-    ui_element_t * pxElementHandler = pvElement;
-    uint32_t * pu32EventData = pvEventData;
+    ui_screen_t *pxScreenHandler = pvScreen;
+    ui_element_t *pxElementHandler = pvElement;
+    uint32_t *pu32EventData = pvEventData;
+
+    if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_MIDI_DATA))
+    {
+        uint8_t * pu8MidiCmd = MIDI_get_cmd_buf();
+
+        if (pu8MidiCmd != NULL)
+        {
+            sprintf(pxElementHandler->pcName, NAME_FORMAT_MIDI,
+                    pu8MidiCmd[0U],
+                    pu8MidiCmd[1U],
+                    pu8MidiCmd[2U]);
+        }
+    }
 }
 
 static void vElementCv1Action(void * pvScreen, void * pvElement, void * pvEventData)

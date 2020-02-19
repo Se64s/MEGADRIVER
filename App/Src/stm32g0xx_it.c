@@ -36,9 +36,11 @@ extern DMA_HandleTypeDef hdma_i2c1_rx;
 extern DMA_HandleTypeDef hdma_i2c1_tx;
 extern DMA_HandleTypeDef hdma_usart2_rx;
 extern DMA_HandleTypeDef hdma_usart2_tx;
+extern DMA_HandleTypeDef hdma_usart3_rx;
 extern DMA_HandleTypeDef hdma_adc1;
 extern I2C_HandleTypeDef hi2c1;
 extern UART_HandleTypeDef huart2;
+extern UART_HandleTypeDef huart3;
 extern TIM_HandleTypeDef htim3;
 extern ADC_HandleTypeDef hadc1;
 
@@ -83,6 +85,7 @@ void DMA1_Channel1_IRQHandler(void)
 void DMA1_Channel2_3_IRQHandler(void)
 {
   HAL_DMA_IRQHandler(&hdma_i2c1_tx);
+  HAL_DMA_IRQHandler(&hdma_usart3_rx);
 }
 
 /**
@@ -117,6 +120,23 @@ void USART2_IRQHandler(void)
 
     /* Abort and retrigger reception */
     HAL_UART_Abort_IT(&huart2);
+  }
+}
+
+/**
+  * @brief This function handles USART3_4 interrupts.
+  */
+void USART3_4_IRQHandler(void)
+{
+  HAL_UART_IRQHandler(&huart3);
+
+  /* Handle idle event on usart */
+  if (__HAL_UART_GET_IT(&huart3, UART_IT_IDLE))
+  {
+    __HAL_UART_CLEAR_IT(&huart3, UART_CLEAR_IDLEF);
+
+    /* Abort and retrigger reception */
+    HAL_UART_Abort_IT(&huart3);
   }
 }
 

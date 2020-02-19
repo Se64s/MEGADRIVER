@@ -31,6 +31,7 @@ BUILD_DIR = build
 # C sources
 C_SOURCES =  \
 App/Src/main.c \
+App/Src/midi_task.c \
 App/Src/ui_task.c \
 App/Src/synth_task.c \
 App/Src/cli_task.c \
@@ -66,8 +67,9 @@ Drivers/User_Drivers/Src/adc_driver.c \
 Drivers/User_Drivers/Src/YM2612_driver.c \
 Drivers/User_Drivers/Src/encoder_driver.c \
 Drivers/User_Drivers/Src/display_driver.c \
-Lib/Src/printf.c \
-Lib/Src/circular_buffer.c \
+Lib/printf/printf.c \
+Lib/cbuf/circular_buffer.c \
+Lib/midi/midi_lib.c \
 Lib/ui/ui_sys.c \
 Lib/ui/ui_menu_test.c \
 Lib/ui/ui_screen_test.c \
@@ -177,9 +179,11 @@ AS_INCLUDES =
 # C includes
 C_INCLUDES =  \
 -IApp/Inc \
--ILib/Inc \
 -ILib/u8g2 \
 -ILib/ui \
+-ILib/cbuf \
+-ILib/printf \
+-ILib/midi \
 -IDrivers/User_Drivers/Inc \
 -IDrivers/STM32G0xx_HAL_Driver/Inc \
 -IDrivers/STM32G0xx_HAL_Driver/Inc/Legacy \
