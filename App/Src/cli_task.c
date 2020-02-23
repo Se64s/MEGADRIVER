@@ -14,10 +14,6 @@
 #include "serial_driver.h"
 #include "printf.h"
 
-#include "FreeRTOS.h"
-#include "task.h"
-#include "semphr.h"
-
 #include "FreeRTOS_CLI.h"
 #include "cli_cmd.h"
 
@@ -156,6 +152,7 @@ bool CLI_task_init(void)
 {
     bool retval = false;
 
+    /* Init HW resources */
     (void)SERIAL_init(SERIAL_1, _event_cb);
 
     /* Create mutex */
@@ -201,7 +198,7 @@ void cli_printf(const char *module_name, const char *Format, ...)
             SERIAL_send(SERIAL_1, (uint8_t *)print_output_buffer, len_data);
             while (ser_tx_done != true)
             {
-                vTaskDelay(1U);
+                vTaskDelay(1U / portTICK_PERIOD_MS);
             }
         }
 
@@ -218,7 +215,7 @@ void cli_printf(const char *module_name, const char *Format, ...)
             SERIAL_send(SERIAL_1, (uint8_t *)print_output_buffer, len_data);
             while (ser_tx_done != true)
             {
-                vTaskDelay(1U);
+                vTaskDelay(1U / portTICK_PERIOD_MS);
             }
         }
 
@@ -254,7 +251,7 @@ void cli_raw_printf(const char *Format, ...)
             SERIAL_send(SERIAL_1, (uint8_t *)print_output_buffer, len_data);
             while (ser_tx_done != true)
             {
-                vTaskDelay(1U);
+                __NOP();
             }
         }
 
@@ -263,6 +260,18 @@ void cli_raw_printf(const char *Format, ...)
             while(1);
         }
     }
+}
+
+bool cli_task_notify(uint32_t u32Event)
+{
+    bool bRetval = false;
+    /* Check if task has been init */
+    if (cli_task_handle != NULL)
+    {
+      xTaskNotify(cli_task_handle, u32Event, eSetBits);
+      bRetval = true;
+    }
+    return bRetval;
 }
 
 /*****END OF FILE****/

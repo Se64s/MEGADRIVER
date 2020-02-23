@@ -15,12 +15,17 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 /* Private includes ----------------------------------------------------------*/
+
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
+
 /* Private defines -----------------------------------------------------------*/
 
 /* Task parameters */
 #define CLI_TASK_NAME   "CLI"
-#define CLI_TASK_STACK  128U
-#define CLI_TASK_PRIO   1U
+#define CLI_TASK_STACK  256U
+#define CLI_TASK_PRIO   0U
 
 /* Buffer sizes */
 #define CLI_OUTPUT_BUFFER_SIZE  configCOMMAND_INT_MAX_OUTPUT_SIZE
@@ -50,6 +55,13 @@ void cli_printf(const char *module_name, const char *Format, ...);
   * @retval None.
   */
 void cli_raw_printf(const char *Format, ...);
+
+/**
+  * @brief Notify event to a task.
+  * @param u32Event event to notify.
+  * @retval operation result, true for correct read, false for error
+  */
+bool cli_task_notify(uint32_t u32Event);
 
 #ifdef __cplusplus
 }

@@ -20,8 +20,11 @@ extern "C"
 /* Private defines -----------------------------------------------------------*/
 
 /* Data rx buffer size */
-#define SERIAL_0_CBUF_SIZE  (32)
-#define SERIAL_0_RX_SIZE    (8)
+#define SERIAL_0_CBUF_SIZE  (32U)
+#define SERIAL_0_RX_SIZE    (8U)
+
+#define SERIAL_1_CBUF_SIZE  (32U)
+#define SERIAL_1_RX_SIZE    (8U)
 
 /* Exported types ------------------------------------------------------------*/
 

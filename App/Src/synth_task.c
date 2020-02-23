@@ -8,9 +8,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "synth_task.h"
 #include "cli_task.h"
-
-#include "FreeRTOS.h"
-#include "task.h"
+#include "ui_task.h"
 
 #include "YM2612_driver.h"
 
@@ -53,6 +51,8 @@ static void _synth_main(void *pvParameters);
 
 static void _init_setup(void)
 {
+    cli_printf(SYNTH_TASK_NAME, "Initial register setup");
+
     YM2612_write_reg(0x22, 0x00, 0); // LFO off
     YM2612_write_reg(0x27, 0x00, 0); // CH3 normal
     YM2612_write_reg(0x28, 0x00, 0); //All ch off
@@ -101,17 +101,23 @@ static void _init_setup(void)
 static void _init_key_on(void)
 {
     YM2612_write_reg(0x28, 0xF0, 0); // Key on
+
+    /* Report to ui task */
+    UI_task_notify(UI_SIGNAL_SYNTH_ON);
 }
 
 static void _init_key_off(void)
 {
     YM2612_write_reg(0x28, 0x00, 0); // Key off
+
+    /* Report to ui task */
+    UI_task_notify(UI_SIGNAL_SYNTH_OFF);
 }
 
 static void _synth_main( void *pvParameters )
 {
     /* Init YM2612 resources */
-    YM2612_init();
+    (void)YM2612_init();
 
     /* Show init msg */
     cli_printf(SYNTH_TASK_NAME, "Init");
@@ -123,10 +129,12 @@ static void _synth_main( void *pvParameters )
     {
       cli_printf(SYNTH_TASK_NAME, "Key ON");
       _init_key_on();
-      vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+      vTaskDelay(3000 / portTICK_PERIOD_MS);
 
       cli_printf(SYNTH_TASK_NAME, "Key OFF");
       _init_key_off();
+
       vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
@@ -146,6 +154,18 @@ bool SYNTH_task_init(void)
         retval = true;
     }
     return(retval);
+}
+
+bool SYNTH_task_notify(uint32_t u32Event)
+{
+    bool bRetval = false;
+    /* Check if task has been init */
+    if (synth_task_handle != NULL)
+    {
+      xTaskNotify(synth_task_handle, u32Event, eSetBits);
+      bRetval = true;
+    }
+    return bRetval;
 }
 
 /*****END OF FILE****/

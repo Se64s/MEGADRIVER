@@ -15,6 +15,8 @@
 
 #include "cli_task.h"
 #include "synth_task.h"
+#include "ui_task.h"
+#include "midi_task.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -51,8 +53,10 @@ int main(void)
   SystemClock_Config();
 
   /* Task creation */
+  MIDI_task_init();
   CLI_task_init();
   SYNTH_task_init();
+  UI_task_init();
 
   /* Start the scheduler so the tasks start executing. */
   vTaskStartScheduler();

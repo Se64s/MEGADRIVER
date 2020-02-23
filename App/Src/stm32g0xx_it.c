@@ -21,6 +21,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32g0xx_it.h"
+#include "encoder_driver.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -31,9 +32,17 @@
 /* Private user code ---------------------------------------------------------*/
 /* External variables --------------------------------------------------------*/
 
+extern DMA_HandleTypeDef hdma_i2c1_rx;
+extern DMA_HandleTypeDef hdma_i2c1_tx;
 extern DMA_HandleTypeDef hdma_usart2_rx;
 extern DMA_HandleTypeDef hdma_usart2_tx;
+extern DMA_HandleTypeDef hdma_usart3_rx;
+extern DMA_HandleTypeDef hdma_adc1;
+extern I2C_HandleTypeDef hi2c1;
 extern UART_HandleTypeDef huart2;
+extern UART_HandleTypeDef huart3;
+extern TIM_HandleTypeDef htim3;
+extern ADC_HandleTypeDef hadc1;
 
 /******************************************************************************/
 /*           Cortex-M0+ Processor Interruption and Exception Handlers          */
@@ -63,12 +72,38 @@ void HardFault_Handler(void)
 /******************************************************************************/
 
 /**
+  * @brief This function handles DMA1 channel 1 interrupt.
+  */
+void DMA1_Channel1_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(&hdma_i2c1_rx);
+}
+
+/**
+  * @brief This function handles DMA1 channel 2 and channel 3 interrupts.
+  */
+void DMA1_Channel2_3_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(&hdma_i2c1_tx);
+  HAL_DMA_IRQHandler(&hdma_usart3_rx);
+}
+
+/**
   * @brief This function handles DMA1 channel 4, channel 5, channel 6, channel 7 and DMAMUX1 interrupts.
   */
 void DMA1_Ch4_7_DMAMUX1_OVR_IRQHandler(void)
 {
   HAL_DMA_IRQHandler(&hdma_usart2_tx);
   HAL_DMA_IRQHandler(&hdma_usart2_rx);
+  HAL_DMA_IRQHandler(&hdma_adc1);
+}
+
+/**
+  * @brief This function handles I2C1 interrupts.
+  */
+void I2C1_IRQHandler(void)
+{
+  HAL_I2C_EV_IRQHandler(&hi2c1);
 }
 
 /**
@@ -85,6 +120,95 @@ void USART2_IRQHandler(void)
 
     /* Abort and retrigger reception */
     HAL_UART_Abort_IT(&huart2);
+  }
+}
+
+/**
+  * @brief This function handles USART3_4 interrupts.
+  */
+void USART3_4_IRQHandler(void)
+{
+  HAL_UART_IRQHandler(&huart3);
+
+  /* Handle idle event on usart */
+  if (__HAL_UART_GET_IT(&huart3, UART_IT_IDLE))
+  {
+    __HAL_UART_CLEAR_IT(&huart3, UART_CLEAR_IDLEF);
+
+    /* Abort and retrigger reception */
+    HAL_UART_Abort_IT(&huart3);
+  }
+}
+
+/**
+  * @brief This function handles TIM3 interrupt.
+  */
+void TIM3_IRQHandler(void)
+{
+  uint32_t u32tmpCout = (&htim3)->Instance->CNT;
+  
+  /* Check encoder direction and generate event */
+  if (u32tmpCout < ENCODER_0_MIN_TH)
+  {
+    (&htim3)->Instance->CNT = ENCODER_0_REF_VALUE;
+    ENCODER_irqEncHandler(ENCODER_ID_0, ENCODER_0_VALUE_CW);
+  }
+  else if (u32tmpCout > ENCODER_0_MAX_TH)
+  {
+    (&htim3)->Instance->CNT = ENCODER_0_REF_VALUE;
+    ENCODER_irqEncHandler(ENCODER_ID_0, ENCODER_0_VALUE_CCW);
+  }
+
+  /* Clear flags */
+  HAL_TIM_IRQHandler(&htim3);
+}
+
+/**
+  * @brief This function handles exti interrupt.
+  */
+void EXTI4_15_IRQHandler(void)
+{
+  HAL_GPIO_EXTI_IRQHandler(ENCODER_0_SW_GPIO_PIN);
+}
+
+/**
+  * @brief This function handles ADC1 interrupt.
+  */
+void ADC1_IRQHandler(void)
+{
+  HAL_ADC_IRQHandler(&hadc1);
+}
+
+/**
+  * @brief  This function handles ADC interrupt request.
+  * @param  None
+  * @retval None
+  */
+void ADCx_IRQHandler(void)
+{
+  HAL_ADC_IRQHandler(&hadc1);
+}
+
+/* Global callbacks */
+
+/**
+  * @brief EXTI line detection callbacks
+  * @param GPIO_Pin: Specifies the pins connected EXTI line
+  * @retval None
+  */
+void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin)
+{
+  if (GPIO_Pin == ENCODER_0_SW_GPIO_PIN)
+  {
+    ENCODER_irqSwHandler(ENCODER_ID_0, ENCODER_SW_SET);
+  }
+}
+
+void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
+{
+  if (GPIO_Pin == ENCODER_0_SW_GPIO_PIN)
+  {
+    ENCODER_irqSwHandler(ENCODER_ID_0, ENCODER_SW_RESET);
   }
 }
 

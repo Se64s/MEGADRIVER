@@ -16,7 +16,6 @@
   *
  ******************************************************************************
   */
-/* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __STM32G0xx_IT_H
@@ -34,10 +33,15 @@
 
 void NMI_Handler(void);
 void HardFault_Handler(void);
+void DMA1_Channel1_IRQHandler(void);
 void DMA1_Channel2_3_IRQHandler(void);
 void DMA1_Ch4_7_DMAMUX1_OVR_IRQHandler(void);
+void I2C1_IRQHandler(void);
 void USART2_IRQHandler(void);
-void SPI1_IRQHandler(void);
+void USART3_4_IRQHandler(void);
+void TIM3_IRQHandler(void);
+void EXTI4_15_IRQHandler(void);
+void ADCx_IRQHandler(void);
 
 #ifdef __cplusplus
 }
