@@ -9,11 +9,20 @@
  *                                                                           *
  *****************************************************************************/
 
-function Reset() {
-  TargetInterface.resetAndStop();
+int ConfigTargetSettings(void)
+{
+    if (JLINK_SetDevice("STM32G070CB") >= 0)
+    {
+        JLINK_SYS_Report("Set device OK\r\n");
+    }
+    else
+    {
+        JLINK_SYS_Report("Set device ERROR\r\n");
+    }
+    return 0;
 }
 
-function EnableTrace(traceInterfaceType) {
-  // TODO: Enable trace
+int InitTarget(void)
+{
+    return 0;
 }
-

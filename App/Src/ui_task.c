@@ -122,19 +122,19 @@ static void __ui_main( void *pvParameters )
     /* Init display */
     if (DISPLAY_init(DISPLAY_0, &xDisplayHandler) != DISPLAY_STATUS_OK)
     {
-        cli_printf(UI_TASK_NAME, "Display init ERROR");
+        vCliPrintf(UI_TASK_NAME, "Display init ERROR");
         while (1);
     }
 
     /* Init ui menu engine */
     if (UI_init(&xUiMenuHandler) != UI_STATUS_OK)
     {
-        cli_printf(UI_TASK_NAME, "UI engine init ERROR");
+        vCliPrintf(UI_TASK_NAME, "UI engine init ERROR");
         while (1);
     }
 
     /* Show init msg */
-    cli_printf(UI_TASK_NAME, "Init");
+    vCliPrintf(UI_TASK_NAME, "Init");
 
     /* Update display for first time */
     DISPLAY_update(DISPLAY_0, &xDisplayHandler);
@@ -170,7 +170,7 @@ static void __ui_main( void *pvParameters )
 
 /* Public fuctions -----------------------------------------------------------*/
 
-bool UI_task_init(void)
+bool bUiTaskInit(void)
 {
     bool retval = false;
 
@@ -185,7 +185,7 @@ bool UI_task_init(void)
     return(retval);
 }
 
-bool UI_task_notify(uint32_t u32Event)
+bool bUiTaskNotify(uint32_t u32Event)
 {
     bool bRetval = false;
     /* Check if task has been init */

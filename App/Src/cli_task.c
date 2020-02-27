@@ -91,7 +91,7 @@ void _cli_main( void *pvParameters )
     cli_cmd_init();
 
     /* Show init msg */
-    cli_printf(CLI_TASK_NAME, "Init");
+    vCliPrintf(CLI_TASK_NAME, "Init");
 
     /* Infinite loop */
     for(;;)
@@ -107,13 +107,13 @@ void _cli_main( void *pvParameters )
                 {
                     if (i_rx_buff != 0)
                     {
-                        cli_printf(CLI_TASK_NAME, "cmd: \"%s\"", cInputBuffer);
+                        vCliPrintf(CLI_TASK_NAME, "cmd: \"%s\"", cInputBuffer);
 
                         BaseType_t xReturned;
 
                         do {
                             xReturned = FreeRTOS_CLIProcessCommand(cInputBuffer, cCliOutputBuffer, configCOMMAND_INT_MAX_OUTPUT_SIZE);
-                            cli_printf(CLI_TASK_NAME, "%s", cCliOutputBuffer);
+                            vCliPrintf(CLI_TASK_NAME, "%s", cCliOutputBuffer);
                             memset(cCliOutputBuffer, 0, configCOMMAND_INT_MAX_OUTPUT_SIZE);
                         } while(xReturned != pdFALSE);
 
@@ -121,7 +121,7 @@ void _cli_main( void *pvParameters )
                     }
                     else
                     {
-                        cli_printf(CLI_TASK_NAME, "$", cInputBuffer);
+                        vCliPrintf(CLI_TASK_NAME, "$", cInputBuffer);
                     }
 
                     memset(cInputBuffer, 0, configCOMMAND_INT_MAX_INPUT_SIZE);
@@ -135,7 +135,7 @@ void _cli_main( void *pvParameters )
                     }
                     else
                     {
-                        cli_printf(CLI_TASK_NAME, "Flush input buffer");
+                        vCliPrintf(CLI_TASK_NAME, "Flush input buffer");
                         memset(cInputBuffer, 0, configCOMMAND_INT_MAX_INPUT_SIZE);
                         i_rx_buff = 0;
                     }
@@ -148,7 +148,7 @@ void _cli_main( void *pvParameters )
 
 /* Public fuctions -----------------------------------------------------------*/
 
-bool CLI_task_init(void)
+bool bCliTaskInit(void)
 {
     bool retval = false;
 
@@ -170,7 +170,7 @@ bool CLI_task_init(void)
 }
 
 /* CLI printf implementation */
-void cli_printf(const char *module_name, const char *Format, ...)
+void vCliPrintf(const char *module_name, const char *Format, ...)
 {
     if (cli_serial_mutex != NULL)
     {
@@ -227,7 +227,7 @@ void cli_printf(const char *module_name, const char *Format, ...)
 }
 
 /* CLI printf implementation */
-void cli_raw_printf(const char *Format, ...)
+void vCliRawPrintf(const char *Format, ...)
 {
     if (cli_serial_mutex != NULL)
     {
@@ -262,7 +262,7 @@ void cli_raw_printf(const char *Format, ...)
     }
 }
 
-bool cli_task_notify(uint32_t u32Event)
+bool bCliTaskNotify(uint32_t u32Event)
 {
     bool bRetval = false;
     /* Check if task has been init */

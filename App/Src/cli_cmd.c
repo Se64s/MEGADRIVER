@@ -97,7 +97,7 @@ static BaseType_t YM2612Write(char *pcWriteBuffer,
     {
         YM2612_bank_t xbankValue = (u8bankSel == YM2612_BANK_0)?YM2612_BANK_0:YM2612_BANK_1;
         
-        YM2612_write_reg(u8regAddr, u8regData, xbankValue);
+        vYM2612_write_reg(u8regAddr, u8regData, xbankValue);
         
         (void)snprintf(pcWriteBuffer, xWriteBufferLen, "OK");
     }

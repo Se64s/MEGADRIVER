@@ -389,7 +389,7 @@ static void vElementEncoderAction(void * pvScreen, void * pvElement, void * pvEv
     {
         uint32_t enc_count = 0;
         ENCODER_getEvent(ENCODER_ID_0, &enc_count);
-        cli_printf(UI_TASK_NAME, "Encoder CW event: %d", enc_count);
+        vCliPrintf(UI_TASK_NAME, "Encoder CW event: %d", enc_count);
 
         uint32_t u32ElementIndex = pxScreenHandler->u32ElementSelectionIndex;
         uint32_t u32RenderIndex = pxScreenHandler->u32ElementRenderIndex;
@@ -412,7 +412,7 @@ static void vElementEncoderAction(void * pvScreen, void * pvElement, void * pvEv
     {
         uint32_t enc_count = 0;
         ENCODER_getEvent(ENCODER_ID_0, &enc_count);
-        cli_printf(UI_TASK_NAME, "Encoder CCW event: %d", enc_count);
+        vCliPrintf(UI_TASK_NAME, "Encoder CCW event: %d", enc_count);
 
         uint32_t u32ElementIndex = pxScreenHandler->u32ElementSelectionIndex;
         uint32_t u32RenderIndex = pxScreenHandler->u32ElementRenderIndex;
@@ -441,7 +441,7 @@ static void vElementSwitchAction(void * pvScreen, void * pvElement, void * pvEve
 
     if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET) || CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_RESET))
     {
-        cli_printf(UI_TASK_NAME, "Encoder SW state %d", ENCODER_getSwState(ENCODER_ID_0));
+        vCliPrintf(UI_TASK_NAME, "Encoder SW state %d", ENCODER_getSwState(ENCODER_ID_0));
     }
 }
 
@@ -473,7 +473,7 @@ static void vElementMidiAction(void *pvScreen, void *pvElement, void *pvEventDat
 
     if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_MIDI_DATA))
     {
-        uint8_t * pu8MidiCmd = MIDI_get_cmd_buf();
+        uint8_t pu8MidiCmd[3U] = {0};
 
         if (pu8MidiCmd != NULL)
         {

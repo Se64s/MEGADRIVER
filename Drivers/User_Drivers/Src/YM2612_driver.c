@@ -13,6 +13,9 @@
 #ifdef YM2612_USE_RTOS
 #include "FreeRTOS.h"
 #include "task.h"
+#ifdef YM2612_DEBUG
+#include "cli_task.h"
+#endif
 #endif
 
 /* Private includes ----------------------------------------------------------*/
@@ -30,7 +33,16 @@
 #define PULSE1_VALUE    (uint32_t)(PERIOD_VALUE / 2) /* Capture Compare 1 Value  */
 
 /* Number of ticks per microsec */
-#define TICKS_USEC  10U
+#define TICKS_USEC          (10U)
+
+/* Number of notes per Octave */
+#define NUM_NOTES_OCTAVE    (12U)
+
+/* Base block define */
+#define BASE_BLOCK          (4U)
+
+/* Max block range */
+#define MAX_BLOCK           (8U)
 
 /* Private macro -------------------------------------------------------------*/
 
@@ -39,6 +51,13 @@
 #define YM_RESET_BIT(PORT, BITS)  ((PORT)->BRR = (uint32_t)(BITS))
 
 /* Private variables ---------------------------------------------------------*/
+
+/* F_num base values - 12 notes */
+const static uint16_t u16OctaveBaseValues[] = {
+    617, 654, 693, 734,
+    778, 824, 873, 925,
+    980, 1038, 1100, 1165
+};
 
 /* Timer hanlder */
 TIM_HandleTypeDef htim14;
@@ -199,7 +218,7 @@ static void MX_TIM_Deinit(void)
 /* Callback ------------------------------------------------------------------*/
 /* Public user code ----------------------------------------------------------*/
 
-YM2612_status_t YM2612_init(void)
+YM2612_status_t xYM2612_init(void)
 {
     YM2612_status_t retval = YM2612_STATUS_ERROR;
     
@@ -231,7 +250,7 @@ YM2612_status_t YM2612_init(void)
     return (retval);
 }
 
-YM2612_status_t YM2612_deinit(void)
+YM2612_status_t xYM2612_deinit(void)
 {
     YM2612_status_t retval = YM2612_STATUS_OK;
     
@@ -240,14 +259,14 @@ YM2612_status_t YM2612_deinit(void)
     return (retval);
 }
 
-void YM2612_write_reg(uint8_t reg_addr, uint8_t reg_data, YM2612_bank_t bank)
+void vYM2612_write_reg(uint8_t u8RegAddr, uint8_t u8RegData, YM2612_bank_t xBank)
 {
 #ifdef YM2612_USE_RTOS
     taskENTER_CRITICAL();
 #endif
 
     /* Write address */
-    if (bank == YM2612_BANK_0)
+    if (xBank == YM2612_BANK_0)
     {
         YM_RESET_BIT(YM2612_A1_GPIO_PORT, YM2612_A1_GPIO_PIN);
     }
@@ -257,8 +276,8 @@ void YM2612_write_reg(uint8_t reg_addr, uint8_t reg_data, YM2612_bank_t bank)
     }
     YM_RESET_BIT(YM2612_A0_GPIO_PORT, YM2612_A0_GPIO_PIN);
     YM_RESET_BIT(YM2612_CS_GPIO_PORT, YM2612_CS_GPIO_PIN);
-    YM_SET_BIT(YM2612_Dx_GPIO_PORT, (reg_addr & 0xFF));
-    YM_RESET_BIT(YM2612_Dx_GPIO_PORT, ((~reg_addr) & 0xFF));
+    YM_SET_BIT(YM2612_Dx_GPIO_PORT, (u8RegAddr & 0xFF));
+    YM_RESET_BIT(YM2612_Dx_GPIO_PORT, ((~u8RegAddr) & 0xFF));
     YM_RESET_BIT(YM2612_WR_GPIO_PORT, YM2612_WR_GPIO_PIN);
 
     /* Operation delay */
@@ -271,8 +290,8 @@ void YM2612_write_reg(uint8_t reg_addr, uint8_t reg_data, YM2612_bank_t bank)
 
     /* Write data */
     YM_RESET_BIT(YM2612_CS_GPIO_PORT, YM2612_CS_GPIO_PIN);
-    YM_SET_BIT(YM2612_Dx_GPIO_PORT, (reg_data & 0xFF));
-    YM_RESET_BIT(YM2612_Dx_GPIO_PORT, ((~reg_data) & 0xFF));
+    YM_SET_BIT(YM2612_Dx_GPIO_PORT, (u8RegData & 0xFF));
+    YM_RESET_BIT(YM2612_Dx_GPIO_PORT, ((~u8RegData) & 0xFF));
     YM_RESET_BIT(YM2612_WR_GPIO_PORT, YM2612_WR_GPIO_PIN);
 
     /* Operation delay */
@@ -288,6 +307,66 @@ void YM2612_write_reg(uint8_t reg_addr, uint8_t reg_data, YM2612_bank_t bank)
 #ifdef YM2612_USE_RTOS
     taskEXIT_CRITICAL();
 #endif
+}
+
+bool bYM2612_set_note(YM2612_ch_id_t xChannel, uint8_t u8MidiNote)
+{
+    bool bRetval = false;
+    bool bBankSelection = xChannel / 3;
+    uint8_t u8Addr = 0U;
+    uint8_t u8Data = 0U;
+    uint8_t u8ChannelOffset = xChannel % 3U;
+    uint8_t u8NoteIndex = u8MidiNote % NUM_NOTES_OCTAVE;
+    uint8_t u8OctaveIndex = u8MidiNote / NUM_NOTES_OCTAVE;
+    uint16_t u16fnum = u16OctaveBaseValues[u8NoteIndex];
+    uint8_t u8BlockOffset = BASE_BLOCK;
+
+    if (BASE_BLOCK > u8OctaveIndex)
+    {
+        u8BlockOffset -= BASE_BLOCK - u8OctaveIndex;
+    }
+    else if (BASE_BLOCK < u8OctaveIndex)
+    {
+        u8BlockOffset += u8OctaveIndex - BASE_BLOCK;
+    }
+
+    if (u8BlockOffset < MAX_BLOCK)
+    {
+#ifdef YM2612_DEBUG
+        vCliPrintf("DBG", "Fnum %d, Block %d", u16fnum, u8BlockOffset);
+#endif
+
+        u8Addr = YM2612_ADDR_FNUM_2 + u8ChannelOffset;
+        u8Data = (u16fnum >> 8U) & 0x07U;
+        u8Data |= (u8BlockOffset & 0x07U) << 3U;
+        vYM2612_write_reg(u8Addr, u8Data, bBankSelection);
+
+        u8Addr = YM2612_ADDR_FNUM_1 + u8ChannelOffset;
+        u8Data = u16fnum & 0xFFU;
+        vYM2612_write_reg(u8Addr, u8Data, bBankSelection);
+
+        bRetval = true;
+    }
+    else
+    {
+#ifdef YM2612_DEBUG
+        vCliPrintf("DBG", "Block %d Out of range", u8BlockOffset);
+#endif
+    }
+
+    return bRetval;
+}
+
+void vYM2612_key_on(YM2612_ch_id_t xChannel)
+{
+    uint8_t u8ChannelOffset = (xChannel & 0x03U) | ((xChannel / 3) << 2U);
+    vYM2612_write_reg(YM2612_ADDR_KEY_ON_OFF, 0xF0 | u8ChannelOffset, 0);
+}
+
+void vYM2612_key_off(YM2612_ch_id_t xChannel)
+{
+    uint8_t u8ChannelOffset = (xChannel & 0x03U) | ((xChannel / 3) << 2U);
+    vYM2612_write_reg(YM2612_ADDR_KEY_ON_OFF, 0x00 | u8ChannelOffset, 0);
 }
 
 /*****END OF FILE****/

@@ -21,6 +21,21 @@ extern "C"
 
   /* Exported types ------------------------------------------------------------*/
 
+/** Midi modes */
+typedef enum
+{
+    /** Omni-on Poly */
+    MidiMode1 = 0x00,
+    /** Omni-on Mono */
+    MidiMode2,
+    /** Omni-off Poly */
+    MidiMode3,
+    /** Omni-off Mono */
+    MidiMode4,
+    /** Number of defined modes */
+    MidiModeNum,
+} midiMode_t;
+
   /** Defined midi lib status */
   typedef enum
   {

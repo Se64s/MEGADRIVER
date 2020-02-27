@@ -53,10 +53,10 @@ int main(void)
   SystemClock_Config();
 
   /* Task creation */
-  MIDI_task_init();
-  CLI_task_init();
-  SYNTH_task_init();
-  UI_task_init();
+  bMidiTaskInit();
+  bCliTaskInit();
+  bSynthTaskInit();
+  bUiTaskInit();
 
   /* Start the scheduler so the tasks start executing. */
   vTaskStartScheduler();

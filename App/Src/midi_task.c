@@ -13,26 +13,66 @@
 
 #include "serial_driver.h"
 
-#include "midi_lib.h"
-
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
+
+/* Midi control structure */
+typedef struct {
+    midiMode_t xMode;
+    uint8_t u8Channel;
+    uint8_t u8Program;
+    uint8_t u8Bank;
+} MidiCtrl_t;
+
 /* Private define ------------------------------------------------------------*/
 
+/* Timeout for store midi messages */
+#define MIDI_MSG_TIMEOUT                (100U)
+
+/* Size for storage midi commands */
+#define MIDI_CMD_BUF_STORAGE_SIZE       (32U)
+
 /* Signal definition */
-#define MIDI_SIGNAL_RX_DATA     (1UL << 0)
-#define MIDI_SIGNAL_ERROR       (1UL << 2)
+#define MIDI_SIGNAL_RX_DATA             (1UL << 0)
+#define MIDI_SIGNAL_ERROR               (1UL << 2)
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 
+/* Midi control structure */
+MidiCtrl_t xMidiCfg = {0};
+
 /* Task handler */
 TaskHandle_t xMidiTaskHandle = NULL;
 
-/* Buffer for MIDI commands */
-volatile static uint8_t pu8MidiCmdBuf[MIDI_CMD_BUF_SIZE] = {0};
+/* Message buffer control structrure */
+MessageBufferHandle_t xMidiMessageBuffer;
 
 /* Private function prototypes -----------------------------------------------*/
+
+/**
+  * @brief Decide if the following message should be processed.
+  * @param u8MidiStatus Midi status cmd.
+  * @param pxMidiCfg pointer to midi control structure.
+  * @retval True if cmd should be preocess, false if not.
+  */
+static bool bProcessMidiCmd(uint8_t u8MidiStatus, MidiCtrl_t * pxMidiCfg);
+
+/**
+  * @brief Callback for midi commands detection.
+  * @param pu8Data pointer of SysEx cmd.
+  * @param u32LenData len of SysEx cmd.
+  * @retval None.
+  */
+static void vMidiCmdSysExCallBack(uint8_t *pu8Data, uint32_t u32LenData);
+
+/**
+  * @brief Callback for midi commands detection.
+  * @param u8Cmd Midi CMD byte.
+  * @param u8Data0 Midi DATA byte.
+  * @retval None.
+  */
+static void vMidiCmd1CallBack(uint8_t u8Cmd, uint8_t u8Data);
 
 /**
   * @brief Callback for midi commands detection.
@@ -41,7 +81,14 @@ volatile static uint8_t pu8MidiCmdBuf[MIDI_CMD_BUF_SIZE] = {0};
   * @param u8Data1 Midi DATA1 byte.
   * @retval None.
   */
-static void vMidiCmdCallBack(uint8_t u8Cmd, uint8_t u8Data0, uint8_t u8Data1);
+static void vMidiCmd2CallBack(uint8_t u8Cmd, uint8_t u8Data0, uint8_t u8Data1);
+
+/**
+  * @brief Callback for midi commands detection.
+  * @param u8RtCmd Real time cmd.
+  * @retval None.
+  */
+static void vMidiCmdRtCallBack(uint8_t u8RtCmd);
 
 /**
   * @brief Handler for serial port events.
@@ -59,17 +106,89 @@ static void vMidiMain(void *pvParameters);
 
 /* Private fuctions ----------------------------------------------------------*/
 
-static void vMidiCmdCallBack(uint8_t u8Cmd, uint8_t u8Data0, uint8_t u8Data1)
+static bool bProcessMidiCmd(uint8_t u8MidiStatus, MidiCtrl_t * pxMidiCfg)
 {
-    /* Fill data buffer with CMD data */
-    pu8MidiCmdBuf[0U] = u8Cmd;
-    pu8MidiCmdBuf[1U] = u8Data0;
-    pu8MidiCmdBuf[2U] = u8Data1;
+    bool bRetVal = false;
 
-    cli_printf(MIDI_TASK_NAME, "MIDI CMD RX");
+    if (pxMidiCfg != NULL)
+    {
+        /* Omni mode process al channels */
+        if ((pxMidiCfg->xMode == MidiMode1) || (pxMidiCfg->xMode == MidiMode2))
+        {
+            bRetVal = true;
+        }
+        /* Check channel */
+        else if ((pxMidiCfg->xMode == MidiMode3) || (pxMidiCfg->xMode == MidiMode4))
+        {
+            if ((u8MidiStatus & MIDI_STATUS_CH_MASK) == pxMidiCfg->u8Channel)
+            {
+                bRetVal = true;
+            }
+        }
+        else
+        {
+            /* Not handle */
+        }
+    }
 
-    /* Report to ui task */
-    UI_task_notify(UI_SIGNAL_MIDI_DATA);
+    return bRetVal;
+}
+
+static void vMidiCmdSysExCallBack(uint8_t *pu8Data, uint32_t u32LenData)
+{
+    vCliPrintf(MIDI_TASK_NAME, "SysEx: ");
+    if (pu8Data != NULL)
+    {
+        while (u32LenData-- != 0)
+        {
+            vCliRawPrintf("%02X ", *pu8Data++);
+        }
+    }
+}
+
+static void vMidiCmd1CallBack(uint8_t u8Cmd, uint8_t u8Data)
+{
+    if (bProcessMidiCmd(u8Cmd, &xMidiCfg))
+    {
+        size_t xBytesSent;
+        uint8_t pu8MidiCmd[] = {u8Cmd, u8Data};
+
+        xBytesSent = xMessageBufferSend(xMidiMessageBuffer,(void *)pu8MidiCmd, sizeof(pu8MidiCmd), pdMS_TO_TICKS(MIDI_MSG_TIMEOUT));
+
+        if (xBytesSent == sizeof(pu8MidiCmd))
+        {
+            vCliPrintf(MIDI_TASK_NAME, "CMD1: %02X-%02X", u8Cmd, u8Data);
+        }
+        else
+        {
+            vCliPrintf(MIDI_TASK_NAME, "CMD2: Memory Error");
+        }
+    }
+}
+
+static void vMidiCmd2CallBack(uint8_t u8Cmd, uint8_t u8Data0, uint8_t u8Data1)
+{
+    if (bProcessMidiCmd(u8Cmd, &xMidiCfg))
+    {
+        size_t xBytesSent;
+        uint8_t pu8MidiCmd[] = {u8Cmd, u8Data0, u8Data1};
+
+        xBytesSent = xMessageBufferSend(xMidiMessageBuffer,(void *)pu8MidiCmd, sizeof(pu8MidiCmd), pdMS_TO_TICKS(MIDI_MSG_TIMEOUT));
+
+        if (xBytesSent == sizeof(pu8MidiCmd))
+        {
+            vCliPrintf(MIDI_TASK_NAME, "CMD2: %02X-%02X-%02X", u8Cmd, u8Data0, u8Data1);
+        }
+        else
+        {
+            vCliPrintf(MIDI_TASK_NAME, "CMD2: Memory Error");
+        }
+    }
+}
+
+static void vMidiCmdRtCallBack(uint8_t u8RtCmd)
+{
+    vCliPrintf(MIDI_TASK_NAME, "RT: %02X", u8RtCmd);
 }
 
 static void vSerialPortHandlerCallBack(serial_event_t xEvent)
@@ -100,10 +219,16 @@ static void vMidiMain(void *pvParameters)
     (void)SERIAL_init(SERIAL_0, vSerialPortHandlerCallBack);
 
     /* Init MIDI library */
-    (void)midi_init(NULL, NULL, vMidiCmdCallBack, NULL);
+    (void)midi_init(vMidiCmdSysExCallBack, vMidiCmd1CallBack, vMidiCmd2CallBack, vMidiCmdRtCallBack);
+
+    /* Init control structure */
+    xMidiCfg.xMode = MidiMode3;
+    xMidiCfg.u8Channel = 1U;
+    xMidiCfg.u8Program = 0U;
+    xMidiCfg.u8Bank = 0U;
 
     /* Show init msg */
-    cli_printf(MIDI_TASK_NAME, "Init");
+    vCliPrintf(MIDI_TASK_NAME, "Init");
 
     for (;;)
     {
@@ -125,22 +250,25 @@ static void vMidiMain(void *pvParameters)
 
 /* Public fuctions -----------------------------------------------------------*/
 
-bool MIDI_task_init(void)
+bool bMidiTaskInit(void)
 {
     bool bRetval = false;
 
     /* Create task */
     xTaskCreate(vMidiMain, MIDI_TASK_NAME, MIDI_TASK_STACK, NULL, MIDI_TASK_PRIO, &xMidiTaskHandle);
 
+    /* Init resources */
+    xMidiMessageBuffer = xMessageBufferCreate(MIDI_CMD_BUF_STORAGE_SIZE);
+
     /* Check resources */
-    if (xMidiTaskHandle != NULL)
+    if ((xMidiTaskHandle != NULL) && (xMidiMessageBuffer != NULL))
     {
         bRetval = true;
     }
     return (bRetval);
 }
 
-bool MIDI_task_notify(uint32_t u32Event)
+bool bMidiTaskNotify(uint32_t u32Event)
 {
     bool bRetval = false;
     /* Check if task has been init */
@@ -152,9 +280,9 @@ bool MIDI_task_notify(uint32_t u32Event)
     return bRetval;
 }
 
-uint8_t * MIDI_get_cmd_buf(void)
+MessageBufferHandle_t xMidiGetMessageBuffer(void)
 {
-    return pu8MidiCmdBuf;
+    return xMidiMessageBuffer;
 }
 
 /*****END OF FILE****/

@@ -52,14 +52,14 @@ extern "C" {
   * @brief Init resources for UI tasks
   * @retval operation result, true for correct creation, false for error
   */
-bool UI_task_init(void);
+bool bUiTaskInit(void);
 
 /**
   * @brief Notify event to a task.
   * @param u32Event event to notify.
   * @retval operation result, true for correct read, false for error
   */
-bool UI_task_notify(uint32_t u32Event);
+bool bUiTaskNotify(uint32_t u32Event);
 
 #ifdef __cplusplus
 }
