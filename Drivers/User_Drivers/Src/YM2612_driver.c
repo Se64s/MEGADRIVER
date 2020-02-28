@@ -359,13 +359,13 @@ bool bYM2612_set_note(YM2612_ch_id_t xChannel, uint8_t u8MidiNote)
 
 void vYM2612_key_on(YM2612_ch_id_t xChannel)
 {
-    uint8_t u8ChannelOffset = (xChannel & 0x03U) | ((xChannel / 3) << 2U);
+    uint8_t u8ChannelOffset = (xChannel % 3U) | ((xChannel / 3U) << 2U);
     vYM2612_write_reg(YM2612_ADDR_KEY_ON_OFF, 0xF0 | u8ChannelOffset, 0);
 }
 
 void vYM2612_key_off(YM2612_ch_id_t xChannel)
 {
-    uint8_t u8ChannelOffset = (xChannel & 0x03U) | ((xChannel / 3) << 2U);
+    uint8_t u8ChannelOffset = (xChannel % 3U) | ((xChannel / 3U) << 2U);
     vYM2612_write_reg(YM2612_ADDR_KEY_ON_OFF, 0x00 | u8ChannelOffset, 0);
 }
 
