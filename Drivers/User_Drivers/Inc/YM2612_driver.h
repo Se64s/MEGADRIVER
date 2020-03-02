@@ -24,6 +24,7 @@ extern "C"
 /* Option defines */
 #define YM2612_USE_RTOS
 #define YM2612_DEBUG
+//#define YM2612_TEST_GPIO
 
 /* Device parameters */
 #define YM2612_MAX_NUM_VOICE    (6U)

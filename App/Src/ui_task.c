@@ -108,7 +108,8 @@ static void adc_cb(adc_event_t xEvent)
 
 static void __ui_main( void *pvParameters )
 {
-    vTaskDelay(250 / portTICK_PERIOD_MS);
+    /* Init delay to for pow stabilization */
+    vTaskDelay(pdMS_TO_TICKS(1000U));
     
     /* Init encoder */
     ENCODER_init(ENCODER_ID_0, encoder_cb);

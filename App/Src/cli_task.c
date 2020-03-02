@@ -21,7 +21,11 @@
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
-#define CLI_EOL     "\r\n"
+/* Init message */
+#define CLI_INIT_MSG    "\r\n\r\n##################\r\n##\r\n## INIT SYNTH SYSTEM\r\n##\r\n##################\r\n"
+
+/* End of line terminator */
+#define CLI_EOL         "\r\n"
 
 /* Serial signals */
 #define CLI_SIGNAL_TX_DONE  (1UL << 0)
@@ -89,6 +93,12 @@ void _cli_main( void *pvParameters )
 
     /* Register used functions */
     cli_cmd_init();
+
+    /* Init delay to for pow stabilization */
+    vTaskDelay(pdMS_TO_TICKS(500U));
+
+    /* Start message */
+    vCliRawPrintf(CLI_INIT_MSG);
 
     /* Show init msg */
     vCliPrintf(CLI_TASK_NAME, "Init");

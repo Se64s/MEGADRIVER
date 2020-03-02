@@ -215,6 +215,9 @@ static void vSerialPortHandlerCallBack(serial_event_t xEvent)
 
 static void vMidiMain(void *pvParameters)
 {
+    /* Init delay to for pow stabilization */
+    vTaskDelay(pdMS_TO_TICKS(500U));
+
     /* Init resources */
     (void)SERIAL_init(SERIAL_0, vSerialPortHandlerCallBack);
 

@@ -14,12 +14,12 @@ def main():
     ]
 
     f_num_list = []
-    for block_num in range(7,-1,-1):
-        for note in base_note_freq:
-            f_num = note / pow(2, block_num - 1)
-            f_num_list.append(int(f_num))
+    block_num = 4
+    for note in base_note_freq:
+        f_num = note / pow(2, block_num - 1)
+        f_num_list.append(int(f_num))
     
-    print(f_num_list, len(f_num_list))
+    print("f_num: ", f_num_list, "block: ", block_num)
 
 if __name__ == "__main__":
     main()

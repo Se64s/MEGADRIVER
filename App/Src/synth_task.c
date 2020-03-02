@@ -335,6 +335,9 @@ static void vHandleMidiCmd(uint8_t * pu8MidiCmd, uint8_t u8CmdSize)
 
 static void vSynthTaskMain( void *pvParameters )
 {
+    /* Init delay to for pow stabilization */
+    vTaskDelay(pdMS_TO_TICKS(500U));
+
     /* Init YM2612 resources */
     (void)xYM2612_init();
 

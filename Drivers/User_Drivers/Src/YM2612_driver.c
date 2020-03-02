@@ -72,6 +72,12 @@ TIM_HandleTypeDef htim14;
 static void _us_delay(uint32_t microsec);
 
 /**
+  * @brief  Test output on each gpio out
+  * @retval None
+*/
+static void _low_level_test(void);
+
+/**
   * @brief  Init low level resources
   * @retval None
 */
@@ -106,6 +112,27 @@ static void _us_delay(uint32_t microsec)
     {
         __NOP();
     }
+}
+
+static void _low_level_test(void)
+{
+    YM_SET_BIT(YM2612_Dx_GPIO_PORT, YM2612_Dx_GPIO_PIN);
+    YM_SET_BIT(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
+    YM_SET_BIT(YM2612_A1_GPIO_PORT, YM2612_A1_GPIO_PIN);
+    YM_SET_BIT(YM2612_A0_GPIO_PORT, YM2612_A0_GPIO_PIN);
+    YM_SET_BIT(YM2612_RD_GPIO_PORT, YM2612_RD_GPIO_PIN);
+    YM_SET_BIT(YM2612_WR_GPIO_PORT, YM2612_WR_GPIO_PIN);
+    YM_SET_BIT(YM2612_CS_GPIO_PORT, YM2612_CS_GPIO_PIN);
+    _us_delay(10);
+
+    YM_RESET_BIT(YM2612_Dx_GPIO_PORT, YM2612_Dx_GPIO_PIN);
+    YM_RESET_BIT(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
+    YM_RESET_BIT(YM2612_A1_GPIO_PORT, YM2612_A1_GPIO_PIN);
+    YM_RESET_BIT(YM2612_A0_GPIO_PORT, YM2612_A0_GPIO_PIN);
+    YM_RESET_BIT(YM2612_RD_GPIO_PORT, YM2612_RD_GPIO_PIN);
+    YM_RESET_BIT(YM2612_WR_GPIO_PORT, YM2612_WR_GPIO_PIN);
+    YM_RESET_BIT(YM2612_CS_GPIO_PORT, YM2612_CS_GPIO_PIN);
+    _us_delay(10);
 }
 
 static void _low_level_init(void)
@@ -143,6 +170,10 @@ static void _low_level_init(void)
     YM2612_CS_GPIO_CLK();
     GPIO_InitStruct.Pin = YM2612_CS_GPIO_PIN;
     HAL_GPIO_Init(YM2612_CS_GPIO_PORT, &GPIO_InitStruct);
+
+#ifdef YM2612_TEST_GPIO
+    _low_level_test();
+#endif
 
     /* CLK_LINE */
     MX_TIM_Init();

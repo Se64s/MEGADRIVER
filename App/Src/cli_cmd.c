@@ -62,7 +62,7 @@ static BaseType_t devReset(char *pcWriteBuffer,
         size_t xWriteBufferLen,
         const char *pcCommandString)
 {
-    (void)snprintf(pcWriteBuffer, xWriteBufferLen, "OK");
+    vCliPrintf("CLI", "OK");
     (void)HAL_NVIC_SystemReset();
     return pdFALSE;
 }
