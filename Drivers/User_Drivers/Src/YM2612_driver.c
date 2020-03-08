@@ -62,7 +62,37 @@ const static uint16_t u16OctaveBaseValues[] = {
 /* Timer hanlder */
 TIM_HandleTypeDef htim14;
 
+/* Chip control structure */
+static xFmDevice_t xYmDevice = {0};
+
 /* Private function prototypes -----------------------------------------------*/
+
+/**
+  * @brief  Get chanbel register value from device structure.
+  * @param  pxDevice pointer to channel control structure.
+  * @param  u8RegAddr Address of register to get.
+  * @param  pu8RegData pointer where store register value.
+  * @retval True if registere has been extracted, False ioc.
+*/
+static bool _get_device_register_value(xFmDevice_t * pxDevice, uint8_t u8RegAddr, uint8_t * pu8RegData);
+
+/**
+  * @brief  Get chanbel register value from device structure.
+  * @param  pxChannel pointer to channel control structure.
+  * @param  u8RegAddr Address of register to get.
+  * @param  pu8RegData pointer where store register value.
+  * @retval True if registere has been extracted, False ioc.
+*/
+static bool _get_channel_register_value(xFmChannel_t * pxChannel, uint8_t u8RegAddr, uint8_t * pu8RegData);
+
+/**
+  * @brief  Get channel operator register value from device structure.
+  * @param  pxOperator pointer to operator structure.
+  * @param  u8RegAddr Address of register to get.
+  * @param  pu8RegData pointer where store register value.
+  * @retval True if registere has been extracted, False ioc.
+*/
+static bool _get_operator_register_value(xFmOperator_t * pxOperator, uint8_t u8RegAddr, uint8_t * pu8RegData);
 
 /**
   * @brief  Software delay
@@ -104,6 +134,107 @@ static void MX_TIM_Init(void);
 static void MX_TIM_Deinit(void);
 
 /* Private user code ---------------------------------------------------------*/
+
+static bool _get_device_register_value(xFmDevice_t * pxDevice, uint8_t u8RegAddr, uint8_t * pu8RegData)
+{
+    uint8_t bRetVal = false;
+
+    if ((pxDevice != NULL) && (pu8RegData != NULL))
+    {
+        uint8_t u8RegData = 0U;
+
+        if (u8RegAddr == YM2612_ADDR_LFO)
+        {
+            u8RegData = ((pxDevice->u8LfoOn & 0x01) << 3U) | (pxDevice->u8LfoFreq & 0x07);
+            *pu8RegData = u8RegData;
+            bRetVal = true;
+        }
+    }
+
+    return bRetVal;
+}
+
+static bool _get_channel_register_value(xFmChannel_t * pxChannel, uint8_t u8RegAddr, uint8_t * pu8RegData)
+{
+    uint8_t bRetVal = false;
+    
+    if ((pxChannel != NULL) && (pu8RegData != NULL))
+    {
+        uint8_t u8RegData = 0U;
+
+        if (u8RegAddr == YM2612_ADDR_FB_ALG)
+        {
+            u8RegData = ((pxChannel->u8Feedback & 0x07) << 3U) | (pxChannel->u8Algorithm & 0x07);
+            *pu8RegData = u8RegData;
+            bRetVal = true;
+        }
+        else if (u8RegAddr == YM2612_ADDR_LR_AMS_PMS)
+        {
+            u8RegData = ((pxChannel->u8AudioOut & 0x03) << 6U) | 
+            ((pxChannel->u8AmpModSens & 0x03) << 4U) | 
+            (pxChannel->u8PhaseModSens & 0x07);
+            *pu8RegData = u8RegData;
+            bRetVal = true;
+        }
+    }
+
+    return bRetVal;
+}
+
+static bool _get_operator_register_value(xFmOperator_t * pxOperator, uint8_t u8RegAddr, uint8_t * pu8RegData)
+{
+    uint8_t bRetVal = false;
+    
+    if ((pxOperator != NULL) && (pu8RegData != NULL))
+    {
+        uint8_t u8RegData = 0U;
+
+        if (u8RegAddr == YM2612_ADDR_DET_MULT)
+        {
+            u8RegData = ((pxOperator->u8Detune & 0x07) << 4U) | (pxOperator->u8Multiple & 0x0F);
+            *pu8RegData = u8RegData;
+            bRetVal = true;
+        }
+        else if (u8RegAddr == YM2612_ADDR_TOT_LVL)
+        {
+            u8RegData = pxOperator->u8TotalLevel & 0x1F;
+            *pu8RegData = u8RegData;
+            bRetVal = true;
+        }
+        else if (u8RegAddr == YM2612_ADDR_KS_AR)
+        {
+            u8RegData = ((pxOperator->u8KeyScale & 0x03) << 6U) | (pxOperator->u8AttackRate & 0x1F);
+            *pu8RegData = u8RegData;
+            bRetVal = true;
+        }
+        else if (u8RegAddr == YM2612_ADDR_AM_DR)
+        {
+            u8RegData = ((pxOperator->u8AmpMod & 0x01) << 7U) | (pxOperator->u8DecayRate & 0x1F);
+            *pu8RegData = u8RegData;
+            bRetVal = true;
+        }
+        else if (u8RegAddr == YM2612_ADDR_SR)
+        {
+            u8RegData = pxOperator->u8SustainRate & 0x1F;
+            *pu8RegData = u8RegData;
+            bRetVal = true;
+        }
+        else if (u8RegAddr == YM2612_ADDR_SL_RR)
+        {
+            u8RegData = ((pxOperator->u8SustainLevel & 0x0F) << 4U) | (pxOperator->u8ReleaseRate & 0x0F);
+            *pu8RegData = u8RegData;
+            bRetVal = true;
+        }
+        else if (u8RegAddr == YM2612_ADDR_SSG_EG)
+        {
+            u8RegData = pxOperator->u8SsgEg & 0x0F;
+            *pu8RegData = u8RegData;
+            bRetVal = true;
+        }
+    }
+    
+    return bRetVal;
+}
 
 static void _us_delay(uint32_t microsec)
 {
@@ -292,6 +423,9 @@ YM2612_status_t xYM2612_deinit(void)
 
 void vYM2612_write_reg(uint8_t u8RegAddr, uint8_t u8RegData, YM2612_bank_t xBank)
 {
+#ifdef YM2612_DEBUG
+    vCliPrintf("DBG", "WR REG: %02X-%02X-%02X", u8RegAddr, u8RegData, xBank);
+#endif
 #ifdef YM2612_USE_RTOS
     taskENTER_CRITICAL();
 #endif
@@ -338,6 +472,56 @@ void vYM2612_write_reg(uint8_t u8RegAddr, uint8_t u8RegData, YM2612_bank_t xBank
 #ifdef YM2612_USE_RTOS
     taskEXIT_CRITICAL();
 #endif
+}
+
+void vYM2612_set_reg_preset(xFmDevice_t * pxRegPreset)
+{
+    uint8_t u8RegValue = 0U;
+
+    /* Copy register preset */
+    xYmDevice = *pxRegPreset;
+
+    /* Set values on chip */
+    (void)_get_device_register_value(&xYmDevice, YM2612_ADDR_LFO, &u8RegValue);
+    vYM2612_write_reg(YM2612_ADDR_LFO, u8RegValue, YM2612_BANK_0);
+
+    for (uint32_t u32IVoice = 0U; u32IVoice < YM2612_NUM_CHANNEL; u32IVoice++)
+    {
+        uint8_t u8BankOffset = u32IVoice / 3U;
+        uint8_t u8ChannelOffset = u32IVoice % 3U;
+
+        (void)_get_channel_register_value(&xYmDevice.xChannel[u32IVoice], YM2612_ADDR_FB_ALG, &u8RegValue);
+        vYM2612_write_reg(YM2612_ADDR_FB_ALG + u8ChannelOffset, u8RegValue, u8BankOffset);
+
+        (void)_get_channel_register_value(&xYmDevice.xChannel[u32IVoice], YM2612_ADDR_LR_AMS_PMS, &u8RegValue);
+        vYM2612_write_reg(YM2612_ADDR_LR_AMS_PMS + u8ChannelOffset, u8RegValue, u8BankOffset);
+
+        for (uint32_t u32IOperator = 0U; u32IOperator < YM2612_NUM_OP_CHANNEL; u32IOperator++)
+        {
+            uint8_t u8OpOffset = u32IOperator * 4;
+
+            (void)_get_operator_register_value(&xYmDevice.xChannel[u32IVoice].xOperator[u32IOperator], YM2612_ADDR_DET_MULT, &u8RegValue);
+            vYM2612_write_reg(YM2612_ADDR_DET_MULT + u8ChannelOffset + u8OpOffset, u8RegValue, u8BankOffset);
+
+            (void)_get_operator_register_value(&xYmDevice.xChannel[u32IVoice].xOperator[u32IOperator], YM2612_ADDR_TOT_LVL, &u8RegValue);
+            vYM2612_write_reg(YM2612_ADDR_TOT_LVL + u8ChannelOffset + u8OpOffset, u8RegValue, u8BankOffset);
+
+            (void)_get_operator_register_value(&xYmDevice.xChannel[u32IVoice].xOperator[u32IOperator], YM2612_ADDR_KS_AR, &u8RegValue);
+            vYM2612_write_reg(YM2612_ADDR_KS_AR + u8ChannelOffset + u8OpOffset, u8RegValue, u8BankOffset);
+
+            (void)_get_operator_register_value(&xYmDevice.xChannel[u32IVoice].xOperator[u32IOperator], YM2612_ADDR_AM_DR, &u8RegValue);
+            vYM2612_write_reg(YM2612_ADDR_AM_DR + u8ChannelOffset + u8OpOffset, u8RegValue, u8BankOffset);
+
+            (void)_get_operator_register_value(&xYmDevice.xChannel[u32IVoice].xOperator[u32IOperator], YM2612_ADDR_SR, &u8RegValue);
+            vYM2612_write_reg(YM2612_ADDR_SR + u8ChannelOffset + u8OpOffset, u8RegValue, u8BankOffset);
+
+            (void)_get_operator_register_value(&xYmDevice.xChannel[u32IVoice].xOperator[u32IOperator], YM2612_ADDR_SL_RR, &u8RegValue);
+            vYM2612_write_reg(YM2612_ADDR_SL_RR + u8ChannelOffset + u8OpOffset, u8RegValue, u8BankOffset);
+
+            (void)_get_operator_register_value(&xYmDevice.xChannel[u32IVoice].xOperator[u32IOperator], YM2612_ADDR_SSG_EG, &u8RegValue);
+            vYM2612_write_reg(YM2612_ADDR_SSG_EG + u8ChannelOffset + u8OpOffset, u8RegValue, u8BankOffset);
+        }
+    }
 }
 
 bool bYM2612_set_note(YM2612_ch_id_t xChannel, uint8_t u8MidiNote)

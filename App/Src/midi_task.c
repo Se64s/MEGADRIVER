@@ -136,12 +136,23 @@ static bool bProcessMidiCmd(uint8_t u8MidiStatus, MidiCtrl_t * pxMidiCfg)
 
 static void vMidiCmdSysExCallBack(uint8_t *pu8Data, uint32_t u32LenData)
 {
-    vCliPrintf(MIDI_TASK_NAME, "SysEx: ");
-    if (pu8Data != NULL)
+    if ((pu8Data) != NULL)
     {
-        while (u32LenData-- != 0)
+        size_t xBytesSent;
+        uint8_t u8DataIndex = 0U;
+        MidiMsg_t xMidiCmd = {0};
+
+        xMidiCmd.xType = MIDI_TYPE_SYSEX;
+
+        xBytesSent = xMessageBufferSend(xMidiMessageBuffer,(void *)&xMidiCmd, sizeof(MidiMsg_t), pdMS_TO_TICKS(MIDI_MSG_TIMEOUT));
+
+        if (xBytesSent == sizeof(MidiMsg_t))
         {
-            vCliRawPrintf("%02X ", *pu8Data++);
+            vCliPrintf(MIDI_TASK_NAME, "SYSEX: CMD LEN %d", u32LenData);
+        }
+        else
+        {
+            vCliPrintf(MIDI_TASK_NAME, "SYSEX: Memory Error");
         }
     }
 }
@@ -151,17 +162,22 @@ static void vMidiCmd1CallBack(uint8_t u8Cmd, uint8_t u8Data)
     if (bProcessMidiCmd(u8Cmd, &xMidiCfg))
     {
         size_t xBytesSent;
-        uint8_t pu8MidiCmd[] = {u8Cmd, u8Data};
+        uint8_t u8DataIndex = 0U;
+        MidiMsg_t xMidiCmd = {0};
 
-        xBytesSent = xMessageBufferSend(xMidiMessageBuffer,(void *)pu8MidiCmd, sizeof(pu8MidiCmd), pdMS_TO_TICKS(MIDI_MSG_TIMEOUT));
+        xMidiCmd.xType = MIDI_TYPE_CMD;
+        xMidiCmd.u8Data[u8DataIndex++] = u8Cmd;
+        xMidiCmd.u8Data[u8DataIndex++] = u8Data;
 
-        if (xBytesSent == sizeof(pu8MidiCmd))
+        xBytesSent = xMessageBufferSend(xMidiMessageBuffer,(void *)&xMidiCmd, sizeof(MidiMsg_t), pdMS_TO_TICKS(MIDI_MSG_TIMEOUT));
+
+        if (xBytesSent == sizeof(MidiMsg_t))
         {
             vCliPrintf(MIDI_TASK_NAME, "CMD1: %02X-%02X", u8Cmd, u8Data);
         }
         else
         {
-            vCliPrintf(MIDI_TASK_NAME, "CMD2: Memory Error");
+            vCliPrintf(MIDI_TASK_NAME, "CMD1: Memory Error");
         }
     }
 }
@@ -171,11 +187,17 @@ static void vMidiCmd2CallBack(uint8_t u8Cmd, uint8_t u8Data0, uint8_t u8Data1)
     if (bProcessMidiCmd(u8Cmd, &xMidiCfg))
     {
         size_t xBytesSent;
-        uint8_t pu8MidiCmd[] = {u8Cmd, u8Data0, u8Data1};
+        uint8_t u8DataIndex = 0U;
+        MidiMsg_t xMidiCmd = {0};
 
-        xBytesSent = xMessageBufferSend(xMidiMessageBuffer,(void *)pu8MidiCmd, sizeof(pu8MidiCmd), pdMS_TO_TICKS(MIDI_MSG_TIMEOUT));
+        xMidiCmd.xType = MIDI_TYPE_CMD;
+        xMidiCmd.u8Data[u8DataIndex++] = u8Cmd;
+        xMidiCmd.u8Data[u8DataIndex++] = u8Data0;
+        xMidiCmd.u8Data[u8DataIndex++] = u8Data1;
 
-        if (xBytesSent == sizeof(pu8MidiCmd))
+        xBytesSent = xMessageBufferSend(xMidiMessageBuffer,(void *)&xMidiCmd, sizeof(MidiMsg_t), pdMS_TO_TICKS(MIDI_MSG_TIMEOUT));
+
+        if (xBytesSent == sizeof(MidiMsg_t))
         {
             vCliPrintf(MIDI_TASK_NAME, "CMD2: %02X-%02X-%02X", u8Cmd, u8Data0, u8Data1);
         }
@@ -188,7 +210,23 @@ static void vMidiCmd2CallBack(uint8_t u8Cmd, uint8_t u8Data0, uint8_t u8Data1)
 
 static void vMidiCmdRtCallBack(uint8_t u8RtCmd)
 {
-    vCliPrintf(MIDI_TASK_NAME, "RT: %02X", u8RtCmd);
+    size_t xBytesSent;
+    uint8_t u8DataIndex = 0U;
+    MidiMsg_t xMidiCmd = {0};
+
+    xMidiCmd.xType = MIDI_TYPE_RT;
+    xMidiCmd.u8Data[u8DataIndex++] = u8RtCmd;
+
+    xBytesSent = xMessageBufferSend(xMidiMessageBuffer,(void *)&xMidiCmd, sizeof(MidiMsg_t), pdMS_TO_TICKS(MIDI_MSG_TIMEOUT));
+
+    if (xBytesSent == sizeof(MidiMsg_t))
+    {
+        vCliPrintf(MIDI_TASK_NAME, "RT: %02X", u8RtCmd);
+    }
+    else
+    {
+        vCliPrintf(MIDI_TASK_NAME, "RT: Memory Error");
+    }
 }
 
 static void vSerialPortHandlerCallBack(serial_event_t xEvent)
@@ -222,7 +260,7 @@ static void vMidiMain(void *pvParameters)
     (void)SERIAL_init(SERIAL_0, vSerialPortHandlerCallBack);
 
     /* Init MIDI library */
-    (void)midi_init(vMidiCmdSysExCallBack, vMidiCmd1CallBack, vMidiCmd2CallBack, vMidiCmdRtCallBack);
+    (void)midi_init(vMidiCmdSysExCallBack, vMidiCmd1CallBack, vMidiCmd2CallBack, NULL);
 
     /* Init control structure */
     xMidiCfg.xMode = MidiMode3;

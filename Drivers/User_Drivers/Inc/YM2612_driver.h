@@ -23,8 +23,14 @@ extern "C"
 
 /* Option defines */
 #define YM2612_USE_RTOS
-#define YM2612_DEBUG
-//#define YM2612_TEST_GPIO
+// #define YM2612_DEBUG
+// #define YM2612_TEST_GPIO
+
+/* Number of channels by device */
+#define YM2612_NUM_CHANNEL      (6U)
+
+/* Number of operator by channel */
+#define YM2612_NUM_OP_CHANNEL   (4U)
 
 /* Device parameters */
 #define YM2612_MAX_NUM_VOICE    (6U)
@@ -97,6 +103,41 @@ extern "C"
 
 /* Exported types ------------------------------------------------------------*/
 
+/* Operator structure */
+typedef struct 
+{
+  uint8_t u8Detune;
+  uint8_t u8Multiple;
+  uint8_t u8TotalLevel;
+  uint8_t u8KeyScale;
+  uint8_t u8AttackRate;
+  uint8_t u8AmpMod;
+  uint8_t u8DecayRate;
+  uint8_t u8SustainRate;
+  uint8_t u8SustainLevel;
+  uint8_t u8ReleaseRate;
+  uint8_t u8SsgEg;
+} xFmOperator_t;
+
+/* Channel voice structure */
+typedef struct 
+{
+  uint8_t u8Feedback;
+  uint8_t u8Algorithm;
+  uint8_t u8AudioOut;
+  uint8_t u8AmpModSens;
+  uint8_t u8PhaseModSens;
+  xFmOperator_t xOperator[YM2612_NUM_OP_CHANNEL];
+} xFmChannel_t;
+
+/* Chip voice structure */
+typedef struct 
+{
+  uint8_t u8LfoOn;
+  uint8_t u8LfoFreq;
+  xFmChannel_t xChannel[YM2612_NUM_CHANNEL];
+} xFmDevice_t;
+
 /* Operation status */
 typedef enum
 {
@@ -108,19 +149,21 @@ typedef enum
 /* YM2612 register addresses */
 typedef enum
 {
-    YM2612_ADDR_TEST0 = 0x21U,      /* LSI test data */
-    YM2612_ADDR_LFO = 0x22U,        /* LFO freq control */
-    YM2612_ADDR_TIMA_0 = 0x24U,     /* TIMA ?? */
-    YM2612_ADDR_TIMA_1 = 0x25U,     /* TIMA ?? */
-    YM2612_ADDR_TIMB_0 = 0x26U,     /* TIMB ?? */
-    YM2612_ADDR_TIMx_CTRL = 0x27U,  /* TIMAB Ctrl */
-    YM2612_ADDR_KEY_ON_OFF = 0x28U, /* Key on/off */
-    YM2612_ADDR_DAC_DATA = 0x2AU,   /* DAC data */
-    YM2612_ADDR_DAC_SEL = 0x2BU,    /* DAC sel */
-    YM2612_ADDR_TEST1 = 0x2CU,      /* LSI test data */
-    YM2612_ADDR_CH0_FNUM_1 = 0xA0,  /* LSI test data */
-    YM2612_ADDR_FNUM_1 = 0xA0,      /* FNUM1 */
-    YM2612_ADDR_FNUM_2 = 0xA4,      /* FNUM2 */
+    YM2612_ADDR_LFO = 0x22U,
+    YM2612_ADDR_KEY_ON_OFF = 0x28U,
+    YM2612_ADDR_DAC_DATA = 0x2AU,
+    YM2612_ADDR_DAC_SEL = 0x2BU,
+    YM2612_ADDR_DET_MULT = 0x30U,
+    YM2612_ADDR_TOT_LVL = 0x40U,
+    YM2612_ADDR_KS_AR = 0x50U,
+    YM2612_ADDR_AM_DR = 0x60U,
+    YM2612_ADDR_SR = 0x70U,
+    YM2612_ADDR_SL_RR = 0x80U,
+    YM2612_ADDR_SSG_EG = 0x90U,
+    YM2612_ADDR_FNUM_1 = 0xA0U,
+    YM2612_ADDR_FNUM_2 = 0xA4U,
+    YM2612_ADDR_FB_ALG = 0xB0U,
+    YM2612_ADDR_LR_AMS_PMS = 0xB4U,
     YM2612_ADDR_NODEF = 0xFFU,
 } YM2612_addr_t;
 
@@ -166,6 +209,13 @@ YM2612_status_t xYM2612_deinit(void);
   * @retval None
   */
 void vYM2612_write_reg(uint8_t u8RegAddr, uint8_t u8RegData, YM2612_bank_t xBank);
+
+/**
+  * @brief Set reg preset.
+  * @param pxRegPreset pointer with reg preset to set
+  * @retval None
+  */
+void vYM2612_set_reg_preset(xFmDevice_t * pxRegPreset);
 
 /**
   * @brief Set midi note into channel

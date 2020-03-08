@@ -12,11 +12,12 @@ def read_byte(file_handler):
     return struct.unpack('B', file_handler.read(1))[0]
 
 def process_file(file_path, ym_handler):
+    retval = False
     with open(file_path, 'rb') as byte_reader:
         byte_data = byte_reader.read()
         if len(byte_data) == 43:
             byte_reader.seek(0)
-            # Read algorithm - 3
+            # Read algorithm
             ym_handler.op_algorithm = read_byte(byte_reader)
             ym_handler.feedback = read_byte(byte_reader)
             reg = read_byte(byte_reader)
@@ -42,24 +43,29 @@ def process_file(file_path, ym_handler):
                 ym_handler.channel[channel_id + 1] = ym_handler.channel[0]
                 ym_handler.channel[channel_id + 1].channel_id = channel_id + 1
             # Set all channels
-            ym_handler.set_reg_values()
-            return True
+            if ym_handler.ser_com:
+                ym_handler.set_reg_values()
+            if ym_handler.midi_com:
+                ym_handler.midi_set_reg_values()
+            retval = True
         else:
             print("VGI: Error on file size (%d/43)" % len(byte_data))
-            return False
+    return retval
 
 def main():
     # Get parameters
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', type=str, required=True, help="path to vgi file to process")
-    parser.add_argument('-s', type=str, required=True, help="serial port to use")
+    parser.add_argument('-s', type=str, required=False, help="serial port to use")
+    parser.add_argument('-m', type=int, required=False, help="midi port to use")
     args = parser.parse_args()
     vgi_file_path = args.f
     serial_com = args.s
+    midi_com = args.m
     # Create handler for YM chip
-    fm_chip = YM2612.YM2612Chip(com=serial_com)
-    fm_chip.reset_board()
+    fm_chip = YM2612.YM2612Chip(ser_com=serial_com, midi_com=midi_com)
     # Try to get register values from file
+    print ("VGI: Init process")
     if process_file(vgi_file_path, fm_chip):
         print ("VGI: OK")
     else:

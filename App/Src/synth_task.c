@@ -11,8 +11,6 @@
 #include "ui_task.h"
 #include "midi_task.h"
 
-#include "YM2612_driver.h"
-
 /* Private includes ----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
@@ -105,10 +103,16 @@ static void vSynthTaskMain(void *pvParameters);
 /**
   * @brief Handle midi cmd
   * @param pu8MidiCmd
-  * @param u8CmdSize
   * @retval None
   */
-static void vHandleMidiCmd(uint8_t * pu8MidiCmd, uint8_t u8CmdSize);
+static void vHandleMidiCmd(uint8_t * pu8MidiCmd);
+
+/**
+  * @brief Read SysEx message from midi lib
+  * @param None
+  * @retval None
+  */
+static void vHandleMidiSysEx(void);
 
 /* Private fuctions ----------------------------------------------------------*/
 
@@ -314,23 +318,50 @@ static void _init_setup(void)
     }
 }
 
-static void vHandleMidiCmd(uint8_t * pu8MidiCmd, uint8_t u8CmdSize)
+static void vHandleMidiCmd(uint8_t * pu8MidiCmd)
 {
-  if (u8CmdSize == 3U)
-  {
-    uint8_t u8MidiCmd = pu8MidiCmd[0U] & MIDI_STATUS_CMD_MASK;
-    uint8_t u8MidiData0 = pu8MidiCmd[1U];
-    uint8_t u8MidiData1 = pu8MidiCmd[2U];
+    if (pu8MidiCmd != NULL)
+    {
+        uint8_t u8MidiCmd = *pu8MidiCmd++;
 
-    if (u8MidiCmd == MIDI_STATUS_NOTE_ON)
-    {
-        vCtrlVoiceOn(&xVoiceCtrl, u8MidiData0, u8MidiData1);
+        if ((u8MidiCmd & MIDI_STATUS_CMD_MASK) == MIDI_STATUS_NOTE_ON)
+        {
+            uint8_t u8MidiData0 = *pu8MidiCmd++;
+            uint8_t u8MidiData1 = *pu8MidiCmd++;
+            vCtrlVoiceOn(&xVoiceCtrl, u8MidiData0, u8MidiData1);
+        }
+        else if ((u8MidiCmd & MIDI_STATUS_CMD_MASK) == MIDI_STATUS_NOTE_OFF)
+        {
+            uint8_t u8MidiData0 = *pu8MidiCmd++;
+            uint8_t u8MidiData1 = *pu8MidiCmd++;
+            vCtrlVoiceOff(&xVoiceCtrl, u8MidiData0, u8MidiData1);
+        }
     }
-    else if (u8MidiCmd == MIDI_STATUS_NOTE_OFF)
+}
+
+static void vHandleMidiSysEx(void)
+{
+    uint32_t u32SysExLenData = 0U;
+    uint8_t * pu8SysExData;
+
+    if (midi_get_sysex_data(&pu8SysExData, &u32SysExLenData) == midiOk)
     {
-        vCtrlVoiceOff(&xVoiceCtrl, u8MidiData0, u8MidiData1);
+        if (u32SysExLenData >= SYNTH_LEN_MIN_SYSEX_CMD)
+        {
+            SynthSysExCmd_t * pxSysExCmd = (SynthSysExCmd_t *)pu8SysExData;
+
+            if ((pxSysExCmd->xSysExCmd) == SYNTH_SYSEX_CMD_SET_PRESET && (u32SysExLenData == SYNTH_LEN_SET_REG_CMD))
+            {
+                xFmDevice_t * xPresetData = &pxSysExCmd->pu8CmdData;
+                vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD SET PRESET");
+                vYM2612_set_reg_preset(xPresetData);
+            }
+        }
+        else
+        {
+            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD too short");
+        }
     }
-  }
 }
 
 static void vSynthTaskMain( void *pvParameters )
@@ -357,15 +388,25 @@ static void vSynthTaskMain( void *pvParameters )
       if (MsgBuff != NULL)
       {
         size_t xReceivedBytes;
-        uint8_t pu8TmpCmd[SYNTH_TMP_CMD_SIZE] = {0};
+        MidiMsg_t xMidiCmd = {0};
 
         /* Get cmd from buffer */
-        xReceivedBytes = xMessageBufferReceive(MsgBuff, (void *) pu8TmpCmd, sizeof(pu8TmpCmd), pdMS_TO_TICKS(SYNTH_CMD_TIMEOUT));
+        xReceivedBytes = xMessageBufferReceive(MsgBuff, (void *) &xMidiCmd, sizeof(MidiMsg_t), pdMS_TO_TICKS(SYNTH_CMD_TIMEOUT));
 
         /* Handle cmd if not empty */
-        if (xReceivedBytes != 0U)
+        if (xReceivedBytes == sizeof(MidiMsg_t))
         {
-          vHandleMidiCmd(pu8TmpCmd, xReceivedBytes);
+            if (xMidiCmd.xType == MIDI_TYPE_CMD)
+            {
+                vHandleMidiCmd(xMidiCmd.u8Data);
+            }
+            else if (xMidiCmd.xType == MIDI_TYPE_RT)
+            {
+            }
+            else if (xMidiCmd.xType == MIDI_TYPE_SYSEX)
+            {
+                vHandleMidiSysEx();
+            }
         }
       }
     }

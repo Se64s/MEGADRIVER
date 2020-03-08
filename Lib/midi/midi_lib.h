@@ -104,7 +104,7 @@ typedef enum
 #define MIDI_STATUS_SYS_EX_END 0xF7
 
 /* Sys ex max buffer size */
-#define SYS_EX_BUFF_SIZE 32
+#define SYS_EX_BUFF_SIZE 310
 
   /* Exported functions prototypes ---------------------------------------------*/
 
@@ -135,6 +135,14 @@ typedef enum
  * @retval Operation result.
  */
   midiStatus_t midi_reset_fsm(void);
+
+  /**
+ * @brief  Get buffer for SysEx data.
+ * @param  pu8Data pointer to store buffer used for sysex data
+ * @param  pu32LenData pointer to store the len of the current sysex data.
+ * @retval Operation result.
+ */
+  midiStatus_t midi_get_sysex_data(uint8_t ** pu8Data, uint32_t * pu32LenData);
 
 #ifdef __cplusplus
 }

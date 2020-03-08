@@ -178,7 +178,7 @@ static midiStatus_t state_handler_wait_byte_sys_ex(uint8_t rx_byte)
                 if (midi_cb_sys_ex != NULL)
                 {
                     midi_cb_sys_ex(sys_ex_buff_data, i_data_sys_ex);
-                    i_data_sys_ex = 0;
+                    //i_data_sys_ex = 0;
                 }
             }
             fsm_rx_state = dispatch_status;
@@ -348,6 +348,20 @@ midiStatus_t midi_reset_fsm(void)
     midi_tmp_data_2 = 0;
 
     return retval;
+}
+
+midiStatus_t midi_get_sysex_data(uint8_t ** pu8Data, uint32_t * pu32LenData)
+{
+    midiStatus_t xRetval = midiError;
+
+    if ((pu8Data != NULL) && (pu32LenData != NULL))
+    {
+        *pu8Data = sys_ex_buff_data;
+        *pu32LenData = i_data_sys_ex;
+        xRetval = midiOk;
+    }
+
+    return xRetval;
 }
 
 /* EOF */
