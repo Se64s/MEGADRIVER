@@ -28,16 +28,32 @@ extern "C" {
 /* Private defines -----------------------------------------------------------*/
 
 /* Task parameters */
-#define SYNTH_TASK_NAME   "SYNTH"
-#define SYNTH_TASK_STACK  (128U)
-#define SYNTH_TASK_PRIO   (2U)
+#define SYNTH_TASK_NAME             "SYNTH"
+#define SYNTH_TASK_STACK            (128U)
+#define SYNTH_TASK_PRIO             (2U)
 
 /* SysEx CMD parameters */
-#define SYNTH_LEN_VENDOR_ID       (3U)
-#define SYNTH_LEN_MIN_SYSEX_CMD   (4U)
-#define SYNTH_LEN_SET_REG_CMD     (300U)
+#define SYNTH_LEN_VENDOR_ID         (3U)
+#define SYNTH_LEN_MIN_SYSEX_CMD     (4U)
+#define SYNTH_LEN_SET_REG_CMD       (300U)
+
+/* Synth message parameters */
+#define SYNTH_LEN_MSG               (4U)
+
+/* Maximun number of voices */
+#define SYNTH_MAX_NUM_VOICE     (YM2612_MAX_NUM_VOICE)
 
 /* Exported types ------------------------------------------------------------*/
+
+/* Synth commands */
+typedef enum
+{
+    SYNTH_CMD_NOTE_ON = 0x00U,
+    SYNTH_CMD_NOTE_OFF,
+    SYNTH_CMD_NOTE_OFF_ALL,
+    SYNTH_CMD_SYSEX,
+    SYNTH_CMD_NO_DEF = 0xFFU
+} SynthMsgType_t;
 
 /* SysEx defined cmd */
 typedef enum
@@ -53,6 +69,13 @@ typedef struct
   SynthSysExCmdDef_t xSysExCmd;
   uint8_t * pu8CmdData;
 } SynthSysExCmd_t;
+
+/* Synth cmd message structure */
+typedef struct
+{
+  SynthMsgType_t xType;
+  uint8_t u8Data[SYNTH_LEN_MSG];
+} SynthMsg_t;
 
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/

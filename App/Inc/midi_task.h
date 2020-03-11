@@ -28,12 +28,18 @@ extern "C" {
 /* Private defines -----------------------------------------------------------*/
 
 /* Task parameters */
-#define MIDI_TASK_NAME      "MIDI"
-#define MIDI_TASK_STACK     (128U)
-#define MIDI_TASK_PRIO      (2U)
+#define MIDI_TASK_NAME                  "MIDI"
+#define MIDI_TASK_STACK                 (128U)
+#define MIDI_TASK_PRIO                  (2U)
 
 /* Midi msg parameter */
-#define MIDI_MSG_DATA_LEN   (4U)
+#define MIDI_MSG_DATA_LEN               (4U)
+
+/* Signal definition */
+#define MIDI_SIGNAL_RX_DATA             (1UL << 0)
+#define MIDI_SIGNAL_ERROR               (1UL << 2)
+#define MIDI_SIGNAL_CHANGE_MODE_POLY    (1UL << 3)
+#define MIDI_SIGNAL_CHANGE_MODE_MONO    (1UL << 4)
 
 /* Exported types ------------------------------------------------------------*/
 
@@ -45,13 +51,6 @@ typedef enum
   MIDI_TYPE_SYSEX,
   MIDI_TYPE_NO_DEF = 0xFFU
 } MidiMsgType_t;
-
-/* Midi message structure */
-typedef struct
-{
-  MidiMsgType_t xType;
-  uint8_t u8Data[MIDI_MSG_DATA_LEN];
-} MidiMsg_t;
 
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/

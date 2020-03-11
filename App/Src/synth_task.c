@@ -15,77 +15,46 @@
 /* Private define ------------------------------------------------------------*/
 
 /* Timeout for rx a cmd */
-#define SYNTH_CMD_TIMEOUT   (1000U)
+#define SYNTH_CMD_TIMEOUT       (1000U)
 
 /* Size of cmd buff */
-#define SYNTH_TMP_CMD_SIZE  (3U)
-
-/* Maximun number of voices */
-#define SYNTH_MAX_NUM_VOICE (YM2612_MAX_NUM_VOICE)
+#define SYNTH_TMP_CMD_SIZE      (3U)
 
 /* Private typedef -----------------------------------------------------------*/
-
-/* Voice modes */
-typedef enum 
-{
-    SYNTH_MODE_MONO = 0x00U,
-    SYNTH_MODE_POLY,
-    SYNTH_MODE_NOTDEF = 0xFFU
-} synth_voice_mode_t;
-
-/* Voice structure */
-typedef struct
-{
-    uint8_t u8Note;
-    uint8_t u8Velocity;
-    bool bStatus;
-} synth_voice_t;
-
-/* Voice control structure */
-typedef struct
-{
-    synth_voice_mode_t xMode;
-    uint8_t u8NumVoices;
-    uint8_t u8NumActVoices;
-    synth_voice_t xVoiceList[SYNTH_MAX_NUM_VOICE];
-    synth_voice_t xTmpVoice;
-} synth_ctrl_voice_t;
-
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 
 /* Task handler */
 TaskHandle_t xSynthTaskHandle = NULL;
 
-/* Voice control structure */
-static synth_ctrl_voice_t xVoiceCtrl = {0};
-
 /* Private function prototypes -----------------------------------------------*/
 
 /**
-  * @brief Reset voice control structure
-  * @param pxVoiceCtrl pointer to control structure.
-  * @retval None
-  */
-static void vCtrlVoiceReset(synth_ctrl_voice_t * pxVoiceCtrl);
-
-/**
   * @brief Activate voice.
-  * @param pxVoiceCtrl pointer to control structure.
-  * @param u8Note Note to assign.
-  * @param u8Velocity Note velocity.
+  * @param pxCmdMsg pointer to synth cmd.
   * @retval None
   */
-static void vCtrlVoiceOn(synth_ctrl_voice_t * pxVoiceCtrl, uint8_t u8Note, uint8_t u8Velocity);
+static void vCmdVoiceOn(SynthMsg_t * pxCmdMsg);
 
 /**
   * @brief Deactivate voice.
-  * @param pxVoiceCtrl pointer to control structure.
-  * @param u8Note Note to assign.
-  * @param u8Velocity Note velocity.
+  * @param pxCmdMsg pointer to synth cmd.
   * @retval None
   */
-static void vCtrlVoiceOff(synth_ctrl_voice_t * pxVoiceCtrl, uint8_t u8Note, uint8_t u8Velocity);
+static void vCmdVoiceOff(SynthMsg_t * pxCmdMsg);
+
+/**
+  * @brief Deactivate all voices.
+  * @retval None
+  */
+static void vCmdVoiceOffAll(void);
+
+/**
+  * @brief Read SysEx message from midi lib
+  * @param None
+  * @retval None
+  */
+static void vCmdSysEx(void);
 
 /**
   * @brief Initial YM2612 setup
@@ -100,155 +69,80 @@ static void _init_setup(void);
   */
 static void vSynthTaskMain(void *pvParameters);
 
-/**
-  * @brief Handle midi cmd
-  * @param pu8MidiCmd
-  * @retval None
-  */
-static void vHandleMidiCmd(uint8_t * pu8MidiCmd);
-
-/**
-  * @brief Read SysEx message from midi lib
-  * @param None
-  * @retval None
-  */
-static void vHandleMidiSysEx(void);
-
 /* Private fuctions ----------------------------------------------------------*/
 
-static void vCtrlVoiceReset(synth_ctrl_voice_t * pxVoiceCtrl)
+static void vCmdVoiceOn(SynthMsg_t * pxCmdMsg)
 {
-    pxVoiceCtrl->xMode = SYNTH_MODE_POLY;
-    pxVoiceCtrl->u8NumVoices = SYNTH_MAX_NUM_VOICE;
-    pxVoiceCtrl->u8NumActVoices = 0U;
-
-    for (uint32_t u32Voice = 0; u32Voice < SYNTH_MAX_NUM_VOICE; u32Voice++)
+    if (pxCmdMsg->xType == SYNTH_CMD_NOTE_ON)
     {
-        pxVoiceCtrl->xVoiceList[u32Voice].u8Note = 0U;
-        pxVoiceCtrl->xVoiceList[u32Voice].u8Velocity = 0U;
-        pxVoiceCtrl->xVoiceList[u32Voice].bStatus = false;
-    }
+        uint8_t u8VoiceChannel = pxCmdMsg->u8Data[0U];
+        uint8_t u8Note = pxCmdMsg->u8Data[1U];
 
-    pxVoiceCtrl->xTmpVoice.u8Note = 0U;
-    pxVoiceCtrl->xTmpVoice.u8Velocity = 0U;
-    pxVoiceCtrl->xTmpVoice.bStatus = false;
-}
-
-static void vCtrlVoiceOn(synth_ctrl_voice_t * pxVoiceCtrl, uint8_t u8Note, uint8_t u8Velocity)
-{
-    /* Check for num free voices */
-    if (pxVoiceCtrl->u8NumActVoices < pxVoiceCtrl->u8NumVoices)
-    {
-        uint32_t u32VoiceIndex = 0xFFU;
-
-        /* Search an active voice with the same note */
-        for (uint32_t u32Voice = 0; u32Voice < pxVoiceCtrl->u8NumVoices; u32Voice++)
+        /* Check voice range */
+        if (u8VoiceChannel < SYNTH_MAX_NUM_VOICE)
         {
-            if ((pxVoiceCtrl->xVoiceList[u32Voice].u8Note == u8Note) && (pxVoiceCtrl->xVoiceList[u32Voice].bStatus))
+            if (bYM2612_set_note(u8VoiceChannel, u8Note))
             {
-                u32VoiceIndex = u32Voice;
-                break;
+                vCliPrintf(SYNTH_TASK_NAME, "Key ON: %d", u8VoiceChannel);
+                vYM2612_key_on(u8VoiceChannel);
+                bUiTaskNotify(UI_SIGNAL_SYNTH_OFF);
             }
         }
+    }
+}
 
-        /* If voice found overwrite it */
-        if (u32VoiceIndex != 0xFFU)
+static void vCmdVoiceOff(SynthMsg_t * pxCmdMsg)
+{
+    if (pxCmdMsg->xType == SYNTH_CMD_NOTE_OFF)
+    {
+        uint8_t u8VoiceChannel = pxCmdMsg->u8Data[0U];
+        uint8_t u8Note = pxCmdMsg->u8Data[1U];
+
+        /* Check voice range */
+        if (u8VoiceChannel < SYNTH_MAX_NUM_VOICE)
         {
-            if (bYM2612_set_note(u32VoiceIndex, u8Note))
+            if (bYM2612_set_note(u8VoiceChannel, u8Note))
             {
-                vCliPrintf(SYNTH_TASK_NAME, "Key ON");
-                vYM2612_key_on(u32VoiceIndex);
-                bUiTaskNotify(UI_SIGNAL_SYNTH_ON);
+                vCliPrintf(SYNTH_TASK_NAME, "Key OFF: %d", u8VoiceChannel);
+                vYM2612_key_off(u8VoiceChannel);
+                bUiTaskNotify(UI_SIGNAL_SYNTH_OFF);
+            }
+        }
+    }
+}
+
+static void vCmdVoiceOffAll(void)
+{
+    vCliPrintf(SYNTH_TASK_NAME, "Clear ALL voices");
+    for (uint8_t u8VoiceIndex = 0U; u8VoiceIndex < SYNTH_MAX_NUM_VOICE; u8VoiceIndex++)
+    {
+        vYM2612_key_off(u8VoiceIndex);
+    }
+    bUiTaskNotify(UI_SIGNAL_SYNTH_OFF);
+}
+
+static void vCmdMidiSysEx(void)
+{
+    uint32_t u32SysExLenData = 0U;
+    uint8_t * pu8SysExData;
+
+    if (midi_get_sysex_data(&pu8SysExData, &u32SysExLenData) == midiOk)
+    {
+        if (u32SysExLenData >= SYNTH_LEN_MIN_SYSEX_CMD)
+        {
+            SynthSysExCmd_t * pxSysExCmd = (SynthSysExCmd_t *)pu8SysExData;
+
+            if ((pxSysExCmd->xSysExCmd) == SYNTH_SYSEX_CMD_SET_PRESET && (u32SysExLenData == SYNTH_LEN_SET_REG_CMD))
+            {
+                xFmDevice_t * xPresetData = &pxSysExCmd->pu8CmdData;
+                vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD SET PRESET");
+                vYM2612_set_reg_preset(xPresetData);
             }
         }
         else
         {
-            /* Search for a free slot */
-            for (uint32_t u32Voice = 0; u32Voice < pxVoiceCtrl->u8NumVoices; u32Voice++)
-            {
-                if (!pxVoiceCtrl->xVoiceList[u32Voice].bStatus)
-                {
-                    u32VoiceIndex = u32Voice;
-                    break;
-                }
-            }
-
-            /* If free slot found, update ctrl struct */
-            if (u32VoiceIndex != 0xFFU)
-            {
-                if (bYM2612_set_note(u32VoiceIndex, u8Note))
-                {
-                    /* Update struct */
-                    pxVoiceCtrl->xVoiceList[u32VoiceIndex].u8Note = u8Note;
-                    pxVoiceCtrl->xVoiceList[u32VoiceIndex].u8Velocity = u8Velocity;
-                    pxVoiceCtrl->xVoiceList[u32VoiceIndex].bStatus = true;
-                    pxVoiceCtrl->u8NumActVoices++;
-
-                    /* Update synth */
-                    vCliPrintf(SYNTH_TASK_NAME, "Key ON");
-                    vYM2612_key_on(u32VoiceIndex);
-                    bUiTaskNotify(UI_SIGNAL_SYNTH_ON);
-                }
-            }
+            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD too short");
         }
-    }
-    else
-    {
-        /* Save note in temporal slot */
-        pxVoiceCtrl->xTmpVoice.u8Note = u8Note;
-        pxVoiceCtrl->xTmpVoice.u8Velocity = u8Velocity;
-        pxVoiceCtrl->xTmpVoice.bStatus = true;
-    }
-}
-
-static void vCtrlVoiceOff(synth_ctrl_voice_t * pxVoiceCtrl, uint8_t u8Note, uint8_t u8Velocity)
-{
-    uint32_t u32VoiceIndex = 0xFFU;
-
-    /* Search for active note and deactivate it */
-    for (uint32_t u32Voice = 0; u32Voice < pxVoiceCtrl->u8NumVoices; u32Voice++)
-    {
-        if ((pxVoiceCtrl->xVoiceList[u32Voice].u8Note == u8Note) && (pxVoiceCtrl->xVoiceList[u32Voice].bStatus))
-        {
-            /* Update struct */
-            pxVoiceCtrl->xVoiceList[u32Voice].u8Note = 0U;
-            pxVoiceCtrl->xVoiceList[u32Voice].u8Velocity = 0U;
-            pxVoiceCtrl->xVoiceList[u32Voice].bStatus = false;
-
-            /* Update synth */
-            vCliPrintf(SYNTH_TASK_NAME, "Key OFF");
-            vYM2612_key_off(u32Voice);
-            bUiTaskNotify(UI_SIGNAL_SYNTH_OFF);
-
-            u32VoiceIndex = u32Voice;
-        }
-    }
-
-    /* Update voice number */
-    if (u32VoiceIndex != 0xFFU)
-    {
-        pxVoiceCtrl->u8NumActVoices--;
-    }
-
-    /* Check tmp voice */
-    if (pxVoiceCtrl->xTmpVoice.u8Note == u8Note)
-    {
-        pxVoiceCtrl->xTmpVoice.u8Note = 0U;
-        pxVoiceCtrl->xTmpVoice.u8Velocity = 0U;
-        pxVoiceCtrl->xTmpVoice.bStatus = false;
-    }
-
-    /* Check and restore tmp voice */
-    if ((pxVoiceCtrl->u8NumActVoices < pxVoiceCtrl->u8NumVoices) && pxVoiceCtrl->xTmpVoice.bStatus)
-    {
-        uint8_t u8TmpNote = pxVoiceCtrl->xTmpVoice.u8Note;
-        uint8_t u8TmpVelocity = pxVoiceCtrl->xTmpVoice.u8Velocity;
-
-        pxVoiceCtrl->xTmpVoice.u8Note = 0U;
-        pxVoiceCtrl->xTmpVoice.u8Velocity = 0U;
-        pxVoiceCtrl->xTmpVoice.bStatus = false;
-
-        vCtrlVoiceOn(pxVoiceCtrl, u8TmpNote, u8TmpVelocity);
     }
 }
 
@@ -318,52 +212,6 @@ static void _init_setup(void)
     }
 }
 
-static void vHandleMidiCmd(uint8_t * pu8MidiCmd)
-{
-    if (pu8MidiCmd != NULL)
-    {
-        uint8_t u8MidiCmd = *pu8MidiCmd++;
-
-        if ((u8MidiCmd & MIDI_STATUS_CMD_MASK) == MIDI_STATUS_NOTE_ON)
-        {
-            uint8_t u8MidiData0 = *pu8MidiCmd++;
-            uint8_t u8MidiData1 = *pu8MidiCmd++;
-            vCtrlVoiceOn(&xVoiceCtrl, u8MidiData0, u8MidiData1);
-        }
-        else if ((u8MidiCmd & MIDI_STATUS_CMD_MASK) == MIDI_STATUS_NOTE_OFF)
-        {
-            uint8_t u8MidiData0 = *pu8MidiCmd++;
-            uint8_t u8MidiData1 = *pu8MidiCmd++;
-            vCtrlVoiceOff(&xVoiceCtrl, u8MidiData0, u8MidiData1);
-        }
-    }
-}
-
-static void vHandleMidiSysEx(void)
-{
-    uint32_t u32SysExLenData = 0U;
-    uint8_t * pu8SysExData;
-
-    if (midi_get_sysex_data(&pu8SysExData, &u32SysExLenData) == midiOk)
-    {
-        if (u32SysExLenData >= SYNTH_LEN_MIN_SYSEX_CMD)
-        {
-            SynthSysExCmd_t * pxSysExCmd = (SynthSysExCmd_t *)pu8SysExData;
-
-            if ((pxSysExCmd->xSysExCmd) == SYNTH_SYSEX_CMD_SET_PRESET && (u32SysExLenData == SYNTH_LEN_SET_REG_CMD))
-            {
-                xFmDevice_t * xPresetData = &pxSysExCmd->pu8CmdData;
-                vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD SET PRESET");
-                vYM2612_set_reg_preset(xPresetData);
-            }
-        }
-        else
-        {
-            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD too short");
-        }
-    }
-}
-
 static void vSynthTaskMain( void *pvParameters )
 {
     /* Init delay to for pow stabilization */
@@ -378,9 +226,6 @@ static void vSynthTaskMain( void *pvParameters )
     /* Basic register init */
     _init_setup();
 
-    /* Init Voice control */
-    vCtrlVoiceReset(&xVoiceCtrl);
-
     for(;;)
     {
       MessageBufferHandle_t MsgBuff = xMidiGetMessageBuffer();
@@ -388,24 +233,29 @@ static void vSynthTaskMain( void *pvParameters )
       if (MsgBuff != NULL)
       {
         size_t xReceivedBytes;
-        MidiMsg_t xMidiCmd = {0};
+        SynthMsg_t xSynthCmd = {0};
 
         /* Get cmd from buffer */
-        xReceivedBytes = xMessageBufferReceive(MsgBuff, (void *) &xMidiCmd, sizeof(MidiMsg_t), pdMS_TO_TICKS(SYNTH_CMD_TIMEOUT));
+        xReceivedBytes = xMessageBufferReceive(MsgBuff, (void *) &xSynthCmd, sizeof(SynthMsg_t), pdMS_TO_TICKS(SYNTH_CMD_TIMEOUT));
 
         /* Handle cmd if not empty */
-        if (xReceivedBytes == sizeof(MidiMsg_t))
+        if (xReceivedBytes == sizeof(SynthMsg_t))
         {
-            if (xMidiCmd.xType == MIDI_TYPE_CMD)
+            if (xSynthCmd.xType == SYNTH_CMD_NOTE_ON)
             {
-                vHandleMidiCmd(xMidiCmd.u8Data);
+                vCmdVoiceOn(&xSynthCmd);
             }
-            else if (xMidiCmd.xType == MIDI_TYPE_RT)
+            else if (xSynthCmd.xType == SYNTH_CMD_NOTE_OFF)
             {
+                vCmdVoiceOff(&xSynthCmd);
             }
-            else if (xMidiCmd.xType == MIDI_TYPE_SYSEX)
+            else if (xSynthCmd.xType == SYNTH_CMD_NOTE_OFF_ALL)
             {
-                vHandleMidiSysEx();
+                vCmdVoiceOffAll();
+            }
+            else if (xSynthCmd.xType == SYNTH_CMD_SYSEX)
+            {
+                vCmdMidiSysEx();
             }
         }
       }
