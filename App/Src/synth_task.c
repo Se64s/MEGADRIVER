@@ -103,7 +103,7 @@ static void vCmdVoiceOn(SynthMsg_t * pxCmdMsg)
             {
                 vCliPrintf(SYNTH_TASK_NAME, "Key  ON: %02d - %03d", u8VoiceChannel, u8Note);
                 vYM2612_key_on(u8VoiceChannel);
-                bUiTaskNotify(UI_SIGNAL_SYNTH_OFF);
+                bUiTaskNotify(UI_SIGNAL_SYNTH_ON);
             }
         }
     }
