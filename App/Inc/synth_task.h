@@ -34,8 +34,12 @@ extern "C" {
 
 /* SysEx CMD parameters */
 #define SYNTH_LEN_VENDOR_ID         (3U)
+#define SYNTH_LEN_PRESET_NAME       (16U)
+#define SYNTH_LEN_PRESET_CODED_NAME (30U)
 #define SYNTH_LEN_MIN_SYSEX_CMD     (4U)
 #define SYNTH_LEN_SET_REG_CMD       (300U)
+#define SYNTH_LEN_SAVE_PRESET_CMD   (331U)
+#define SYNTH_LEN_LOAD_PRESET_CMD   (5U)
 
 /* Synth message parameters */
 #define SYNTH_LEN_MSG               (4U)
@@ -59,6 +63,8 @@ typedef enum
 typedef enum
 {
   SYNTH_SYSEX_CMD_SET_PRESET = 0x00U,
+  SYNTH_SYSEX_CMD_SAVE_PRESET = 0x01U,
+  SYNTH_SYSEX_CMD_LOAD_PRESET = 0x02U,
   SYNTH_SYSEX_CMD_NO_DEF = 0x1FU
 } SynthSysExCmdDef_t;
 
@@ -69,6 +75,20 @@ typedef struct
   SynthSysExCmdDef_t xSysExCmd;
   uint8_t * pu8CmdData;
 } SynthSysExCmd_t;
+
+/* Payload format for save preset cmd*/
+typedef struct 
+{
+  uint8_t u8Position;
+  uint8_t u8CodedName[SYNTH_LEN_PRESET_CODED_NAME];
+  xFmDevice_t xRegData;
+} SynthSysExCmdSavePreset_t;
+
+/* Payload format for load preset cmd*/
+typedef struct 
+{
+  uint8_t u8Position;
+} SynthSysExCmdLoadPreset_t;
 
 /* Synth cmd message structure */
 typedef struct

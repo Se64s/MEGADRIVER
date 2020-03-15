@@ -11,8 +11,9 @@ import sys
 def read_byte(file_handler):
     return struct.unpack('B', file_handler.read(1))[0]
 
-def process_file(file_path, ym_handler):
+def load_vgi_file(file_path, ym_handler):
     retval = False
+    print ("VGI: LOAD FILE", file_path)
     with open(file_path, 'rb') as byte_reader:
         byte_data = byte_reader.read()
         if len(byte_data) == 43:
@@ -42,34 +43,78 @@ def process_file(file_path, ym_handler):
             for channel_id in range(5):
                 ym_handler.channel[channel_id + 1] = ym_handler.channel[0]
                 ym_handler.channel[channel_id + 1].channel_id = channel_id + 1
-            # Set all channels
-            if ym_handler.ser_com:
-                ym_handler.set_reg_values()
-            if ym_handler.midi_com:
-                ym_handler.midi_set_reg_values()
             retval = True
         else:
             print("VGI: Error on file size (%d/43)" % len(byte_data))
+    # Show operation result
+    if retval == False:
+        print ("VGI: ERR")
+    else:
+        print ("VGI: OK")
+    return retval
+
+def set_reg_values(ym_handler):
+    """Set current register values"""
+    retval = False
+    print ("VGI: SET REGISTER")
+    if ym_handler.ser_com:
+        ym_handler.set_reg_values()
+        retval = True
+    if ym_handler.midi_com:
+        ym_handler.midi_set_reg_values()
+        retval = True
+    return retval
+
+def load_preset(ym_handler, preset_pos):
+    """Load preset into defined position"""
+    retval = False
+    if preset_pos in range(YM2612.YM_MAX_NUM_USER_PRESETS):
+        print ("VGI: LOAD PRESET", preset_pos)
+        ym_handler.midi_load_preset(preset_pos)
+        retval = True
+    else:
+        print ("VGI: NOT VALID PRESETS ID")
+    return retval
+
+def save_preset(ym_handler, preset_pos):
+    """Save preset into defined position"""
+    retval = False
+    print ("VGI: SAVE PRESET", preset_pos)
+    ym_handler.set_reg_values()
+    if preset_pos in range(YM2612.YM_MAX_NUM_USER_PRESETS):
+        print ("VGI: SAVE PRESET", preset_pos)
+        preset_name = "User preset %d" % preset_pos
+        ym_handler.midi_save_preset(preset_pos, preset_name)
+        retval = True
+    else:
+        print ("VGI: NOT VALID PRESETS ID")
     return retval
 
 def main():
     # Get parameters
     parser = argparse.ArgumentParser()
-    parser.add_argument('-f', type=str, required=True, help="path to vgi file to process")
-    parser.add_argument('-s', type=str, required=False, help="serial port to use")
-    parser.add_argument('-m', type=int, required=False, help="midi port to use")
+    parser.add_argument('-f','--file', type=str, required=False, help="path to vgi file to process")
+    parser.add_argument('-s','--serial', type=str, required=False, help="serial port to use")
+    parser.add_argument('-m', '--midi', type=int, required=False, help="midi port to use")
+    parser.add_argument('-sr', '--set-register', action='store_true', required=False, help="set register values on device")
+    parser.add_argument('-lp', '--load-preset', type=int, required=False, help="load preset into a slot")
+    parser.add_argument('-sp', '--save-preset', type=int, required=False, help="save preset into a slot")
     args = parser.parse_args()
-    vgi_file_path = args.f
-    serial_com = args.s
-    midi_com = args.m
+    vgi_file_path = args.file
     # Create handler for YM chip
-    fm_chip = YM2612.YM2612Chip(ser_com=serial_com, midi_com=midi_com)
+    fm_chip = YM2612.YM2612Chip(ser_com=args.serial, midi_com=args.midi)
     # Try to get register values from file
-    print ("VGI: Init process")
-    if process_file(vgi_file_path, fm_chip):
-        print ("VGI: OK")
-    else:
-        print ("VGI: ERR")
+    if args.file:
+        load_vgi_file(vgi_file_path, fm_chip)
+    # Load register values
+    if args.set_register:
+        set_reg_values(fm_chip)
+    # Execute save preset action
+    elif args.save_preset != None:
+        save_preset(fm_chip, args.save_preset)
+    # Execute load preset action
+    elif args.load_preset != None:
+        load_preset(fm_chip, args.load_preset)
 
 if __name__ == "__main__":
     main()

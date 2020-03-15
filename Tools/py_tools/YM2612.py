@@ -8,6 +8,13 @@ import time
 import serial
 import rtmidi
 
+# Defined constants
+YM_MAX_NUM_USER_PRESETS = 8
+
+# Defined SYSEX CMD
+YM_SYSEX_CMD_SET_REG = 0
+YM_SYSEX_CMD_SAVE_PRESET = 1
+YM_SYSEX_CMD_LOAD_PRESET = 2
 
 class YM2612Chip:
     """
@@ -33,6 +40,8 @@ class YM2612Chip:
             print("MIDI: Using port", self.midiout.get_port_name(self.midi_com))
         else:
             self.midiout = None
+        # Vendor id
+        self.vendor_id = 0x001234
         # Chip general register
         self.lfo_on = lfo_on
         self.lfo_freq = lfo_freq
@@ -214,24 +223,117 @@ class YM2612Chip:
         # Check if midi interface def
         if self.midiout:
             print("MIDI: Send data start", self.midiout.get_port_name(self.midi_com))
-            # Vendor id
-            sys_ex_vendor = 0x000102
             # CMD set preset
-            sys_ex_cmd = 0x00
+            sysex_cmd = YM_SYSEX_CMD_SET_REG
             sysex_data = []
-            sysex_data.append(0xF0) # SysEx init
-            sysex_data.append((sys_ex_vendor >> 16) & 0xFF)
-            sysex_data.append((sys_ex_vendor >> 8) & 0xFF)
-            sysex_data.append((sys_ex_vendor >> 0) & 0xFF)
-            sysex_data.append(sys_ex_cmd) 
+            # SysEx init
+            sysex_data.append(0xF0)
+            # Set vendor id
+            sysex_data.append((self.vendor_id >> 16) & 0xFF)
+            sysex_data.append((self.vendor_id >> 8) & 0xFF)
+            sysex_data.append((self.vendor_id >> 0) & 0xFF)
+            # Set sysex cmd
+            sysex_data.append(sysex_cmd) 
+            # Set reg data
             sysex_data.extend(self.__get_reg_values_array())
-            sysex_data.append(0xF7) # SysEx end
+            # SysEx end
+            sysex_data.append(0xF7) 
+            # Data sending
             self.midiout.send_message(sysex_data)
+            # Report operation
             print("MIDI: Data len", len(sysex_data))
-            print("MIDI: SysEx vendor id x%06X" % sys_ex_vendor)
-            print("MIDI: SysEx CMD x%02X" % sys_ex_cmd)
+            print("MIDI: SysEx CMD x%02X" % sysex_cmd)
             print("MIDI: Send finish")
             retval = True
+        else:
+            print("MIDI: Not init")
+        return retval
+
+    def midi_save_preset(self, preset_pos=0, preset_name=""):
+        """
+        Save current register conf into specified preset position
+        preset_pos: preset position [0:15]
+        preset_name: string of 15 characters to identify the preset
+        """
+        retval = False
+        # Check if midi interface def
+        if self.midiout:
+            print("MIDI: Send data start", self.midiout.get_port_name(self.midi_com))
+            # Prepare parameters
+            if preset_pos < YM_MAX_NUM_USER_PRESETS:
+                # Prepare preset name
+                format_preset_name = "{:<15}".format(preset_name)
+                # CMD set preset
+                sysex_cmd = YM_SYSEX_CMD_SAVE_PRESET
+                # Set data into array
+                sysex_data = []
+                # SysEx init
+                sysex_data.append(0xF0) # SysEx init
+                # Vendor id
+                sysex_data.append((self.vendor_id >> 16) & 0xFF)
+                sysex_data.append((self.vendor_id >> 8) & 0xFF)
+                sysex_data.append((self.vendor_id >> 0) & 0xFF)
+                # Cmd
+                sysex_data.append(sysex_cmd)
+                # Preset pos
+                sysex_data.append(preset_pos)
+                # Preset name
+                for str_ch in format_preset_name:
+                    sysex_data.append((ord(str_ch) >> 0) & 0x0F)
+                    sysex_data.append((ord(str_ch) >> 4) & 0x0F)
+                # Register data
+                sysex_data.extend(self.__get_reg_values_array())
+                # SysEx end
+                sysex_data.append(0xF7)
+                # Data TX
+                self.midiout.send_message(sysex_data)
+                # Show used parameters
+                print("MIDI: Data len", len(sysex_data))
+                print("MIDI: SysEx CMD x%02X" % sysex_cmd)
+                print("MIDI: Send finish")
+                retval = True
+            else:
+                print("MIDI: Preset Id out of range")
+        else:
+            print("MIDI: Not init")
+        return retval
+
+    def midi_load_preset(self, preset_pos=0):
+        """
+        Load saved preset
+        preset_pos: preset position [0:8]
+        """
+        retval = False
+        # Check if midi interface def
+        if self.midiout:
+            print("MIDI: Send data start", self.midiout.get_port_name(self.midi_com))
+            # Prepare parameters
+            if preset_pos < YM_MAX_NUM_USER_PRESETS:
+                # CMD set preset
+                sysex_cmd = YM_SYSEX_CMD_LOAD_PRESET
+                # Set data into array
+                sysex_data = []
+                # SysEx init
+                sysex_data.append(0xF0) # SysEx init
+                # Vendor id
+                sysex_data.append((self.vendor_id >> 16) & 0xFF)
+                sysex_data.append((self.vendor_id >> 8) & 0xFF)
+                sysex_data.append((self.vendor_id >> 0) & 0xFF)
+                # Cmd
+                sysex_data.append(sysex_cmd)
+                # Preset pos
+                sysex_data.append(preset_pos)
+                # SysEx end
+                sysex_data.append(0xF7)
+                # Data TX
+                self.midiout.send_message(sysex_data)
+                # Show used parameters
+                print("MIDI: Data len", len(sysex_data))
+                print("MIDI: SysEx CMD x%02X" % sysex_cmd)
+                print("MIDI: Send finish")
+                retval = True
+            else:
+                print("MIDI: Preset Id out of range")
         else:
             print("MIDI: Not init")
         return retval
@@ -479,7 +581,8 @@ def main():
     # synth.set_preset(1)
     # Test midi com
     synth = YM2612Chip(midi_com=2)
-    synth.midi_set_reg_values()
+    # synth.midi_set_reg_values()
+    synth.midi_save_preset(5, "Test_05")
 
 if __name__ == "__main__":
     main()

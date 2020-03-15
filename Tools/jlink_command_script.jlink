@@ -1,5 +1,7 @@
 // Halt device
 r
+// erase all data
+erase
 // load bins
 loadbin ./build/FM_SYNTH.bin,0x8000000
 // reset program

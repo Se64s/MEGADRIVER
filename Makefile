@@ -32,8 +32,10 @@ BUILD_DIR = build
 C_SOURCES =  \
 App/Src/main.c \
 App/Src/midi_task.c \
+App/Src/midi_app_data.c \
 App/Src/ui_task.c \
 App/Src/synth_task.c \
+App/Src/synth_app_data.c \
 App/Src/cli_task.c \
 App/Src/cli_cmd.c \
 App/Src/stm32g0xx_it.c \
@@ -62,6 +64,7 @@ Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_cortex.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_exti.c \
 Drivers/User_Drivers/Src/serial_driver.c \
+Drivers/User_Drivers/Src/flash_driver.c \
 Drivers/User_Drivers/Src/i2c_driver.c \
 Drivers/User_Drivers/Src/adc_driver.c \
 Drivers/User_Drivers/Src/YM2612_driver.c \
@@ -73,6 +76,7 @@ Lib/midi/midi_lib.c \
 Lib/ui/ui_sys.c \
 Lib/ui/ui_menu_test.c \
 Lib/ui/ui_screen_test.c \
+Lib/app_data/app_data_handler.c \
 Lib/u8g2/u8g2_bitmap.c \
 Lib/u8g2/u8g2_box.c \
 Lib/u8g2/u8g2_buffer.c \
@@ -184,6 +188,7 @@ C_INCLUDES =  \
 -ILib/cbuf \
 -ILib/printf \
 -ILib/midi \
+-ILib/app_data \
 -IDrivers/User_Drivers/Inc \
 -IDrivers/STM32G0xx_HAL_Driver/Inc \
 -IDrivers/STM32G0xx_HAL_Driver/Inc/Legacy \

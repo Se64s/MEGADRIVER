@@ -110,7 +110,7 @@ typedef enum
 #define MIDI_STATUS_SYS_EX_END 0xF7
 
 /* Sys ex max buffer size */
-#define SYS_EX_BUFF_SIZE 310
+#define SYS_EX_BUFF_SIZE 350
 
   /* Exported functions prototypes ---------------------------------------------*/
 

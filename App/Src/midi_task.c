@@ -14,6 +14,8 @@
 
 #include "serial_driver.h"
 
+#include "midi_app_data.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
@@ -69,6 +71,12 @@ MessageBufferHandle_t xMidiMessageBuffer;
   * @retval None.
   */
 static void vResetMidiCtrl(void);
+
+/**
+  * @brief Load data from persistence memory.
+  * @retval None.
+  */
+static void vRestoreMidiCtrl(void);
 
 /**
   * @brief Send synth cmd to synth task.
@@ -176,8 +184,7 @@ static void vMidiMain(void *pvParameters);
 
 static void vResetMidiCtrl(void)
 {
-    xMidiCfg.xMode = MidiMode3;     /* Poly mode */
-    // xMidiCfg.xMode = MidiMode4;      /* Mono mode */
+    xMidiCfg.xMode = MidiMode4;      /* Mono mode */
     xMidiCfg.u8Bank = 0U;
     xMidiCfg.u8Program = 0U;
     xMidiCfg.u8BaseChannel = 1U;
@@ -198,6 +205,27 @@ static void vResetMidiCtrl(void)
     SynthMsg_t xTmpCmd = {0U};
     xTmpCmd.xType = SYNTH_CMD_NOTE_OFF_ALL;
     (void)bSendSynthCmd(&xTmpCmd);
+}
+
+static void vRestoreMidiCtrl(void)
+{
+    const midi_app_data_t * pxFlasData = NULL;
+
+    if (bMIDI_APP_DATA_read(&pxFlasData))
+    {
+        xMidiCfg.xMode = pxFlasData->u8Mode;
+        xMidiCfg.u8BaseChannel = pxFlasData->u8BaseChannel;
+        xMidiCfg.u8Program = pxFlasData->u8Program;
+
+        vCliPrintf(MIDI_TASK_NAME, "FLASH: Load Mode %02X", xMidiCfg.xMode);
+        vCliPrintf(MIDI_TASK_NAME, "FLASH: Load Channel %02X", xMidiCfg.u8BaseChannel);
+        vCliPrintf(MIDI_TASK_NAME, "FLASH: Load Program %02X", xMidiCfg.u8Program);
+    }
+    else
+    {
+        vCliPrintf(MIDI_TASK_NAME, "FLASH: Error reading flash data");
+    }
+
 }
 
 static bool bSendSynthCmd(SynthMsg_t * pxSynthCmd)
@@ -592,8 +620,14 @@ static void vMidiMain(void *pvParameters)
     /* Init MIDI library */
     (void)midi_init(vMidiCmdSysExCallBack, vMidiCmd1CallBack, vMidiCmd2CallBack, vMidiCmdRtCallBack);
 
+    /* Init flash data */
+    (void)bMIDI_APP_DATA_init();
+
     /* Init control structure */
     vResetMidiCtrl();
+
+    /* Restore midi cfg */
+    vRestoreMidiCtrl();
 
     /* Show init msg */
     vCliPrintf(MIDI_TASK_NAME, "Init");
