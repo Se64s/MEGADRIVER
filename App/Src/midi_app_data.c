@@ -40,9 +40,9 @@ bool bMIDI_APP_DATA_init(void)
             midi_app_data_t xMidiDefaultCfg = {0};
 
             /* Base address */
-            xMidiDefaultCfg.u8Mode = MidiMode3;
-            xMidiDefaultCfg.u8BaseChannel = 1U;
-            xMidiDefaultCfg.u8Program = 0U;
+            xMidiDefaultCfg.u8Mode = MIDI_APP_DATA_DEFAULT_MODE;
+            xMidiDefaultCfg.u8BaseChannel = MIDI_APP_DATA_DEFAULT_CH;
+            xMidiDefaultCfg.u8Program = MIDI_APP_DATA_DEFAULT_PROG;
 
             if (xAPP_DATA_save_element(&xMidiAppData, (void *)&xMidiDefaultCfg) == APP_DATA_OK)
             {

@@ -30,6 +30,11 @@ extern "C"
 /** Init page for midi data  */
 #define MIDI_APP_DATA_NUM_PAGES     (1U)
 
+/** Default values */
+#define MIDI_APP_DATA_DEFAULT_MODE   (MidiMode3)
+#define MIDI_APP_DATA_DEFAULT_CH     (0U)
+#define MIDI_APP_DATA_DEFAULT_PROG   (0U)
+
 /* Exported types  -----------------------------------------------------------*/
 
 /** Defined program data */
