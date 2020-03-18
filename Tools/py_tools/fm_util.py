@@ -76,6 +76,17 @@ def load_preset(ym_handler, preset_pos):
         print ("VGI: NOT VALID PRESETS ID")
     return retval
 
+def load_default_preset(ym_handler, preset_pos):
+    """Load default preset into defined position"""
+    retval = False
+    if preset_pos in range(YM2612.YM_MAX_NUM_DEFAULT_PRESETS):
+        print ("VGI: LOAD DEFAULT PRESET", preset_pos)
+        ym_handler.midi_load_default_preset(preset_pos)
+        retval = True
+    else:
+        print ("VGI: NOT VALID PRESETS ID")
+    return retval
+
 def save_preset(ym_handler, preset_pos):
     """Save preset into defined position"""
     retval = False
@@ -97,7 +108,8 @@ def main():
     parser.add_argument('-s','--serial', type=str, required=False, help="serial port to use")
     parser.add_argument('-m', '--midi', type=int, required=False, help="midi port to use")
     parser.add_argument('-sr', '--set-register', action='store_true', required=False, help="set register values on device")
-    parser.add_argument('-lp', '--load-preset', type=int, required=False, help="load preset into a slot")
+    parser.add_argument('-dp', '--default-preset', type=int, required=False, help="load default preset")
+    parser.add_argument('-lp', '--load-preset', type=int, required=False, help="load user preset")
     parser.add_argument('-sp', '--save-preset', type=int, required=False, help="save preset into a slot")
     args = parser.parse_args()
     vgi_file_path = args.file
@@ -109,6 +121,9 @@ def main():
     # Load register values
     if args.set_register:
         set_reg_values(fm_chip)
+    # Execute load vendor preset action
+    elif args.default_preset != None:
+        load_default_preset(fm_chip, args.default_preset)
     # Execute save preset action
     elif args.save_preset != None:
         save_preset(fm_chip, args.save_preset)
