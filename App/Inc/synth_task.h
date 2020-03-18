@@ -33,13 +33,14 @@ extern "C" {
 #define SYNTH_TASK_PRIO             (2U)
 
 /* SysEx CMD parameters */
-#define SYNTH_LEN_VENDOR_ID         (3U)
-#define SYNTH_LEN_PRESET_NAME       (16U)
-#define SYNTH_LEN_PRESET_CODED_NAME (30U)
-#define SYNTH_LEN_MIN_SYSEX_CMD     (4U)
-#define SYNTH_LEN_SET_REG_CMD       (300U)
-#define SYNTH_LEN_SAVE_PRESET_CMD   (331U)
-#define SYNTH_LEN_LOAD_PRESET_CMD   (5U)
+#define SYNTH_LEN_VENDOR_ID                 (3U)
+#define SYNTH_LEN_PRESET_NAME               (16U)
+#define SYNTH_LEN_PRESET_CODED_NAME         (30U)
+#define SYNTH_LEN_MIN_SYSEX_CMD             (4U)
+#define SYNTH_LEN_SET_REG_CMD               (300U)
+#define SYNTH_LEN_SAVE_PRESET_CMD           (331U)
+#define SYNTH_LEN_LOAD_PRESET_CMD           (5U)
+#define SYNTH_LEN_LOAD_DEFAULT_PRESET_CMD   (5U)
 
 /* Synth message parameters */
 #define SYNTH_LEN_MSG               (4U)
@@ -65,6 +66,7 @@ typedef enum
   SYNTH_SYSEX_CMD_SET_PRESET = 0x00U,
   SYNTH_SYSEX_CMD_SAVE_PRESET = 0x01U,
   SYNTH_SYSEX_CMD_LOAD_PRESET = 0x02U,
+  SYNTH_SYSEX_CMD_LOAD_DEFAULT_PRESET = 0x03U,
   SYNTH_SYSEX_CMD_NO_DEF = 0x1FU
 } SynthSysExCmdDef_t;
 

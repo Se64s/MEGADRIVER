@@ -12,6 +12,7 @@
 #include "midi_task.h"
 
 #include "synth_app_data.h"
+#include "synth_app_data_const.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -68,11 +69,11 @@ static bool bSavePreset(uint8_t u8Position, uint8_t * pu8Name, xFmDevice_t * pxR
 static bool bLoadPreset(uint8_t u8Position);
 
 /**
-  * @brief Read SysEx message from midi lib
-  * @param None
-  * @retval None
+  * @brief Load default preset.
+  * @param u8Position Position where save the preset.
+  * @retval true, preset loaded, false, error on loading.
   */
-static void vCmdSysEx(void);
+static bool bLoadDefaultPreset(uint8_t u8Position);
 
 /**
   * @brief Initial YM2612 setup
@@ -183,6 +184,25 @@ static bool bLoadPreset(uint8_t u8Position)
     return bRetVal;
 }
 
+static bool bLoadDefaultPreset(uint8_t u8Position)
+{
+    bool bRetVal = false;
+    const xFmDevice_t * pxPresetData = pxSYNTH_APP_DATA_CONST_get(u8Position);
+
+    if (pxPresetData != NULL)
+    {
+        vCliPrintf(SYNTH_TASK_NAME, "LOAD DEFAULT PRESET %d", u8Position);
+        vYM2612_set_reg_preset(pxPresetData);
+        bRetVal = true;
+    }
+    else
+    {
+        vCliPrintf(SYNTH_TASK_NAME, "LOAD DEFAULT PRESET %d: ERROR", u8Position);
+    }
+
+    return bRetVal;
+}
+
 static void vCmdMidiSysEx(void)
 {
     uint32_t u32SysExLenData = 0U;
@@ -225,7 +245,15 @@ static void vCmdMidiSysEx(void)
                 vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD LOAD PRESET");
 
                 /* Process data */
-                bLoadPreset(pxLoadPresetData->u8Position);
+                (void)bLoadPreset(pxLoadPresetData->u8Position);
+            }
+            else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_LOAD_DEFAULT_PRESET) && (u32SysExLenData == SYNTH_LEN_LOAD_DEFAULT_PRESET_CMD))
+            {
+                SynthSysExCmdLoadPreset_t * pxLoadPresetData = &pxSysExCmd->pu8CmdData;
+
+                vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD LOAD DEFAULT PRESET");
+
+                (void)bLoadDefaultPreset(pxLoadPresetData->u8Position);
             }
         }
         else
@@ -239,65 +267,16 @@ static void _init_setup(void)
 {
     vCliPrintf(SYNTH_TASK_NAME, "Initial register setup");
 
-    vYM2612_write_reg(0x22, 0x00, 0); // LFO off
+    uint8_t u8PresetId = 0U;
+    xFmDevice_t * pxInitPreset = pxSYNTH_APP_DATA_CONST_get(u8PresetId);
 
-    vYM2612_write_reg(0x27, 0x00, 0); // CH3 normal
-
-    vYM2612_write_reg(0x28, 0x00, 0); // Key Off CH0
-    vYM2612_write_reg(0x28, 0x01, 0); // Key Off CH1
-    vYM2612_write_reg(0x28, 0x02, 0); // Key Off CH2
-    vYM2612_write_reg(0x28, 0x04, 0); // Key Off CH3
-    vYM2612_write_reg(0x28, 0x05, 0); // Key Off CH4
-    vYM2612_write_reg(0x28, 0x06, 0); // Key Off CH5
-
-    vYM2612_write_reg(0x2B, 0x00, 0); // DAC off
-
-    /* Setup each voice */
-    for (uint32_t u32VoiceIndex = 0U; u32VoiceIndex < SYNTH_MAX_NUM_VOICE; u32VoiceIndex++)
+    if (pxInitPreset != NULL)
     {
-        uint8_t u8RegSelection = u32VoiceIndex / 3U;
-        uint8_t u8RegOffset = u32VoiceIndex % 3U;
-
-        // Operator 1
-        vYM2612_write_reg(0x30 + u8RegOffset, 0x71, u8RegSelection); //DT1/Mul
-        vYM2612_write_reg(0x40 + u8RegOffset, 0x23, u8RegSelection); //Total Level
-        vYM2612_write_reg(0x50 + u8RegOffset, 0x5F, u8RegSelection); //RS/AR
-        vYM2612_write_reg(0x60 + u8RegOffset, 0x05, u8RegSelection); //AM/D1R
-        vYM2612_write_reg(0x70 + u8RegOffset, 0x02, u8RegSelection); //D2R
-        vYM2612_write_reg(0x80 + u8RegOffset, 0x11, u8RegSelection); //D1L/RR
-        vYM2612_write_reg(0x90 + u8RegOffset, 0x00, u8RegSelection); //SSG EG
-
-        //Operator 2
-        vYM2612_write_reg(0x34 + u8RegOffset, 0x0D, u8RegSelection); //DT1/Mul
-        vYM2612_write_reg(0x44 + u8RegOffset, 0x2D, u8RegSelection); //Total Level
-        vYM2612_write_reg(0x54 + u8RegOffset, 0x99, u8RegSelection); //RS/AR
-        vYM2612_write_reg(0x64 + u8RegOffset, 0x05, u8RegSelection); //AM/D1R
-        vYM2612_write_reg(0x74 + u8RegOffset, 0x02, u8RegSelection); //D2R
-        vYM2612_write_reg(0x84 + u8RegOffset, 0x11, u8RegSelection); //D1L/RR
-        vYM2612_write_reg(0x94 + u8RegOffset, 0x00, u8RegSelection); //SSG EG
-
-        //Operator 3
-        vYM2612_write_reg(0x38 + u8RegOffset, 0x33, u8RegSelection); //DT1/Mul
-        vYM2612_write_reg(0x48 + u8RegOffset, 0x26, u8RegSelection); //Total Level
-        vYM2612_write_reg(0x58 + u8RegOffset, 0x5F, u8RegSelection); //RS/AR
-        vYM2612_write_reg(0x68 + u8RegOffset, 0x05, u8RegSelection); //AM/D1R
-        vYM2612_write_reg(0x78 + u8RegOffset, 0x02, u8RegSelection); //D2R
-        vYM2612_write_reg(0x88 + u8RegOffset, 0x11, u8RegSelection); //D1L/RR
-        vYM2612_write_reg(0x98 + u8RegOffset, 0x00, u8RegSelection); //SSG EG
-
-        //Operator 4
-        vYM2612_write_reg(0x3C + u8RegOffset, 0x01, u8RegSelection); //DT1/Mul
-        vYM2612_write_reg(0x4C + u8RegOffset, 0x00, u8RegSelection); //Total Level
-        vYM2612_write_reg(0x5C + u8RegOffset, 0x94, u8RegSelection); //RS/AR
-        vYM2612_write_reg(0x6C + u8RegOffset, 0x07, u8RegSelection); //AM/D1R
-        vYM2612_write_reg(0x7C + u8RegOffset, 0x02, u8RegSelection); //D2R
-        vYM2612_write_reg(0x8C + u8RegOffset, 0xA6, u8RegSelection); //D1L/RR
-        vYM2612_write_reg(0x9C + u8RegOffset, 0x00, u8RegSelection); //SSG EG
-
-        vYM2612_write_reg(0xB0 + u8RegOffset, 0x32, u8RegSelection); // Ch FB/Algo
-        vYM2612_write_reg(0xB4 + u8RegOffset, 0xC0, u8RegSelection); // Enable L-R output
-        vYM2612_write_reg(0xA4 + u8RegOffset, 0x22, u8RegSelection); // Set Freq MSB
-        vYM2612_write_reg(0xA0 + u8RegOffset, 0x69, u8RegSelection); // Freq LSB
+        vYM2612_set_reg_preset(pxInitPreset);
+    }
+    else
+    {
+        vCliPrintf(SYNTH_TASK_NAME, "Error loading flash preset");
     }
 }
 

@@ -36,6 +36,7 @@ App/Src/midi_app_data.c \
 App/Src/ui_task.c \
 App/Src/synth_task.c \
 App/Src/synth_app_data.c \
+App/Src/synth_app_data_const.c \
 App/Src/cli_task.c \
 App/Src/cli_cmd.c \
 App/Src/stm32g0xx_it.c \

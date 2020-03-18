@@ -10,11 +10,25 @@ import rtmidi
 
 # Defined constants
 YM_MAX_NUM_USER_PRESETS = 8
+YM_MAX_NUM_DEFAULT_PRESETS = 8
+
+# Num voices
+YM_MAX_VOICES = 6
+
+# Num operators
+YM_MAX_OPERATORS = 4
 
 # Defined SYSEX CMD
 YM_SYSEX_CMD_SET_REG = 0
 YM_SYSEX_CMD_SAVE_PRESET = 1
 YM_SYSEX_CMD_LOAD_PRESET = 2
+YM_SYSEX_CMD_LOAD_DEFAULT_PRESET = 3
+
+# Defined default PRESETS
+YM_PRESET_DX_PIANO = 0
+YM_PRESET_GUITAR = 1
+YM_PRESET_SAWTOOTH = 2
+YM_PRESET_SONIC = 3
 
 class YM2612Chip:
     """
@@ -89,6 +103,38 @@ class YM2612Chip:
             retval = self.__send_cmd(cli_cmd)
         else:
             print("CMD: Not init")
+        return retval
+
+    def __send_midi_cmd(self, midi_cmd, cmd_payload):
+        retval = False
+        # Check if midi interface def
+        if self.midiout:
+            print("MIDI: Send data start", self.midiout.get_port_name(self.midi_com))
+            # CMD set preset
+            sysex_cmd = midi_cmd
+            # Set data into array
+            sysex_data = []
+            # SysEx init
+            sysex_data.append(0xF0) # SysEx init
+            # Vendor id
+            sysex_data.append((self.vendor_id >> 16) & 0xFF)
+            sysex_data.append((self.vendor_id >> 8) & 0xFF)
+            sysex_data.append((self.vendor_id >> 0) & 0xFF)
+            # Cmd
+            sysex_data.append(sysex_cmd)
+            # Preset pos
+            sysex_data.extend(cmd_payload)
+            # SysEx end
+            sysex_data.append(0xF7)
+            # Data TX
+            self.midiout.send_message(sysex_data)
+            # Show used parameters
+            print("MIDI: Data len", len(sysex_data))
+            print("MIDI: SysEx CMD x%02X" % sysex_cmd)
+            print("MIDI: Send finish")
+            retval = True
+        else:
+            print("MIDI: Not init")
         return retval
 
     def reset_board(self):
@@ -212,41 +258,56 @@ class YM2612Chip:
                 reg_array.append(self.channel[ch_id].operator[op_id].sustain_level)
                 reg_array.append(self.channel[ch_id].operator[op_id].release_rate)
                 reg_array.append(self.channel[ch_id].operator[op_id].ssg_envelope)
+        # Show reg values
+        self.show_reg_values()
         # Return collected data
         return reg_array
+
+    def show_reg_values(self):
+        """
+        Print current reg values in c format
+        """
+        print("CMD: Show current reg values\r\n")
+        print("")
+        print(">> ===== C_REGISTER_MAP ===== <<")
+        print("")
+        # Set board registers
+        print("static const xFmDevice_t xPreset = {")
+        print(".u8LfoOn = %dU," % self.lfo_on)
+        print(".u8LfoFreq = %dU," % self.lfo_freq)
+        for voice in range(YM_MAX_VOICES):
+            print(" // VOICE", voice)
+            print(".xChannel[%dU].u8Algorithm = %dU," % (voice, self.channel[voice].op_algorithm))
+            print(".xChannel[%dU].u8Feedback = %dU," % (voice, self.channel[voice].feedback))
+            print(".xChannel[%dU].u8AudioOut = %dU," % (voice, self.channel[voice].audio_out))
+            print(".xChannel[%dU].u8PhaseModSens = %dU," % (voice, self.channel[voice].phase_mod_sens))
+            print(".xChannel[%dU].u8AmpModSens = %dU," % (voice, self.channel[voice].amp_mod_sens))
+            for operator in range(YM_MAX_OPERATORS):
+                print(" // OPERATOR", operator)
+                print(".xChannel[%dU].xOperator[%dU].u8Detune = %dU," % (voice, operator, self.channel[voice].operator[operator].detune))
+                print(".xChannel[%dU].xOperator[%dU].u8Multiple = %dU," % (voice, operator, self.channel[voice].operator[operator].multiple))
+                print(".xChannel[%dU].xOperator[%dU].u8TotalLevel = %dU," % (voice, operator, self.channel[voice].operator[operator].total_level))
+                print(".xChannel[%dU].xOperator[%dU].u8KeyScale = %dU," % (voice, operator, self.channel[voice].operator[operator].key_scale))
+                print(".xChannel[%dU].xOperator[%dU].u8AttackRate = %dU," % (voice, operator, self.channel[voice].operator[operator].attack_rate))
+                print(".xChannel[%dU].xOperator[%dU].u8AmpMod = %dU," % (voice, operator, self.channel[voice].operator[operator].amp_mod_on))
+                print(".xChannel[%dU].xOperator[%dU].u8DecayRate = %dU," % (voice, operator, self.channel[voice].operator[operator].decay_rate))
+                print(".xChannel[%dU].xOperator[%dU].u8SustainRate = %dU," % (voice, operator, self.channel[voice].operator[operator].sustain_rate))
+                print(".xChannel[%dU].xOperator[%dU].u8SustainLevel = %dU," % (voice, operator, self.channel[voice].operator[operator].sustain_level))
+                print(".xChannel[%dU].xOperator[%dU].u8ReleaseRate = %dU," % (voice, operator, self.channel[voice].operator[operator].release_rate))
+                print(".xChannel[%dU].xOperator[%dU].u8SsgEg = %dU," % (voice, operator, self.channel[voice].operator[operator].ssg_envelope))
+        print("};")
+        print("")
 
     def midi_set_reg_values(self):
         """
         Send register values over midi interface
         """
-        retval = False
-        # Check if midi interface def
-        if self.midiout:
-            print("MIDI: Send data start", self.midiout.get_port_name(self.midi_com))
-            # CMD set preset
-            sysex_cmd = YM_SYSEX_CMD_SET_REG
-            sysex_data = []
-            # SysEx init
-            sysex_data.append(0xF0)
-            # Set vendor id
-            sysex_data.append((self.vendor_id >> 16) & 0xFF)
-            sysex_data.append((self.vendor_id >> 8) & 0xFF)
-            sysex_data.append((self.vendor_id >> 0) & 0xFF)
-            # Set sysex cmd
-            sysex_data.append(sysex_cmd) 
-            # Set reg data
-            sysex_data.extend(self.__get_reg_values_array())
-            # SysEx end
-            sysex_data.append(0xF7) 
-            # Data sending
-            self.midiout.send_message(sysex_data)
-            # Report operation
-            print("MIDI: Data len", len(sysex_data))
-            print("MIDI: SysEx CMD x%02X" % sysex_cmd)
-            print("MIDI: Send finish")
-            retval = True
-        else:
-            print("MIDI: Not init")
+        # Generate CMD payload
+        cmd_midi = YM_SYSEX_CMD_SET_REG
+        cmd_payload = []
+        cmd_payload.extend(self.__get_reg_values_array())
+        # Send command
+        retval = self.__send_midi_cmd(cmd_midi, cmd_payload)
         return retval
 
     def midi_save_preset(self, preset_pos=0, preset_name=""):
@@ -256,46 +317,37 @@ class YM2612Chip:
         preset_name: string of 15 characters to identify the preset
         """
         retval = False
-        # Check if midi interface def
-        if self.midiout:
-            print("MIDI: Send data start", self.midiout.get_port_name(self.midi_com))
-            # Prepare parameters
-            if preset_pos < YM_MAX_NUM_USER_PRESETS:
-                # Prepare preset name
-                format_preset_name = "{:<15}".format(preset_name)
-                # CMD set preset
-                sysex_cmd = YM_SYSEX_CMD_SAVE_PRESET
-                # Set data into array
-                sysex_data = []
-                # SysEx init
-                sysex_data.append(0xF0) # SysEx init
-                # Vendor id
-                sysex_data.append((self.vendor_id >> 16) & 0xFF)
-                sysex_data.append((self.vendor_id >> 8) & 0xFF)
-                sysex_data.append((self.vendor_id >> 0) & 0xFF)
-                # Cmd
-                sysex_data.append(sysex_cmd)
-                # Preset pos
-                sysex_data.append(preset_pos)
-                # Preset name
-                for str_ch in format_preset_name:
-                    sysex_data.append((ord(str_ch) >> 0) & 0x0F)
-                    sysex_data.append((ord(str_ch) >> 4) & 0x0F)
-                # Register data
-                sysex_data.extend(self.__get_reg_values_array())
-                # SysEx end
-                sysex_data.append(0xF7)
-                # Data TX
-                self.midiout.send_message(sysex_data)
-                # Show used parameters
-                print("MIDI: Data len", len(sysex_data))
-                print("MIDI: SysEx CMD x%02X" % sysex_cmd)
-                print("MIDI: Send finish")
-                retval = True
-            else:
-                print("MIDI: Preset Id out of range")
-        else:
-            print("MIDI: Not init")
+        if preset_pos < YM_MAX_NUM_USER_PRESETS:
+            # Generate CMD payload
+            cmd_midi = YM_SYSEX_CMD_SAVE_PRESET
+            cmd_payload = []
+            # Preset pos
+            cmd_payload.append(preset_pos)
+            # Preset name
+            format_preset_name = "{:<15}".format(preset_name)
+            for str_ch in format_preset_name:
+                cmd_payload.append((ord(str_ch) >> 0) & 0x0F)
+                cmd_payload.append((ord(str_ch) >> 4) & 0x0F)
+            # Register data
+            cmd_payload.extend(self.__get_reg_values_array())
+            # Send command
+            retval = self.__send_midi_cmd(cmd_midi, cmd_payload)
+        return retval
+
+    def midi_load_default_preset(self, preset_pos=0):
+        """
+        Load default const preset
+        preset_pos: preset position [0:8]
+        """
+        retval = False
+        if preset_pos < YM_MAX_NUM_DEFAULT_PRESETS:
+            # Generate CMD payload
+            cmd_midi = YM_SYSEX_CMD_LOAD_DEFAULT_PRESET
+            cmd_payload = []
+            # Preset pos
+            cmd_payload.append(preset_pos)
+            # Send command
+            retval = self.__send_midi_cmd(cmd_midi, cmd_payload)
         return retval
 
     def midi_load_preset(self, preset_pos=0):
@@ -304,181 +356,85 @@ class YM2612Chip:
         preset_pos: preset position [0:8]
         """
         retval = False
-        # Check if midi interface def
-        if self.midiout:
-            print("MIDI: Send data start", self.midiout.get_port_name(self.midi_com))
-            # Prepare parameters
-            if preset_pos < YM_MAX_NUM_USER_PRESETS:
-                # CMD set preset
-                sysex_cmd = YM_SYSEX_CMD_LOAD_PRESET
-                # Set data into array
-                sysex_data = []
-                # SysEx init
-                sysex_data.append(0xF0) # SysEx init
-                # Vendor id
-                sysex_data.append((self.vendor_id >> 16) & 0xFF)
-                sysex_data.append((self.vendor_id >> 8) & 0xFF)
-                sysex_data.append((self.vendor_id >> 0) & 0xFF)
-                # Cmd
-                sysex_data.append(sysex_cmd)
-                # Preset pos
-                sysex_data.append(preset_pos)
-                # SysEx end
-                sysex_data.append(0xF7)
-                # Data TX
-                self.midiout.send_message(sysex_data)
-                # Show used parameters
-                print("MIDI: Data len", len(sysex_data))
-                print("MIDI: SysEx CMD x%02X" % sysex_cmd)
-                print("MIDI: Send finish")
-                retval = True
-            else:
-                print("MIDI: Preset Id out of range")
-        else:
-            print("MIDI: Not init")
+        if preset_pos < YM_MAX_NUM_USER_PRESETS:
+            # Generate CMD payload
+            cmd_midi = YM_SYSEX_CMD_LOAD_PRESET
+            cmd_payload = []
+            # Preset pos
+            cmd_payload.append(preset_pos)
+            # Send command
+            retval = self.__send_midi_cmd(cmd_midi, cmd_payload)
         return retval
 
-    def set_preset(self, preset_id):
+    def set_custom_preset(self):
         """
-        Set preset:
-            0-Bell
-            1-Piano
-            2-Eorgan
-            3-Brass
-            4-String
-            5-Vibrphn
+        Set preset custom preset
         """
-        retval = False
-        # Bell
-        if preset_id == 0:
-            print("PRESET: Bell")
-            retval = True
-            # Set board registers
-            self.lfo_on = 1
-            self.lfo_freq = 0
-            for voice in range(6):
-                print("PRESET: Setup voice", voice)
-                # Setup voice 0
-                self.channel[voice].op_algorithm = 4
-                self.channel[voice].feedback = 3
-                self.channel[voice].audio_out = 3
-                self.channel[voice].phase_mod_sens = 0
-                self.channel[voice].amp_mod_sens = 2
-                # Setup operator 0
-                self.channel[voice].operator[0].total_level = 0x28 # 30
-                self.channel[voice].operator[0].multiple = 15
-                self.channel[voice].operator[0].detune = 3
-                self.channel[voice].operator[0].attack_rate = 31
-                self.channel[voice].operator[0].decay_rate = 4
-                self.channel[voice].operator[0].sustain_level = 1
-                self.channel[voice].operator[0].sustain_rate = 10
-                self.channel[voice].operator[0].release_rate = 3
-                self.channel[voice].operator[0].key_scale = 1
-                self.channel[voice].operator[0].amp_mod_on = 1
-                self.channel[voice].operator[0].ssg_envelope = 0x00 # OFF
-                # Setup operator 1
-                self.channel[voice].operator[1].total_level = 0x08 # 6
-                self.channel[voice].operator[1].multiple = 3
-                self.channel[voice].operator[1].detune = 5 # -1
-                self.channel[voice].operator[1].attack_rate = 30
-                self.channel[voice].operator[1].decay_rate = 8
-                self.channel[voice].operator[1].sustain_level = 0x03 # 9
-                self.channel[voice].operator[1].sustain_rate = 6
-                self.channel[voice].operator[1].release_rate = 3
-                self.channel[voice].operator[1].key_scale = 1
-                self.channel[voice].operator[1].amp_mod_on = 0
-                self.channel[voice].operator[1].ssg_envelope = 0x00 # OFF
-                # Setup operator 2
-                self.channel[voice].operator[2].total_level = 0x0C # 19
-                self.channel[voice].operator[2].multiple = 7
-                self.channel[voice].operator[2].detune = 5 # -1
-                self.channel[voice].operator[2].attack_rate = 31
-                self.channel[voice].operator[2].decay_rate = 4
-                self.channel[voice].operator[2].sustain_level = 0x03 # 9
-                self.channel[voice].operator[2].sustain_rate = 17
-                self.channel[voice].operator[2].release_rate = 1
-                self.channel[voice].operator[2].key_scale = 1
-                self.channel[voice].operator[2].amp_mod_on = 0
-                self.channel[voice].operator[2].ssg_envelope = 0x00 # OFF
-                # Setup operator 3
-                self.channel[voice].operator[3].total_level = 0x04 # 3
-                self.channel[voice].operator[3].multiple = 2
-                self.channel[voice].operator[3].detune = 4 # 0
-                self.channel[voice].operator[3].attack_rate = 31
-                self.channel[voice].operator[3].decay_rate = 5
-                self.channel[voice].operator[3].sustain_level = 0x02 # 6
-                self.channel[voice].operator[3].sustain_rate = 12
-                self.channel[voice].operator[3].release_rate = 3
-                self.channel[voice].operator[3].key_scale = 1
-                self.channel[voice].operator[3].amp_mod_on = 0
-                self.channel[voice].operator[3].ssg_envelope = 0x00 # OFF
-        # Piano
-        elif preset_id == 1:
-            print("PRESET: Piano")
-            retval = True
-            # Set board registers
-            self.lfo_on = 0
-            self.lfo_freq = 0
-            for voice in range(6):
-                print("PRESET: Setup voice", voice)
-                # Setup voice 0
-                self.channel[voice].op_algorithm = 4
-                self.channel[voice].feedback = 2
-                self.channel[voice].audio_out = 3
-                self.channel[voice].phase_mod_sens = 0
-                self.channel[voice].amp_mod_sens = 1
-                # Setup operator 0
-                self.channel[voice].operator[0].total_level = 0x30 # 36
-                self.channel[voice].operator[0].multiple = 1
-                self.channel[voice].operator[0].detune = 0
-                self.channel[voice].operator[0].attack_rate = 31
-                self.channel[voice].operator[0].decay_rate = 0
-                self.channel[voice].operator[0].sustain_level = 1 # 3
-                self.channel[voice].operator[0].sustain_rate = 8
-                self.channel[voice].operator[0].release_rate = 0
-                self.channel[voice].operator[0].key_scale = 3
-                self.channel[voice].operator[0].amp_mod_on = 0
-                self.channel[voice].operator[0].ssg_envelope = 0x00 # OFF
-                # Setup operator 1
-                self.channel[voice].operator[1].total_level = 0x01 # 3
-                self.channel[voice].operator[1].multiple = 0
-                self.channel[voice].operator[1].detune = 0 # 0
-                self.channel[voice].operator[1].attack_rate = 25
-                self.channel[voice].operator[1].decay_rate = 7
-                self.channel[voice].operator[1].sustain_level = 0x01 # 3
-                self.channel[voice].operator[1].sustain_rate = 6
-                self.channel[voice].operator[1].release_rate = 7
-                self.channel[voice].operator[1].key_scale = 2
-                self.channel[voice].operator[1].amp_mod_on = 0
-                self.channel[voice].operator[1].ssg_envelope = 0x00 # OFF
-                # Setup operator 2
-                self.channel[voice].operator[2].total_level = 0x30 # 36
-                self.channel[voice].operator[2].multiple = 2
-                self.channel[voice].operator[2].detune = 0
-                self.channel[voice].operator[2].attack_rate = 31
-                self.channel[voice].operator[2].decay_rate = 0
-                self.channel[voice].operator[2].sustain_level = 0x01 # 3
-                self.channel[voice].operator[2].sustain_rate = 8
-                self.channel[voice].operator[2].release_rate = 0
-                self.channel[voice].operator[2].key_scale = 3
-                self.channel[voice].operator[2].amp_mod_on = 0
-                self.channel[voice].operator[2].ssg_envelope = 0x00 # OFF
-                # Setup operator 3
-                self.channel[voice].operator[3].total_level = 0x01 # 3
-                self.channel[voice].operator[3].multiple = 1
-                self.channel[voice].operator[3].detune = 0 # 0
-                self.channel[voice].operator[3].attack_rate = 27
-                self.channel[voice].operator[3].decay_rate = 7
-                self.channel[voice].operator[3].sustain_level = 0x01 # 3
-                self.channel[voice].operator[3].sustain_rate = 6
-                self.channel[voice].operator[3].release_rate = 7
-                self.channel[voice].operator[3].key_scale = 2
-                self.channel[voice].operator[3].amp_mod_on = 0
-                self.channel[voice].operator[3].ssg_envelope = 0x00 # OFF
-        else:
-            print("PRESET: Id not found")
+        retval = True
+        # Set board registers
+        self.lfo_on = 1
+        self.lfo_freq = 0
+        for voice in range(6):
+            print("PRESET: Setup voice", voice)
+            # Setup voice 0
+            self.channel[voice].op_algorithm = 4
+            self.channel[voice].feedback = 3
+            self.channel[voice].audio_out = 3
+            self.channel[voice].phase_mod_sens = 0
+            self.channel[voice].amp_mod_sens = 2
+            # Setup operator 0
+            self.channel[voice].operator[0].total_level = 0x28 # 30
+            self.channel[voice].operator[0].multiple = 15
+            self.channel[voice].operator[0].detune = 3
+            self.channel[voice].operator[0].attack_rate = 31
+            self.channel[voice].operator[0].decay_rate = 4
+            self.channel[voice].operator[0].sustain_level = 0
+            self.channel[voice].operator[0].sustain_rate = 10
+            self.channel[voice].operator[0].release_rate = 3
+            self.channel[voice].operator[0].key_scale = 1
+            self.channel[voice].operator[0].amp_mod_on = 1
+            self.channel[voice].operator[0].ssg_envelope = 0x00 # OFF
+            # Setup operator 1
+            self.channel[voice].operator[1].total_level = 0x07
+            self.channel[voice].operator[1].multiple = 3
+            self.channel[voice].operator[1].detune = 5 # -1
+            self.channel[voice].operator[1].attack_rate = 30
+            self.channel[voice].operator[1].decay_rate = 8
+            self.channel[voice].operator[1].sustain_level = 3
+            self.channel[voice].operator[1].sustain_rate = 6
+            self.channel[voice].operator[1].release_rate = 3
+            self.channel[voice].operator[1].key_scale = 1
+            self.channel[voice].operator[1].amp_mod_on = 0
+            self.channel[voice].operator[1].ssg_envelope = 0x00 # OFF
+            # Setup operator 2
+            self.channel[voice].operator[2].total_level = 0x19
+            self.channel[voice].operator[2].multiple = 7
+            self.channel[voice].operator[2].detune = 5 # -1
+            self.channel[voice].operator[2].attack_rate = 31
+            self.channel[voice].operator[2].decay_rate = 4
+            self.channel[voice].operator[2].sustain_level = 3
+            self.channel[voice].operator[2].sustain_rate = 17
+            self.channel[voice].operator[2].release_rate = 1
+            self.channel[voice].operator[2].key_scale = 1
+            self.channel[voice].operator[2].amp_mod_on = 0
+            self.channel[voice].operator[2].ssg_envelope = 0x00 # OFF
+            # Setup operator 3
+            self.channel[voice].operator[3].total_level = 0x03
+            self.channel[voice].operator[3].multiple = 2
+            self.channel[voice].operator[3].detune = 4
+            self.channel[voice].operator[3].attack_rate = 31
+            self.channel[voice].operator[3].decay_rate = 5
+            self.channel[voice].operator[3].sustain_level = 2
+            self.channel[voice].operator[3].sustain_rate = 12
+            self.channel[voice].operator[3].release_rate = 3
+            self.channel[voice].operator[3].key_scale = 1
+            self.channel[voice].operator[3].amp_mod_on = 0
+            self.channel[voice].operator[3].ssg_envelope = 0x00 # OFF
         if retval:
-            retval = self.set_reg_values()
+            if self.midi_com:
+                retval = self.midi_set_reg_values()
+            elif self.ser_com:
+                retval = self.set_reg_values()
         print("PRESET: End")
         return retval
 
@@ -576,13 +532,10 @@ class YM2612Chip:
 
 def main():
     print("\r\nYM2612: Preset TEST\r\n")
-    # Test serial com
     # synth = YM2612Chip(ser_com="COM3")
-    # synth.set_preset(1)
-    # Test midi com
     synth = YM2612Chip(midi_com=2)
-    # synth.midi_set_reg_values()
-    synth.midi_save_preset(5, "Test_05")
+    # synth.set_custom_preset()
+    synth.midi_load_default_preset(YM_PRESET_SAWTOOTH)
 
 if __name__ == "__main__":
     main()
