@@ -8,6 +8,7 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "ui_sys.h"
+#include "ui_menu_main.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -22,7 +23,7 @@ ui_status_t UI_init(ui_menu_t * pxMenuHandler)
 {
     ui_status_t retval = UI_STATUS_ERROR;
 
-    if (UI_menu_test_init(pxMenuHandler) == UI_STATUS_OK)
+    if (UI_menu_main_init(pxMenuHandler) == UI_STATUS_OK)
     {
         retval = UI_STATUS_OK;
     }
@@ -69,20 +70,12 @@ void UI_action(ui_menu_t * pxMenuHandler, void * pvEvent)
     {
         ui_screen_t * pxScreen;
         uint32_t u32ScreenIndex = pxMenuHandler->u32ScreenSelectionIndex;
-        
+
         /* Get screen to render */
         pxScreen = &pxMenuHandler->pxScreenList[u32ScreenIndex];
-        
-        /* Send action to elements */
-        for (uint32_t u32Index = 0; u32Index < pxScreen->u32ElementNumber; u32Index++)
-        {
-            ui_element_t * pxElement = &pxScreen->pxElementList[u32Index];
 
-            if (pxElement->action_cb != NULL)
-            {
-                pxElement->action_cb(pxScreen, pxElement, pvEvent);
-            }
-        }
+        /* Send action to screen */
+        pxScreen->action_cb(pxMenuHandler, pvEvent);
     }
 }
 

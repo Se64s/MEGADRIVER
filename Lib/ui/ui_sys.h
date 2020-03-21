@@ -42,15 +42,15 @@ typedef enum
 } ui_element_type_t;
 
 /* Callback definitions */
-typedef void (* ui_screen_render_cb)(void * pxDisplayHandler, void * pvScreen);
-typedef void (* ui_element_render_cb)(void * pxDisplayHandler, void * pvScreen, void * pvElement);
-typedef void (* ui_element_action_cb)(void * pvScreen, void * pvElement, void * pvEventData);
+typedef void (* ui_screen_render_cb)(void * pvDisplay, void * pvScreen);
+typedef void (* ui_element_render_cb)(void * pvDisplay, void * pvScreen, void * pvElement);
+typedef void (* ui_screen_action_cb)(void * pvMenu, void * pvEventData);
+typedef void (* ui_element_action_cb)(void * pvMenu, void * pvEventData);
 
 /* Element screen definition */
 typedef struct
 {
     char * pcName;
-    bool bSelected;
     uint32_t u32Index;
     ui_element_render_cb render_cb;
     ui_element_action_cb action_cb;
@@ -59,12 +59,14 @@ typedef struct
 /* Screen structure definition */
 typedef struct
 {
-    char * pcName;
+    const char * pcName;
     uint32_t u32ElementSelectionIndex;
     uint32_t u32ElementRenderIndex;
     uint32_t u32ElementNumber;
     ui_element_t * pxElementList;
     ui_screen_render_cb render_cb;
+    ui_screen_action_cb action_cb;
+    bool bElementSelection;
 } ui_screen_t;
 
 /* Screen menu definition */
