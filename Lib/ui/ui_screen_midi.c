@@ -11,8 +11,9 @@
 #include "printf.h"
 #include "ui_task.h"
 #include "cli_task.h"
-
+#include "midi_task.h"
 #include "ui_menu_main.h"
+#include "encoder_driver.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -36,11 +37,11 @@ typedef enum
 /* Max len for element names */
 #define MAX_LEN_NAME                    (16U)
 
-#define NAME_FORMAT_MODE                "MODE      %s"
-#define NAME_FORMAT_CHANNEL             "CH           %01d"
-#define NAME_FORMAT_BANK                "BANK         %01d"
-#define NAME_FORMAT_PROGRAM             "PROGRAM      %01d"
-#define NAME_FORMAT_RETURN              "RETURN"
+#define NAME_FORMAT_MODE                "MODE       %s"
+#define NAME_FORMAT_CHANNEL             "CH           %d"
+#define NAME_FORMAT_BANK                "BANK         %d"
+#define NAME_FORMAT_PROGRAM             "PROGRAM      %d"
+#define NAME_FORMAT_RETURN              "BACK"
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
@@ -118,9 +119,18 @@ static void vElementModeRender(void * pvDisplay, void * pvScreen, void * pvEleme
         if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
         {
             /* Get data to print */
-
-            /* Prepare data on buffer */
-            sprintf(pxElement->pcName, NAME_FORMAT_MODE, (uint8_t)0U);
+            if (xMidiTaskGetMode() == MidiMode3)
+            {
+                sprintf(pxElement->pcName, NAME_FORMAT_MODE, "POLY");
+            }
+            else if (xMidiTaskGetMode() == MidiMode4)
+            {
+                sprintf(pxElement->pcName, NAME_FORMAT_MODE, "MONO");
+            }
+            else
+            {
+                sprintf(pxElement->pcName, NAME_FORMAT_MODE, "NONE");
+            }
 
             /* Print selection ico */
             vUI_MISC_DrawSelectionBox(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
@@ -146,7 +156,7 @@ static void vElementChannelRender(void * pvDisplay, void * pvScreen, void * pvEl
         if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
         {
             /* Prepare data on buffer */
-            sprintf(pxElement->pcName, NAME_FORMAT_CHANNEL, 0U);
+            sprintf(pxElement->pcName, NAME_FORMAT_CHANNEL, u8MidiTaskGetChannel());
 
             /* Print selection ico */
             vUI_MISC_DrawSelectionBox(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
@@ -172,7 +182,7 @@ static void vElementBankRender(void * pvDisplay, void * pvScreen, void * pvEleme
         if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
         {
             /* Prepare data on buffer */
-            sprintf(pxElement->pcName, NAME_FORMAT_BANK, 0U);
+            sprintf(pxElement->pcName, NAME_FORMAT_BANK, u8MidiTaskGetBank());
 
             /* Print selection ico */
             vUI_MISC_DrawSelectionBox(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
@@ -198,7 +208,7 @@ static void vElementProgramRender(void * pvDisplay, void * pvScreen, void * pvEl
         if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
         {
             /* Prepare data on buffer */
-            sprintf(pxElement->pcName, NAME_FORMAT_PROGRAM, 0U);
+            sprintf(pxElement->pcName, NAME_FORMAT_PROGRAM, u8MidiTaskGetProgram());
 
             /* Print selection ico */
             vUI_MISC_DrawSelectionBox(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
@@ -270,6 +280,35 @@ static void vElementModeAction(void * pvMenu, void * pvEventData)
 {
     if ((pvMenu != NULL) && (pvEventData != NULL))
     {
+        uint32_t * pu32Event = pvEventData;
+        ui_menu_t * pxMenu = pvMenu;
+        ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
+
+        /* Handle encoder events */
+        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        {
+            if (pxScreen->bElementSelection)
+            {
+                midiMode_t xTmpMode = xMidiTaskGetMode();
+
+                if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+                {
+                    xTmpMode++;
+                    
+                }
+                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+                {
+                    xTmpMode--;
+                }
+
+                (void)bMidiTaskSetMode(xTmpMode);
+            }
+        }
+        /* Element selection action */
+        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        {
+            pxScreen->bElementSelection = !pxScreen->bElementSelection;
+        }
     }
 }
 
@@ -277,6 +316,37 @@ static void vElementChannelAction(void * pvMenu, void * pvEventData)
 {
     if ((pvMenu != NULL) && (pvEventData != NULL))
     {
+        uint32_t * pu32Event = pvEventData;
+        ui_menu_t * pxMenu = pvMenu;
+        ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
+
+        /* Handle encoder events */
+        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        {
+            if (pxScreen->bElementSelection)
+            {
+                uint8_t u8Channel = u8MidiTaskGetChannel();
+
+                if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+                {
+                    if (u8Channel != 0U)
+                    {
+                        u8Channel--;
+                    }
+                }
+                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+                {
+                    u8Channel++;
+                }
+
+                (void)bMidiTaskSetChannel(u8Channel);
+            }
+        }
+        /* Element selection action */
+        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        {
+            pxScreen->bElementSelection = !pxScreen->bElementSelection;
+        }
     }
 }
 
@@ -284,6 +354,37 @@ static void vElementBankAction(void * pvMenu, void * pvEventData)
 {
     if ((pvMenu != NULL) && (pvEventData != NULL))
     {
+        uint32_t * pu32Event = pvEventData;
+        ui_menu_t * pxMenu = pvMenu;
+        ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
+
+        /* Handle encoder events */
+        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        {
+            if (pxScreen->bElementSelection)
+            {
+                uint8_t u8Bank = u8MidiTaskGetBank();
+
+                if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+                {
+                    if (u8Bank != 0U)
+                    {
+                        u8Bank--;
+                    }
+                }
+                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+                {
+                    u8Bank++;
+                }
+
+                (void)bMidiTaskSetBank(u8Bank);
+            }
+        }
+        /* Element selection action */
+        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        {
+            pxScreen->bElementSelection = !pxScreen->bElementSelection;
+        }
     }
 }
 
@@ -291,6 +392,37 @@ static void vElementProgramAction(void * pvMenu, void * pvEventData)
 {
     if ((pvMenu != NULL) && (pvEventData != NULL))
     {
+        uint32_t * pu32Event = pvEventData;
+        ui_menu_t * pxMenu = pvMenu;
+        ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
+
+        /* Handle encoder events */
+        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        {
+            if (pxScreen->bElementSelection)
+            {
+                uint8_t u8Program = u8MidiTaskGetProgram();
+
+                if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+                {
+                    if (u8Program != 0U)
+                    {
+                        u8Program--;
+                    }
+                }
+                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+                {
+                    u8Program++;
+                }
+
+                (void)bMidiTaskSetProgram(u8Program);
+            }
+        }
+        /* Element selection action */
+        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        {
+            pxScreen->bElementSelection = !pxScreen->bElementSelection;
+        }
     }
 }
 

@@ -17,6 +17,7 @@ extern "C" {
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -28,9 +29,9 @@ extern "C" {
 /* Private defines -----------------------------------------------------------*/
 
 /* Task parameters */
-#define SYNTH_TASK_NAME             "SYNTH"
-#define SYNTH_TASK_STACK            (128U)
-#define SYNTH_TASK_PRIO             (2U)
+#define SYNTH_TASK_NAME                     "SYNTH"
+#define SYNTH_TASK_STACK                    (256U)
+#define SYNTH_TASK_PRIO                     (2U)
 
 /* SysEx CMD parameters */
 #define SYNTH_LEN_VENDOR_ID                 (3U)
@@ -70,6 +71,14 @@ typedef enum
   SYNTH_SYSEX_CMD_NO_DEF = 0x1FU
 } SynthSysExCmdDef_t;
 
+/* SysEx defined cmd */
+typedef enum
+{
+  SYNTH_PRESET_SOURCE_DEFAULT = 0U,
+  SYNTH_PRESET_SOURCE_USER,
+  SYNTH_PRESET_SOURCE_MAX
+} SynthPresetSource_t;
+
 /* SysEx command format */
 typedef struct 
 {
@@ -102,6 +111,14 @@ typedef struct
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions prototypes ---------------------------------------------*/
+
+/**
+  * @brief Load flahs stored preset
+  * @param u8PresetSource preset source, default or user
+  * @param u8PresetId preset id.
+  * @retval operation result, true for correct load, false for error
+  */
+bool bSynthLoadPreset(SynthPresetSource_t u8PresetSource, uint8_t u8PresetId);
 
 /**
   * @brief Init resources for SYNTH tasks

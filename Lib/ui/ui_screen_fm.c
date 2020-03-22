@@ -37,7 +37,7 @@ typedef enum
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 
-const char pcScreenFmName[MAX_LEN_NAME] = "MAPPING";
+const char pcScreenFmName[MAX_LEN_NAME] = "FM";
 
 ui_element_t xElementFmScreenElementList[UI_NUM_ELEMENT];
 

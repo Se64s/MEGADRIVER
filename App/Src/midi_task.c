@@ -632,6 +632,9 @@ static void vMidiMain(void *pvParameters)
     /* Init delay to for pow stabilization */
     vTaskDelay(pdMS_TO_TICKS(500U));
 
+    /* Show init msg */
+    vCliPrintf(MIDI_TASK_NAME, "Init");
+
     /* Init resources */
     (void)SERIAL_init(SERIAL_0, vSerialPortHandlerCallBack);
 
@@ -646,9 +649,6 @@ static void vMidiMain(void *pvParameters)
 
     /* Restore midi cfg */
     vRestoreMidiCtrl();
-
-    /* Show init msg */
-    vCliPrintf(MIDI_TASK_NAME, "Init");
 
     for (;;)
     {
@@ -669,6 +669,135 @@ static void vMidiMain(void *pvParameters)
 }
 
 /* Public fuctions -----------------------------------------------------------*/
+
+midiMode_t xMidiTaskGetMode(void)
+{
+    return xMidiCfg.xMode;
+}
+
+uint8_t u8MidiTaskGetChannel(void)
+{
+    return xMidiCfg.u8BaseChannel;
+}
+
+uint8_t u8MidiTaskGetBank(void)
+{
+    return xMidiCfg.u8Bank;
+}
+
+uint8_t u8MidiTaskGetProgram(void)
+{
+    return xMidiCfg.u8Program;
+}
+
+bool bMidiTaskSetMode(midiMode_t xNewMode)
+{
+    bool bRetval = false;
+
+    if ((xNewMode != xMidiCfg.xMode) && ((xNewMode == MidiMode3) || (xNewMode == MidiMode4)))
+    {
+        uint8_t u8Bank = xMidiCfg.u8Bank;
+        uint8_t u8Program = xMidiCfg.u8Program;
+        uint8_t u8BaseChannel = xMidiCfg.u8BaseChannel;
+
+        vResetMidiCtrl();
+
+        xMidiCfg.xMode = xNewMode;
+        xMidiCfg.u8BaseChannel = u8BaseChannel;
+        xMidiCfg.u8Program = u8Program;
+        xMidiCfg.u8Bank = u8Bank;
+
+        bRetval = true;
+    }
+
+    return bRetval;
+}
+
+bool bMidiTaskSetChannel(uint8_t u8NewChannel)
+{
+    bool bRetval = false;
+
+    if ((u8NewChannel <= MIDI_CHANNEL_MAX_VALUE) && (u8NewChannel != xMidiCfg.u8BaseChannel))
+    {
+        midiMode_t xMode = xMidiCfg.xMode;
+        uint8_t u8Bank = xMidiCfg.u8Bank;
+        uint8_t u8Program = xMidiCfg.u8Program;
+
+        vResetMidiCtrl();
+
+        xMidiCfg.xMode = xMode;
+        xMidiCfg.u8BaseChannel = u8NewChannel;
+        xMidiCfg.u8Program = u8Program;
+        xMidiCfg.u8Bank = u8Bank;
+
+        bRetval = true;
+    }
+
+    return bRetval;
+}
+
+bool bMidiTaskSetBank(uint8_t u8NewBank)
+{
+    bool bRetval = false;
+
+    if ((u8NewBank < MIDI_APP_MAX_BANK) && (xMidiCfg.u8Bank != u8NewBank))
+    {
+        bRetval = bSynthLoadPreset(u8NewBank, 0U);
+
+        if (bRetval)
+        {
+            midiMode_t xMode = xMidiCfg.xMode;
+            uint8_t u8BaseChannel = xMidiCfg.u8BaseChannel;
+
+            vResetMidiCtrl();
+
+            xMidiCfg.xMode = xMode;
+            xMidiCfg.u8BaseChannel = u8BaseChannel;
+            xMidiCfg.u8Program = 0U;
+            xMidiCfg.u8Bank = u8NewBank;
+
+            vCliPrintf(MIDI_TASK_NAME, "LOAD BANK, %d PROGRAM, %d: OK", u8NewBank, 0U);
+        }
+        else
+        {
+            vCliPrintf(MIDI_TASK_NAME, "LOAD BANK, %d PROGRAM, %d: ERROR", u8NewBank, 0U);
+        }
+    }
+
+    return bRetval;
+}
+
+bool bMidiTaskSetProgram(uint8_t u8NewProgram)
+{
+    bool bRetval = false;
+
+    if ((u8NewProgram <= MIDI_PROGRAM_MAX_VALUE) && (xMidiCfg.u8Program != u8NewProgram))
+    {
+        bRetval = bSynthLoadPreset(xMidiCfg.u8Bank, u8NewProgram);
+
+        if (bRetval)
+        {
+            midiMode_t xMode = xMidiCfg.xMode;
+            uint8_t u8BaseChannel = xMidiCfg.u8BaseChannel;
+            uint8_t u8Bank = xMidiCfg.u8Bank;
+
+            vResetMidiCtrl();
+
+            xMidiCfg.xMode = xMode;
+            xMidiCfg.u8BaseChannel = u8BaseChannel;
+            xMidiCfg.u8Program = u8NewProgram;
+            xMidiCfg.u8Bank = u8Bank;
+
+            vCliPrintf(MIDI_TASK_NAME, "LOAD BANK, %d PROGRAM, %d: OK", xMidiCfg.u8Bank, u8NewProgram);
+        }
+        else
+        {
+            vCliPrintf(MIDI_TASK_NAME, "LOAD BANK, %d PROGRAM, %d: ERROR", xMidiCfg.u8Bank, u8NewProgram);
+        }
+    }
+
+    return bRetval;
+}
 
 bool bMidiTaskInit(void)
 {
