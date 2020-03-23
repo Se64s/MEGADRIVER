@@ -21,18 +21,26 @@
 /* Private user code ---------------------------------------------------------*/
 /* Public user code ----------------------------------------------------------*/
 
-void vUI_MISC_DrawSelectionBox(u8g2_t * pxDisplayHandler, ui_screen_t * pxScreen, uint8_t u8ElementIndex, uint8_t u8SelectBoxY)
+void vUI_MISC_DrawSelection(u8g2_t * pxDisplayHandler, ui_screen_t * pxScreen, uint8_t u8ElementIndex, uint8_t u8SelectBoxY)
 {
     if ((pxDisplayHandler != NULL) && (pxScreen != NULL))
     {
         if (pxScreen->u32ElementSelectionIndex == u8ElementIndex)
         {
-            uint8_t u8BoxX = 0U;
-            uint8_t u8BoxY = u8SelectBoxY - (u8g2_GetMaxCharHeight(pxDisplayHandler) + UI_OFFSET_INTRA_ELEMENT_Y);
-            uint8_t u8BoxW = u8g2_GetDisplayWidth(pxDisplayHandler);
-            uint8_t u8BoxH = u8g2_GetMaxCharWidth(pxDisplayHandler) + UI_OFFSET_INTRA_ELEMENT_Y;
+            uint8_t u8CharPosY = u8SelectBoxY;
 
-            u8g2_DrawBox(pxDisplayHandler, u8BoxX, u8BoxY, u8BoxW, u8BoxH);
+            /* If box is selected, mark option */
+            if (pxScreen->bElementSelection)
+            {
+                
+                uint8_t u8CharPosX = u8g2_GetDisplayWidth(pxDisplayHandler) - (2U * u8g2_GetMaxCharWidth(pxDisplayHandler));
+                u8g2_DrawStr(pxDisplayHandler, u8CharPosX, u8CharPosY, "<<");
+            }
+            else
+            {
+                uint8_t u8CharPosX = u8g2_GetDisplayWidth(pxDisplayHandler) - u8g2_GetMaxCharWidth(pxDisplayHandler);
+                u8g2_DrawStr(pxDisplayHandler, u8CharPosX, u8CharPosY, "<");
+            }
         }
     }
 }

@@ -111,7 +111,7 @@ static void vElementMidiRender(void * pvDisplay, void * pvScreen, void * pvEleme
             sprintf(pxElement->pcName, NAME_FORMAT_MIDI);
 
             /* Print selection ico */
-            vUI_MISC_DrawSelectionBox(pxDisplayHandler, pxScreen, (uint8_t)pxElement->u32Index, (uint8_t)u32IndY);
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, (uint8_t)pxElement->u32Index, (uint8_t)u32IndY);
 
             /* Draw string */
             u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
@@ -138,7 +138,7 @@ static void vElementFmRender(void * pvDisplay, void * pvScreen, void * pvElement
             sprintf(pxElement->pcName, NAME_FORMAT_FM);
 
             /* Print selection ico */
-            vUI_MISC_DrawSelectionBox(pxDisplayHandler, pxScreen, (uint8_t)pxElement->u32Index, (uint8_t)u32IndY);
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, (uint8_t)pxElement->u32Index, (uint8_t)u32IndY);
 
             u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
         }
@@ -164,7 +164,7 @@ static void vElementMappingRender(void * pvDisplay, void * pvScreen, void * pvEl
             sprintf(pxElement->pcName, NAME_FORMAT_MAPPING);
 
             /* Print selection ico */
-            vUI_MISC_DrawSelectionBox(pxDisplayHandler, pxScreen, (uint8_t)pxElement->u32Index, (uint8_t)u32IndY);
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, (uint8_t)pxElement->u32Index, (uint8_t)u32IndY);
 
             u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
         }

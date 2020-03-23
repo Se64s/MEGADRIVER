@@ -102,7 +102,7 @@ static void vElementReturnRender(void * pvDisplay, void * pvScreen, void * pvEle
             sprintf(pxElement->pcName, NAME_FORMAT_RETURN);
 
             /* Print selection ico */
-            vUI_MISC_DrawSelectionBox(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
 
             u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
         }

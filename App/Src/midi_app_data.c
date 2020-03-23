@@ -34,21 +34,7 @@ bool bMIDI_APP_DATA_init(void)
 
     if (xInitStatus == APP_DATA_NOT_INIT)
     {
-        /* Clear page and write a default CFG */
-        if (xAPP_DATA_clear_layout(&xMidiAppData) == APP_DATA_OK)
-        {
-            midi_app_data_t xMidiDefaultCfg = {0};
-
-            /* Base address */
-            xMidiDefaultCfg.u8Mode = MIDI_APP_DATA_DEFAULT_MODE;
-            xMidiDefaultCfg.u8BaseChannel = MIDI_APP_DATA_DEFAULT_CH;
-            xMidiDefaultCfg.u8Program = MIDI_APP_DATA_DEFAULT_PROG;
-
-            if (xAPP_DATA_save_element(&xMidiAppData, (void *)&xMidiDefaultCfg) == APP_DATA_OK)
-            {
-                bRetVal = true;
-            }
-        }
+        /* Init needed */
     }
     else if (xInitStatus == APP_DATA_OK)
     {

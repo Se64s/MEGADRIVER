@@ -25,22 +25,22 @@ typedef enum
     MIDI_SCREEN_ELEMENT_CHANNEL,
     MIDI_SCREEN_ELEMENT_BANK,
     MIDI_SCREEN_ELEMENT_PROGRAM,
+    MIDI_SCREEN_ELEMENT_SAVE,
     MIDI_SCREEN_ELEMENT_RETURN,
     MIDI_SCREEN_LAST_ELEMENT,
 } eMidiScreenElement_t;
 
 /* Private define ------------------------------------------------------------*/
 
-/* Max num of elements */
-#define UI_NUM_ELEMENT                  (8U)
-
 /* Max len for element names */
 #define MAX_LEN_NAME                    (16U)
+#define MAX_LEN_NAME_SAVE_AUX           (4U)
 
-#define NAME_FORMAT_MODE                "MODE       %s"
-#define NAME_FORMAT_CHANNEL             "CH           %d"
-#define NAME_FORMAT_BANK                "BANK         %d"
-#define NAME_FORMAT_PROGRAM             "PROGRAM      %d"
+#define NAME_FORMAT_MODE                "MODE      %s"
+#define NAME_FORMAT_CHANNEL             "CH          %02d"
+#define NAME_FORMAT_BANK                "BANK        %02d"
+#define NAME_FORMAT_PROGRAM             "PROGRAM     %02d"
+#define NAME_FORMAT_SAVE                "SAVE        %s"
 #define NAME_FORMAT_RETURN              "BACK"
 
 /* Private macro -------------------------------------------------------------*/
@@ -54,7 +54,10 @@ char pcMidiModeName[MAX_LEN_NAME] = {0};
 char pcMidiChannelName[MAX_LEN_NAME] = {0};
 char pcMidiBankName[MAX_LEN_NAME] = {0};
 char pcMidiProgramName[MAX_LEN_NAME] = {0};
+char pcMidiSaveName[MAX_LEN_NAME] = {0};
 char pcMidiReturn[MAX_LEN_NAME] = {0};
+
+char pcMidiSaveAuxName[MAX_LEN_NAME_SAVE_AUX] = {0};
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -64,6 +67,7 @@ static void vElementModeRender(void * pvDisplay, void * pvScreen, void * pvEleme
 static void vElementChannelRender(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementBankRender(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementProgramRender(void * pvDisplay, void * pvScreen, void * pvElement);
+static void vElementSaveRender(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementReturnRender(void * pvDisplay, void * pvScreen, void * pvElement);
 
 /* Action function */
@@ -72,6 +76,7 @@ static void vElementModeAction(void * pvMenu, void * pvEventData);
 static void vElementChannelAction(void * pvMenu, void * pvEventData);
 static void vElementBankAction(void * pvMenu, void * pvEventData);
 static void vElementProgramAction(void * pvMenu, void * pvEventData);
+static void vElementSaveAction(void * pvMenu, void * pvEventData);
 static void vElementReturnAction(void * pvMenu, void * pvEventData);
 
 /* Private user code ---------------------------------------------------------*/
@@ -133,7 +138,7 @@ static void vElementModeRender(void * pvDisplay, void * pvScreen, void * pvEleme
             }
 
             /* Print selection ico */
-            vUI_MISC_DrawSelectionBox(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
 
             u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
         }
@@ -159,7 +164,7 @@ static void vElementChannelRender(void * pvDisplay, void * pvScreen, void * pvEl
             sprintf(pxElement->pcName, NAME_FORMAT_CHANNEL, u8MidiTaskGetChannel());
 
             /* Print selection ico */
-            vUI_MISC_DrawSelectionBox(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
 
             u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
         }
@@ -185,7 +190,7 @@ static void vElementBankRender(void * pvDisplay, void * pvScreen, void * pvEleme
             sprintf(pxElement->pcName, NAME_FORMAT_BANK, u8MidiTaskGetBank());
 
             /* Print selection ico */
-            vUI_MISC_DrawSelectionBox(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
 
             u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
         }
@@ -211,7 +216,42 @@ static void vElementProgramRender(void * pvDisplay, void * pvScreen, void * pvEl
             sprintf(pxElement->pcName, NAME_FORMAT_PROGRAM, u8MidiTaskGetProgram());
 
             /* Print selection ico */
-            vUI_MISC_DrawSelectionBox(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
+
+            u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
+        }
+    }
+}
+
+static void vElementSaveRender(void * pvDisplay, void * pvScreen, void * pvElement)
+{
+    if ((pvDisplay != NULL) && (pvScreen != NULL) && (pvElement != NULL))
+    {
+        u8g2_t * pxDisplayHandler = pvDisplay;
+        ui_screen_t * pxScreen = pvScreen;
+        ui_element_t * pxElement = pvElement;
+        uint32_t u32IndX = UI_OFFSET_ELEMENT_X;
+        uint32_t u32IndY = UI_OFFSET_ELEMENT_Y;
+
+        /* Compute element offset */
+        u32IndY += u32UI_MISC_GetDrawIndexY(pxDisplayHandler, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
+
+        if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
+        {
+            /* Clear aux string in case of not empty and not selection */
+            if (pxScreen->u32ElementSelectionIndex != pxElement->u32Index)
+            {
+                if (pcMidiSaveAuxName[0U] != 0U)
+                {
+                    sprintf(pcMidiSaveAuxName, "");
+                }
+            }
+
+            /* Prepare data on buffer */
+            sprintf(pxElement->pcName, NAME_FORMAT_SAVE, pcMidiSaveAuxName);
+
+            /* Print selection ico */
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
 
             u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
         }
@@ -237,7 +277,7 @@ static void vElementReturnRender(void * pvDisplay, void * pvScreen, void * pvEle
             sprintf(pxElement->pcName, NAME_FORMAT_RETURN);
 
             /* Print selection ico */
-            vUI_MISC_DrawSelectionBox(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
 
             u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
         }
@@ -426,6 +466,32 @@ static void vElementProgramAction(void * pvMenu, void * pvEventData)
     }
 }
 
+static void vElementSaveAction(void * pvMenu, void * pvEventData)
+{
+    (void)pvMenu;
+
+    if (pvEventData != NULL)
+    {
+        uint32_t * pu32EventData = pvEventData;
+
+        if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        {
+            /* Set midi screen */
+            vCliPrintf(UI_TASK_NAME, "Event Save");
+
+            /* Save current CFG midi screen */
+            if (bMidiTaskSaveCfg())
+            {
+                sprintf(pcMidiSaveAuxName, "OK");
+            }
+            else
+            {
+                sprintf(pcMidiSaveAuxName, "ERR");
+            }
+        }
+    }
+}
+
 static void vElementReturnAction(void * pvMenu, void * pvEventData)
 {
     if ((pvMenu != NULL) && (pvEventData != NULL))
@@ -487,6 +553,11 @@ ui_status_t UI_screen_midi_init(ui_screen_t * pxScreenHandler)
         xMidiScreenElementList[MIDI_SCREEN_ELEMENT_PROGRAM].u32Index = MIDI_SCREEN_ELEMENT_PROGRAM;
         xMidiScreenElementList[MIDI_SCREEN_ELEMENT_PROGRAM].render_cb = vElementProgramRender;
         xMidiScreenElementList[MIDI_SCREEN_ELEMENT_PROGRAM].action_cb = vElementProgramAction;
+
+        xMidiScreenElementList[MIDI_SCREEN_ELEMENT_SAVE].pcName = pcMidiSaveName;
+        xMidiScreenElementList[MIDI_SCREEN_ELEMENT_SAVE].u32Index = MIDI_SCREEN_ELEMENT_SAVE;
+        xMidiScreenElementList[MIDI_SCREEN_ELEMENT_SAVE].render_cb = vElementSaveRender;
+        xMidiScreenElementList[MIDI_SCREEN_ELEMENT_SAVE].action_cb = vElementSaveAction;
 
         xMidiScreenElementList[MIDI_SCREEN_ELEMENT_RETURN].pcName = pcMidiReturn;
         xMidiScreenElementList[MIDI_SCREEN_ELEMENT_RETURN].u32Index = MIDI_SCREEN_ELEMENT_RETURN;

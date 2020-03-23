@@ -37,14 +37,14 @@ extern "C"
 /* Exported functions prototypes ---------------------------------------------*/
 
 /**
-  * @brief  Check and draw a selection box in given index and position.
+  * @brief  Check and draw a selection indicator in given index and position.
   * @param  pxDisplayHandler ui display hamdler.
   * @param  pxScreen screen control element.
   * @param  u8ElementIndex index of screen to draw.
   * @param  u8SelectBoxY Y coordinate to draw selection box.
   * @retval None.
 */
-void vUI_MISC_DrawSelectionBox(u8g2_t * pxDisplayHandler, ui_screen_t * pxScreen, uint8_t u8ElementIndex, uint8_t u8SelectBoxY);
+void vUI_MISC_DrawSelection(u8g2_t * pxDisplayHandler, ui_screen_t * pxScreen, uint8_t u8ElementIndex, uint8_t u8SelectBoxY);
 
 /**
   * @brief  Get Y coordinate from given element.

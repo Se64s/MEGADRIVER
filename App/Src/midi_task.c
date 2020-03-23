@@ -74,9 +74,9 @@ static void vResetMidiCtrl(void);
 
 /**
   * @brief Load data from persistence memory.
-  * @retval None.
+  * @retval Operation result.
   */
-static void vRestoreMidiCtrl(void);
+static bool bRestoreMidiCtrl(void);
 
 /**
   * @brief Send synth cmd to synth task.
@@ -184,10 +184,10 @@ static void vMidiMain(void *pvParameters);
 
 static void vResetMidiCtrl(void)
 {
-    xMidiCfg.xMode = MidiMode4;      /* Mono mode */
-    xMidiCfg.u8Bank = 0U;
-    xMidiCfg.u8Program = 0U;
-    xMidiCfg.u8BaseChannel = 1U;
+    xMidiCfg.xMode = MIDI_APP_DATA_DEFAULT_MODE;
+    xMidiCfg.u8Bank = MIDI_APP_DATA_DEFAULT_CH;
+    xMidiCfg.u8Program = MIDI_APP_DATA_DEFAULT_BANK;
+    xMidiCfg.u8BaseChannel = MIDI_APP_DATA_DEFAULT_PROG;
 
     /* Tmp values */
     for (uint32_t u32Index = 0U; u32Index < MIDI_NUM_CHANNEL; u32Index++)
@@ -207,25 +207,55 @@ static void vResetMidiCtrl(void)
     (void)bSendSynthCmd(&xTmpCmd);
 }
 
-static void vRestoreMidiCtrl(void)
+static bool bRestoreMidiCtrl(void)
 {
-    const midi_app_data_t * pxFlasData = NULL;
+    bool bRetVal = bMIDI_APP_DATA_init();
 
-    if (bMIDI_APP_DATA_read(&pxFlasData))
+    /* Init flash data */
+    if (bRetVal)
     {
-        xMidiCfg.xMode = pxFlasData->u8Mode;
-        xMidiCfg.u8BaseChannel = pxFlasData->u8BaseChannel;
-        xMidiCfg.u8Program = pxFlasData->u8Program;
+        const midi_app_data_t * pxFlasData = NULL;
 
-        vCliPrintf(MIDI_TASK_NAME, "FLASH: Load Mode %02X", xMidiCfg.xMode);
-        vCliPrintf(MIDI_TASK_NAME, "FLASH: Load Channel %02X", xMidiCfg.u8BaseChannel);
-        vCliPrintf(MIDI_TASK_NAME, "FLASH: Load Program %02X", xMidiCfg.u8Program);
+        if (bMIDI_APP_DATA_read(&pxFlasData))
+        {
+            xMidiCfg.xMode = pxFlasData->u8Mode;
+            xMidiCfg.u8BaseChannel = pxFlasData->u8BaseChannel;
+            xMidiCfg.u8Bank = pxFlasData->u8Bank;
+            xMidiCfg.u8Program = pxFlasData->u8Program;
+
+            vCliPrintf(MIDI_TASK_NAME, "FLASH: Load Mode %02X", xMidiCfg.xMode);
+            vCliPrintf(MIDI_TASK_NAME, "FLASH: Load Channel %02X", xMidiCfg.u8BaseChannel);
+            vCliPrintf(MIDI_TASK_NAME, "FLASH: Load Bank %02X", xMidiCfg.u8Bank);
+            vCliPrintf(MIDI_TASK_NAME, "FLASH: Load Program %02X", xMidiCfg.u8Program);
+        }
+        else
+        {
+            vCliPrintf(MIDI_TASK_NAME, "FLASH: Error reading flash data");
+        }
     }
     else
     {
-        vCliPrintf(MIDI_TASK_NAME, "FLASH: Error reading flash data");
+        /* Initiate flash with default data */
+        midi_app_data_t xMidiDefaultCfg = {0};
+
+        /* Base address */
+        xMidiDefaultCfg.u8Mode = MIDI_APP_DATA_DEFAULT_MODE;
+        xMidiDefaultCfg.u8BaseChannel = MIDI_APP_DATA_DEFAULT_CH;
+        xMidiDefaultCfg.u8Bank = MIDI_APP_DATA_DEFAULT_BANK;
+        xMidiDefaultCfg.u8Program = MIDI_APP_DATA_DEFAULT_PROG;
+
+        if (bMIDI_APP_DATA_write(&xMidiDefaultCfg) == APP_DATA_OK)
+        {
+            vCliPrintf(MIDI_TASK_NAME, "FLASH: Init Midi Default Values OK");
+            bRetVal = true;
+        }
+        else
+        {
+            vCliPrintf(MIDI_TASK_NAME, "FLASH: Init Midi Default Values ERROR");
+        }
     }
 
+    return bRetVal;
 }
 
 static bool bSendSynthCmd(SynthMsg_t * pxSynthCmd)
@@ -641,14 +671,11 @@ static void vMidiMain(void *pvParameters)
     /* Init MIDI library */
     (void)midi_init(vMidiCmdSysExCallBack, vMidiCmd1CallBack, vMidiCmd2CallBack, vMidiCmdRtCallBack);
 
-    /* Init flash data */
-    (void)bMIDI_APP_DATA_init();
-
     /* Init control structure */
     vResetMidiCtrl();
 
-    /* Restore midi cfg */
-    vRestoreMidiCtrl();
+    /* Init flash data */
+    (void)bRestoreMidiCtrl();
 
     for (;;)
     {
@@ -794,6 +821,30 @@ bool bMidiTaskSetProgram(uint8_t u8NewProgram)
         {
             vCliPrintf(MIDI_TASK_NAME, "LOAD BANK, %d PROGRAM, %d: ERROR", xMidiCfg.u8Bank, u8NewProgram);
         }
+    }
+
+    return bRetval;
+}
+
+bool bMidiTaskSaveCfg(void)
+{
+    bool bRetval = false;
+    midi_app_data_t xMidiSaveCfg = {0};
+
+    xMidiSaveCfg.u8Mode = xMidiCfg.xMode;
+    xMidiSaveCfg.u8BaseChannel = xMidiCfg.u8BaseChannel;
+    xMidiSaveCfg.u8Bank = xMidiCfg.u8Bank;
+    xMidiSaveCfg.u8Program = xMidiCfg.u8Program;
+
+    bRetval = bMIDI_APP_DATA_write(&xMidiSaveCfg);
+
+    if (bRetval)
+    {
+        vCliPrintf(MIDI_TASK_NAME, "FLASH: Save Midi CFG OK");
+    }
+    else
+    {
+        vCliPrintf(MIDI_TASK_NAME, "FLASH: Save Midi CFG ERROR");
     }
 
     return bRetval;

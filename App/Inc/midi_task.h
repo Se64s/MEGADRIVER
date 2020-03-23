@@ -112,6 +112,12 @@ bool bMidiTaskSetBank(uint8_t u8NewBank);
 bool bMidiTaskSetProgram(uint8_t u8NewProgram);
 
 /**
+  * @brief Save current setup into flash
+  * @retval operation result
+  */
+bool bMidiTaskSaveCfg(void);
+
+/**
   * @brief Init resources for MIDI tasks
   * @retval operation result, true for correct creation, false for error
   */
