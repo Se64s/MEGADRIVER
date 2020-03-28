@@ -34,12 +34,12 @@ typedef enum
     FM_SCREEN_ELEMENT_OP_TOTAL_LEVEL,
     FM_SCREEN_ELEMENT_OP_KEY_SCALE,
     FM_SCREEN_ELEMENT_OP_ATTACK_RATE,
-    // FM_SCREEN_ELEMENT_OP_AMP_MOD_EN,
-    // FM_SCREEN_ELEMENT_OP_DECAY_RATE,
-    // FM_SCREEN_ELEMENT_OP_SUSTAIN_LEVEL,
-    // FM_SCREEN_ELEMENT_OP_RELEASE_RATE,
-    // FM_SCREEN_ELEMENT_OP_SSG_ENVELOPE,
-    // FM_SCREEN_ELEMENT_SAVE,
+    FM_SCREEN_ELEMENT_OP_AMP_MOD_EN,
+    FM_SCREEN_ELEMENT_OP_DECAY_RATE,
+    FM_SCREEN_ELEMENT_OP_SUSTAIN_LEVEL,
+    FM_SCREEN_ELEMENT_OP_RELEASE_RATE,
+    FM_SCREEN_ELEMENT_OP_SSG_ENVELOPE,
+    FM_SCREEN_ELEMENT_SAVE,
     FM_SCREEN_ELEMENT_RETURN,
     FM_SCREEN_ELEMENT_LAST
 } eFmScreenElement_t;
@@ -101,6 +101,12 @@ char pcElementLabelOperatorMultiple[MAX_LEN_NAME] = {0U};
 char pcElementLabelOperatorTotalLevel[MAX_LEN_NAME] = {0U};
 char pcElementLabelOperatorKeyScale[MAX_LEN_NAME] = {0U};
 char pcElementLabelOperatorAttackRate[MAX_LEN_NAME] = {0U};
+char pcElementLabelOperatorAmpModEn[MAX_LEN_NAME] = {0U};
+char pcElementLabelOperatorDecayRate[MAX_LEN_NAME] = {0U};
+char pcElementLabelOperatorSustainLevel[MAX_LEN_NAME] = {0U};
+char pcElementLabelOperatorReleaseRate[MAX_LEN_NAME] = {0U};
+char pcElementLabelOperatorSsgEnvelope[MAX_LEN_NAME] = {0U};
+char pcElementLabelSave[MAX_LEN_NAME] = {0U};
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -130,6 +136,12 @@ static void vElementRenderOperatorMultiple(void * pvDisplay, void * pvScreen, vo
 static void vElementRenderOperatorTotalLevel(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementRenderOperatorKeyScale(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementRenderOperatorAttackRate(void * pvDisplay, void * pvScreen, void * pvElement);
+static void vElementRenderOperatorAmpModEn(void * pvDisplay, void * pvScreen, void * pvElement);
+static void vElementRenderOperatorDecayRate(void * pvDisplay, void * pvScreen, void * pvElement);
+static void vElementRenderOperatorSustainLevel(void * pvDisplay, void * pvScreen, void * pvElement);
+static void vElementRenderOperatorReleaseRate(void * pvDisplay, void * pvScreen, void * pvElement);
+static void vElementRenderOperatorSsgEnvelope(void * pvDisplay, void * pvScreen, void * pvElement);
+static void vElementRenderSave(void * pvDisplay, void * pvScreen, void * pvElement);
 
 /* Actions functions */
 static void vScreenAction(void * pvMenu, void * pvEventData);
@@ -148,6 +160,12 @@ static void vElementActionOperatorMultiple(void * pvMenu, void * pvEventData);
 static void vElementActionOperatorTotalLevel(void * pvMenu, void * pvEventData);
 static void vElementActionOperatorKeyScale(void * pvMenu, void * pvEventData);
 static void vElementActionOperatorAttackRate(void * pvMenu, void * pvEventData);
+static void vElementActionOperatorAmpModEn(void * pvMenu, void * pvEventData);
+static void vElementActionOperatorDecayRate(void * pvMenu, void * pvEventData);
+static void vElementActionOperatorSustainLevel(void * pvMenu, void * pvEventData);
+static void vElementActionOperatorReleaseRate(void * pvMenu, void * pvEventData);
+static void vElementActionOperatorSsgEnvelope(void * pvMenu, void * pvEventData);
+static void vElementActionSave(void * pvMenu, void * pvEventData);
 
 /* Private user code ---------------------------------------------------------*/
 
@@ -1004,6 +1022,230 @@ static void vElementRenderOperatorAttackRate(void * pvDisplay, void * pvScreen, 
     }
 }
 
+static void vElementRenderOperatorAmpModEn(void * pvDisplay, void * pvScreen, void * pvElement)
+{
+    if ((pvDisplay != NULL) && (pvScreen != NULL) && (pvElement != NULL))
+    {
+        u8g2_t * pxDisplayHandler = pvDisplay;
+        ui_screen_t * pxScreen = pvScreen;
+        ui_element_t * pxElement = pvElement;
+        uint32_t u32IndX = UI_OFFSET_ELEMENT_X;
+        uint32_t u32IndY = UI_OFFSET_ELEMENT_Y;
+
+        /* Compute element offset */
+        u32IndY += u32UI_MISC_GetDrawIndexY(pxDisplayHandler, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
+
+        if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
+        {
+            xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
+
+            /* Prepare data on buffer */
+            if ((u8VoiceIndex <= YM2612_NUM_CHANNEL) && (u8OperatorIndex <= YM2612_NUM_OP_CHANNEL))
+            {
+                uint8_t u8TmpVoiceIndex = (u8VoiceIndex == YM2612_NUM_CHANNEL) ? 0U : u8VoiceIndex;
+                uint8_t u8TmpOperatorIndex = (u8OperatorIndex == YM2612_NUM_OP_CHANNEL) ? 0U : u8OperatorIndex;
+
+                if (pxDeviceCfg->xChannel[u8TmpVoiceIndex].xOperator[u8TmpOperatorIndex].u8AmpMod)
+                {
+                    sprintf(pxElement->pcName, NAME_FORMAT_OP_AMP_MOD_EN, "ON");
+                }
+                else
+                {
+                    sprintf(pxElement->pcName, NAME_FORMAT_OP_AMP_MOD_EN, "OFF");
+                }
+            }
+            else
+            {
+                sprintf(pxElement->pcName, "ERROR");
+            }
+
+            /* Print selection ico */
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
+
+            u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
+        }
+    }
+}
+
+static void vElementRenderOperatorDecayRate(void * pvDisplay, void * pvScreen, void * pvElement)
+{
+    if ((pvDisplay != NULL) && (pvScreen != NULL) && (pvElement != NULL))
+    {
+        u8g2_t * pxDisplayHandler = pvDisplay;
+        ui_screen_t * pxScreen = pvScreen;
+        ui_element_t * pxElement = pvElement;
+        uint32_t u32IndX = UI_OFFSET_ELEMENT_X;
+        uint32_t u32IndY = UI_OFFSET_ELEMENT_Y;
+
+        /* Compute element offset */
+        u32IndY += u32UI_MISC_GetDrawIndexY(pxDisplayHandler, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
+
+        if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
+        {
+            xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
+
+            /* Prepare data on buffer */
+            if ((u8VoiceIndex <= YM2612_NUM_CHANNEL) && (u8OperatorIndex <= YM2612_NUM_OP_CHANNEL))
+            {
+                uint8_t u8TmpVoiceIndex = (u8VoiceIndex == YM2612_NUM_CHANNEL) ? 0U : u8VoiceIndex;
+                uint8_t u8TmpOperatorIndex = (u8OperatorIndex == YM2612_NUM_OP_CHANNEL) ? 0U : u8OperatorIndex;
+
+                sprintf(pxElement->pcName, NAME_FORMAT_OP_DECAY_RATE, pxDeviceCfg->xChannel[u8TmpVoiceIndex].xOperator[u8TmpOperatorIndex].u8DecayRate);
+            }
+            else
+            {
+                sprintf(pxElement->pcName, "ERROR");
+            }
+
+            /* Print selection ico */
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
+
+            u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
+        }
+    }
+}
+
+static void vElementRenderOperatorSustainLevel(void * pvDisplay, void * pvScreen, void * pvElement)
+{
+    if ((pvDisplay != NULL) && (pvScreen != NULL) && (pvElement != NULL))
+    {
+        u8g2_t * pxDisplayHandler = pvDisplay;
+        ui_screen_t * pxScreen = pvScreen;
+        ui_element_t * pxElement = pvElement;
+        uint32_t u32IndX = UI_OFFSET_ELEMENT_X;
+        uint32_t u32IndY = UI_OFFSET_ELEMENT_Y;
+
+        /* Compute element offset */
+        u32IndY += u32UI_MISC_GetDrawIndexY(pxDisplayHandler, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
+
+        if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
+        {
+            xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
+
+            /* Prepare data on buffer */
+            if ((u8VoiceIndex <= YM2612_NUM_CHANNEL) && (u8OperatorIndex <= YM2612_NUM_OP_CHANNEL))
+            {
+                uint8_t u8TmpVoiceIndex = (u8VoiceIndex == YM2612_NUM_CHANNEL) ? 0U : u8VoiceIndex;
+                uint8_t u8TmpOperatorIndex = (u8OperatorIndex == YM2612_NUM_OP_CHANNEL) ? 0U : u8OperatorIndex;
+
+                sprintf(pxElement->pcName, NAME_FORMAT_OP_SUSTAIN_LEVEL, pxDeviceCfg->xChannel[u8TmpVoiceIndex].xOperator[u8TmpOperatorIndex].u8SustainLevel);
+            }
+            else
+            {
+                sprintf(pxElement->pcName, "ERROR");
+            }
+
+            /* Print selection ico */
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
+
+            u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
+        }
+    }
+}
+
+static void vElementRenderOperatorReleaseRate(void * pvDisplay, void * pvScreen, void * pvElement)
+{
+    if ((pvDisplay != NULL) && (pvScreen != NULL) && (pvElement != NULL))
+    {
+        u8g2_t * pxDisplayHandler = pvDisplay;
+        ui_screen_t * pxScreen = pvScreen;
+        ui_element_t * pxElement = pvElement;
+        uint32_t u32IndX = UI_OFFSET_ELEMENT_X;
+        uint32_t u32IndY = UI_OFFSET_ELEMENT_Y;
+
+        /* Compute element offset */
+        u32IndY += u32UI_MISC_GetDrawIndexY(pxDisplayHandler, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
+
+        if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
+        {
+            xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
+
+            /* Prepare data on buffer */
+            if ((u8VoiceIndex <= YM2612_NUM_CHANNEL) && (u8OperatorIndex <= YM2612_NUM_OP_CHANNEL))
+            {
+                uint8_t u8TmpVoiceIndex = (u8VoiceIndex == YM2612_NUM_CHANNEL) ? 0U : u8VoiceIndex;
+                uint8_t u8TmpOperatorIndex = (u8OperatorIndex == YM2612_NUM_OP_CHANNEL) ? 0U : u8OperatorIndex;
+
+                sprintf(pxElement->pcName, NAME_FORMAT_OP_RELEASE_RATE, pxDeviceCfg->xChannel[u8TmpVoiceIndex].xOperator[u8TmpOperatorIndex].u8ReleaseRate);
+            }
+            else
+            {
+                sprintf(pxElement->pcName, "ERROR");
+            }
+
+            /* Print selection ico */
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
+
+            u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
+        }
+    }
+}
+
+static void vElementRenderOperatorSsgEnvelope(void * pvDisplay, void * pvScreen, void * pvElement)
+{
+    if ((pvDisplay != NULL) && (pvScreen != NULL) && (pvElement != NULL))
+    {
+        u8g2_t * pxDisplayHandler = pvDisplay;
+        ui_screen_t * pxScreen = pvScreen;
+        ui_element_t * pxElement = pvElement;
+        uint32_t u32IndX = UI_OFFSET_ELEMENT_X;
+        uint32_t u32IndY = UI_OFFSET_ELEMENT_Y;
+
+        /* Compute element offset */
+        u32IndY += u32UI_MISC_GetDrawIndexY(pxDisplayHandler, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
+
+        if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
+        {
+            xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
+
+            /* Prepare data on buffer */
+            if ((u8VoiceIndex <= YM2612_NUM_CHANNEL) && (u8OperatorIndex <= YM2612_NUM_OP_CHANNEL))
+            {
+                uint8_t u8TmpVoiceIndex = (u8VoiceIndex == YM2612_NUM_CHANNEL) ? 0U : u8VoiceIndex;
+                uint8_t u8TmpOperatorIndex = (u8OperatorIndex == YM2612_NUM_OP_CHANNEL) ? 0U : u8OperatorIndex;
+
+                sprintf(pxElement->pcName, NAME_FORMAT_OP_SSG_ENVELOPE, pxDeviceCfg->xChannel[u8TmpVoiceIndex].xOperator[u8TmpOperatorIndex].u8SsgEg);
+            }
+            else
+            {
+                sprintf(pxElement->pcName, "ERROR");
+            }
+
+            /* Print selection ico */
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
+
+            u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
+        }
+    }
+}
+
+static void vElementRenderSave(void * pvDisplay, void * pvScreen, void * pvElement)
+{
+    if ((pvDisplay != NULL) && (pvScreen != NULL) && (pvElement != NULL))
+    {
+        u8g2_t * pxDisplayHandler = pvDisplay;
+        ui_screen_t * pxScreen = pvScreen;
+        ui_element_t * pxElement = pvElement;
+        uint32_t u32IndX = UI_OFFSET_ELEMENT_X;
+        uint32_t u32IndY = UI_OFFSET_ELEMENT_Y;
+
+        /* Compute element offset */
+        u32IndY += u32UI_MISC_GetDrawIndexY(pxDisplayHandler, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
+
+        if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
+        {
+
+            /* Prepare data on buffer */
+            sprintf(pxElement->pcName, NAME_FORMAT_SAVE, "");
+
+            /* Print selection ico */
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
+
+            u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
+        }
+    }
+}
+
 /* ACTION --------------------------------------------------------------------*/
 
 static void vScreenAction(void * pvMenu, void * pvEventData)
@@ -1519,6 +1761,141 @@ static void vElementActionOperatorAttackRate(void * pvMenu, void * pvEventData)
     }
 }
 
+static void vElementActionOperatorAmpModEn(void * pvMenu, void * pvEventData)
+{
+    if ((pvMenu != NULL) && (pvEventData != NULL))
+    {
+        uint32_t * pu32Event = pvEventData;
+        ui_menu_t * pxMenu = pvMenu;
+        ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
+
+        /* Handle encoder events */
+        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        {
+            if (pxScreen->bElementSelection)
+            {
+                xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
+
+                vActionOperatorElement(pxDeviceCfg, FM_VAR_OPERATOR_AMP_MOD, *pu32Event, MAX_VALUE_AMP_MOD_EN);
+            }
+        }
+        /* Element selection action */
+        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        {
+            pxScreen->bElementSelection = !pxScreen->bElementSelection;
+        }
+    }
+}
+
+static void vElementActionOperatorDecayRate(void * pvMenu, void * pvEventData)
+{
+    if ((pvMenu != NULL) && (pvEventData != NULL))
+    {
+        uint32_t * pu32Event = pvEventData;
+        ui_menu_t * pxMenu = pvMenu;
+        ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
+
+        /* Handle encoder events */
+        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        {
+            if (pxScreen->bElementSelection)
+            {
+                xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
+
+                vActionOperatorElement(pxDeviceCfg, FM_VAR_OPERATOR_DECAY_RATE, *pu32Event, MAX_VALUE_DECAY_RATE);
+            }
+        }
+        /* Element selection action */
+        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        {
+            pxScreen->bElementSelection = !pxScreen->bElementSelection;
+        }
+    }
+}
+
+static void vElementActionOperatorSustainLevel(void * pvMenu, void * pvEventData)
+{
+    if ((pvMenu != NULL) && (pvEventData != NULL))
+    {
+        uint32_t * pu32Event = pvEventData;
+        ui_menu_t * pxMenu = pvMenu;
+        ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
+
+        /* Handle encoder events */
+        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        {
+            if (pxScreen->bElementSelection)
+            {
+                xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
+
+                vActionOperatorElement(pxDeviceCfg, FM_VAR_OPERATOR_SUSTAIN_LEVEL, *pu32Event, MAX_VALUE_SUSTAIN_LEVEL);
+            }
+        }
+        /* Element selection action */
+        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        {
+            pxScreen->bElementSelection = !pxScreen->bElementSelection;
+        }
+    }
+}
+
+static void vElementActionOperatorReleaseRate(void * pvMenu, void * pvEventData)
+{
+    if ((pvMenu != NULL) && (pvEventData != NULL))
+    {
+        uint32_t * pu32Event = pvEventData;
+        ui_menu_t * pxMenu = pvMenu;
+        ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
+
+        /* Handle encoder events */
+        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        {
+            if (pxScreen->bElementSelection)
+            {
+                xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
+
+                vActionOperatorElement(pxDeviceCfg, FM_VAR_OPERATOR_RELEASE_RATE, *pu32Event, MAX_VALUE_RELEASE_RATE);
+            }
+        }
+        /* Element selection action */
+        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        {
+            pxScreen->bElementSelection = !pxScreen->bElementSelection;
+        }
+    }
+}
+
+static void vElementActionOperatorSsgEnvelope(void * pvMenu, void * pvEventData)
+{
+    if ((pvMenu != NULL) && (pvEventData != NULL))
+    {
+        uint32_t * pu32Event = pvEventData;
+        ui_menu_t * pxMenu = pvMenu;
+        ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
+
+        /* Handle encoder events */
+        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        {
+            if (pxScreen->bElementSelection)
+            {
+                xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
+
+                vActionOperatorElement(pxDeviceCfg, FM_VAR_OPERATOR_SSG_ENVELOPE, *pu32Event, MAX_VALUE_SSG_ENVELOPE);
+            }
+        }
+        /* Element selection action */
+        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        {
+            pxScreen->bElementSelection = !pxScreen->bElementSelection;
+        }
+    }
+}
+
+static void vElementActionSave(void * pvMenu, void * pvEventData)
+{
+
+}
+
 /* Public user code ----------------------------------------------------------*/
 
 ui_status_t UI_screen_fm_init(ui_screen_t * pxScreenHandler)
@@ -1603,15 +1980,40 @@ ui_status_t UI_screen_fm_init(ui_screen_t * pxScreenHandler)
         xScreenElementList[FM_SCREEN_ELEMENT_OP_KEY_SCALE].render_cb = vElementRenderOperatorKeyScale;
         xScreenElementList[FM_SCREEN_ELEMENT_OP_KEY_SCALE].action_cb = vElementActionOperatorKeyScale;
 
-        xScreenElementList[FM_SCREEN_ELEMENT_OP_KEY_SCALE].pcName = pcElementLabelOperatorKeyScale;
-        xScreenElementList[FM_SCREEN_ELEMENT_OP_KEY_SCALE].u32Index = FM_SCREEN_ELEMENT_OP_KEY_SCALE;
-        xScreenElementList[FM_SCREEN_ELEMENT_OP_KEY_SCALE].render_cb = vElementRenderOperatorKeyScale;
-        xScreenElementList[FM_SCREEN_ELEMENT_OP_KEY_SCALE].action_cb = vElementActionOperatorKeyScale;
-
         xScreenElementList[FM_SCREEN_ELEMENT_OP_ATTACK_RATE].pcName = pcElementLabelOperatorAttackRate;
         xScreenElementList[FM_SCREEN_ELEMENT_OP_ATTACK_RATE].u32Index = FM_SCREEN_ELEMENT_OP_ATTACK_RATE;
         xScreenElementList[FM_SCREEN_ELEMENT_OP_ATTACK_RATE].render_cb = vElementRenderOperatorAttackRate;
         xScreenElementList[FM_SCREEN_ELEMENT_OP_ATTACK_RATE].action_cb = vElementActionOperatorAttackRate;
+
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_AMP_MOD_EN].pcName = pcElementLabelOperatorAmpModEn;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_AMP_MOD_EN].u32Index = FM_SCREEN_ELEMENT_OP_AMP_MOD_EN;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_AMP_MOD_EN].render_cb = vElementRenderOperatorAmpModEn;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_AMP_MOD_EN].action_cb = vElementActionOperatorAmpModEn;
+
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_DECAY_RATE].pcName = pcElementLabelOperatorDecayRate;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_DECAY_RATE].u32Index = FM_SCREEN_ELEMENT_OP_DECAY_RATE;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_DECAY_RATE].render_cb = vElementRenderOperatorDecayRate;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_DECAY_RATE].action_cb = vElementActionOperatorDecayRate;
+
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_SUSTAIN_LEVEL].pcName = pcElementLabelOperatorSustainLevel;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_SUSTAIN_LEVEL].u32Index = FM_SCREEN_ELEMENT_OP_SUSTAIN_LEVEL;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_SUSTAIN_LEVEL].render_cb = vElementRenderOperatorSustainLevel;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_SUSTAIN_LEVEL].action_cb = vElementActionOperatorSustainLevel;
+
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_RELEASE_RATE].pcName = pcElementLabelOperatorReleaseRate;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_RELEASE_RATE].u32Index = FM_SCREEN_ELEMENT_OP_RELEASE_RATE;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_RELEASE_RATE].render_cb = vElementRenderOperatorReleaseRate;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_RELEASE_RATE].action_cb = vElementActionOperatorReleaseRate;
+
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_SSG_ENVELOPE].pcName = pcElementLabelOperatorSsgEnvelope;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_SSG_ENVELOPE].u32Index = FM_SCREEN_ELEMENT_OP_SSG_ENVELOPE;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_SSG_ENVELOPE].render_cb = vElementRenderOperatorSsgEnvelope;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_SSG_ENVELOPE].action_cb = vElementActionOperatorSsgEnvelope;
+
+        xScreenElementList[FM_SCREEN_ELEMENT_SAVE].pcName = pcElementLabelSave;
+        xScreenElementList[FM_SCREEN_ELEMENT_SAVE].u32Index = FM_SCREEN_ELEMENT_SAVE;
+        xScreenElementList[FM_SCREEN_ELEMENT_SAVE].render_cb = vElementRenderSave;
+        xScreenElementList[FM_SCREEN_ELEMENT_SAVE].action_cb = vElementActionSave;
 
         xScreenElementList[FM_SCREEN_ELEMENT_RETURN].pcName = pcElementLabelReturn;
         xScreenElementList[FM_SCREEN_ELEMENT_RETURN].u32Index = FM_SCREEN_ELEMENT_RETURN;
