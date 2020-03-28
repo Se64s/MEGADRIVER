@@ -229,7 +229,7 @@ void vYM2612_set_reg_preset(xFmDevice_t * pxRegPreset);
   * @brief Get reg preset.
   * @retval address of actual reg preset.
   */
-xFmDevice_t * pxYM2612_set_reg_preset(void);
+xFmDevice_t * pxYM2612_get_reg_preset(void);
 
 /**
   * @brief Set midi note into channel

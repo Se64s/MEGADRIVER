@@ -192,7 +192,7 @@ static void vElementRenderLfoFreq(void * pvDisplay, void * pvScreen, void * pvEl
 
         if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
         {
-            xFmDevice_t * pxDeviceCfg = pxYM2612_set_reg_preset();
+            xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
 
             /* Prepare data on buffer */
             sprintf(pxElement->pcName, NAME_FORMAT_LFO_FREQ, pxDeviceCfg->u8LfoFreq);
@@ -220,7 +220,7 @@ static void vElementRenderLfoEn(void * pvDisplay, void * pvScreen, void * pvElem
 
         if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
         {
-            xFmDevice_t * pxDeviceCfg = pxYM2612_set_reg_preset();
+            xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
 
             /* Prepare data on buffer */
             if (pxDeviceCfg->u8LfoOn == 0U)
@@ -292,7 +292,7 @@ static void vElementRenderVoiceFeedback(void * pvDisplay, void * pvScreen, void 
 
         if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
         {
-            xFmDevice_t * pxDeviceCfg = pxYM2612_set_reg_preset();
+            xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
 
             if (u8VoiceIndex < YM2612_NUM_CHANNEL)
             {
@@ -331,7 +331,7 @@ static void vElementRenderVoiceAlgorithm(void * pvDisplay, void * pvScreen, void
 
         if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
         {
-            xFmDevice_t * pxDeviceCfg = pxYM2612_set_reg_preset();
+            xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
 
             /* Prepare data on buffer */
             if (u8VoiceIndex <= YM2612_NUM_CHANNEL)
@@ -373,7 +373,7 @@ static void vElementRenderVoiceOut(void * pvDisplay, void * pvScreen, void * pvE
 
         if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
         {
-            xFmDevice_t * pxDeviceCfg = pxYM2612_set_reg_preset();
+            xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
 
             /* Prepare data on buffer */
             if (u8VoiceIndex <= YM2612_NUM_CHANNEL)
@@ -436,7 +436,7 @@ static void vElementRenderVoiceAmpModSens(void * pvDisplay, void * pvScreen, voi
 
         if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
         {
-            xFmDevice_t * pxDeviceCfg = pxYM2612_set_reg_preset();
+            xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
 
             /* Prepare data on buffer */
             if (u8VoiceIndex <= YM2612_NUM_CHANNEL)
@@ -478,7 +478,7 @@ static void vElementRenderVoicePhaModSens(void * pvDisplay, void * pvScreen, voi
 
         if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
         {
-            xFmDevice_t * pxDeviceCfg = pxYM2612_set_reg_preset();
+            xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
 
             /* Prepare data on buffer */
             if (u8VoiceIndex <= YM2612_NUM_CHANNEL)
@@ -566,7 +566,7 @@ static void vElementActionLfoFreq(void * pvMenu, void * pvEventData)
         {
             if (pxScreen->bElementSelection)
             {
-                xFmDevice_t * pxDeviceCfg = pxYM2612_set_reg_preset();
+                xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
                 uint8_t u8TmpValue = pxDeviceCfg->u8LfoFreq;
 
                 if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
@@ -611,7 +611,7 @@ static void vElementActionLfoEn(void * pvMenu, void * pvEventData)
         {
             if (pxScreen->bElementSelection)
             {
-                xFmDevice_t * pxDeviceCfg = pxYM2612_set_reg_preset();
+                xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
                 uint8_t u8TmpValue = pxDeviceCfg->u8LfoOn;
 
                 if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
@@ -652,7 +652,7 @@ static void vElementActionVoice(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             if (pxScreen->bElementSelection)
             {
@@ -670,10 +670,26 @@ static void vElementActionVoice(void * pvMenu, void * pvEventData)
                         u8VoiceIndex++;
                     }
                 }
+                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+                {
+                    if (u8VoiceIndex == YM2612_NUM_CHANNEL)
+                    {
+                        xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
+
+                        /* Copy all values */
+                        for (uint32_t u32VoiceIndex = 1U; u32VoiceIndex < YM2612_NUM_CHANNEL; u32VoiceIndex++)
+                        {
+                            pxDeviceCfg->xChannel[u32VoiceIndex] = pxDeviceCfg->xChannel[0U];
+                        }
+
+                        /* Apply changes to register */
+                        vYM2612_set_reg_preset(pxDeviceCfg);
+                    }
+                }
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -693,7 +709,7 @@ static void vElementActionVoiceFeedback(void * pvMenu, void * pvEventData)
         {
             if (pxScreen->bElementSelection)
             {
-                xFmDevice_t * pxDeviceCfg = pxYM2612_set_reg_preset();
+                xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
 
                 if (u8VoiceIndex <= YM2612_NUM_CHANNEL)
                 {
@@ -755,7 +771,7 @@ static void vElementActionVoiceAlgorithm(void * pvMenu, void * pvEventData)
         {
             if (pxScreen->bElementSelection)
             {
-                xFmDevice_t * pxDeviceCfg = pxYM2612_set_reg_preset();
+                xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
 
                 if (u8VoiceIndex <= YM2612_NUM_CHANNEL)
                 {
@@ -817,7 +833,7 @@ static void vElementActionVoiceOut(void * pvMenu, void * pvEventData)
         {
             if (pxScreen->bElementSelection)
             {
-                xFmDevice_t * pxDeviceCfg = pxYM2612_set_reg_preset();
+                xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
 
                 if (u8VoiceIndex <= YM2612_NUM_CHANNEL)
                 {
@@ -879,7 +895,7 @@ static void vElementActionVoiceAmpModSens(void * pvMenu, void * pvEventData)
         {
             if (pxScreen->bElementSelection)
             {
-                xFmDevice_t * pxDeviceCfg = pxYM2612_set_reg_preset();
+                xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
 
                 if (u8VoiceIndex <= YM2612_NUM_CHANNEL)
                 {
@@ -941,7 +957,7 @@ static void vElementActionVoicePhaModSens(void * pvMenu, void * pvEventData)
         {
             if (pxScreen->bElementSelection)
             {
-                xFmDevice_t * pxDeviceCfg = pxYM2612_set_reg_preset();
+                xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
 
                 if (u8VoiceIndex <= YM2612_NUM_CHANNEL)
                 {

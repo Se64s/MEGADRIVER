@@ -524,7 +524,7 @@ void vYM2612_set_reg_preset(xFmDevice_t * pxRegPreset)
     }
 }
 
-xFmDevice_t * pxYM2612_set_reg_preset (void)
+xFmDevice_t * pxYM2612_get_reg_preset (void)
 {
     return &xYmDevice;
 }
