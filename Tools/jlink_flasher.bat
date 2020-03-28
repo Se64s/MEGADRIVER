@@ -34,6 +34,8 @@ TYPE nul > %tmp_cmd_file%
 ECHO r >> %tmp_cmd_file%
 ECHO sleep 250 >> %tmp_cmd_file%
 ECHO loadfile %bin_data% %bin_addr% >> %tmp_cmd_file%
+ECHO r >> %tmp_cmd_file%
+ECHO sleep 100 >> %tmp_cmd_file%
 ECHO g >> %tmp_cmd_file%
 ECHO exit >> %tmp_cmd_file%
 :: Execute cmd with retry

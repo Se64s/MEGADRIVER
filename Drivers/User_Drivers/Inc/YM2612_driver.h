@@ -35,6 +35,14 @@ extern "C"
 /* Device parameters */
 #define YM2612_MAX_NUM_VOICE    (6U)
 
+/* Max and min values of FM parameters */
+#define MAX_VALUE_LFO_FREQ      (8U)
+#define MAX_VALUE_FEEDBACK      (8U)
+#define MAX_VALUE_ALGORITHM     (8U)
+#define MAX_VALUE_VOICE_OUT     (4U)
+#define MAX_VALUE_AMP_MOD_SENS  (4U)
+#define MAX_VALUE_PHA_MOD_SENS  (8U)
+
 /* GPIO definitions */
 #define YM2612_Dx_GPIO_PIN      (YM2612_D0_GPIO_PIN | YM2612_D1_GPIO_PIN | YM2612_D2_GPIO_PIN | YM2612_D3_GPIO_PIN | YM2612_D4_GPIO_PIN | YM2612_D5_GPIO_PIN | YM2612_D6_GPIO_PIN | YM2612_D7_GPIO_PIN)
 #define YM2612_Dx_GPIO_PORT     GPIOB
@@ -216,6 +224,12 @@ void vYM2612_write_reg(uint8_t u8RegAddr, uint8_t u8RegData, YM2612_bank_t xBank
   * @retval None
   */
 void vYM2612_set_reg_preset(xFmDevice_t * pxRegPreset);
+
+/**
+  * @brief Get reg preset.
+  * @retval address of actual reg preset.
+  */
+xFmDevice_t * pxYM2612_set_reg_preset(void);
 
 /**
   * @brief Set midi note into channel

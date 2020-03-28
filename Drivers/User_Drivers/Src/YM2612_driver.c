@@ -524,6 +524,11 @@ void vYM2612_set_reg_preset(xFmDevice_t * pxRegPreset)
     }
 }
 
+xFmDevice_t * pxYM2612_set_reg_preset (void)
+{
+    return &xYmDevice;
+}
+
 bool bYM2612_set_note(YM2612_ch_id_t xChannel, uint8_t u8MidiNote)
 {
     bool bRetval = false;
