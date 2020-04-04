@@ -13,9 +13,6 @@
 
 #include "printf.h"
 
-#include "synth_app_data.h"
-#include "synth_app_data_const.h"
-
 /* Private includes ----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
@@ -419,6 +416,11 @@ bool bSynthLoadPreset(SynthPresetSource_t u8PresetSource, uint8_t u8PresetId)
     }
 
     return bRetval;
+}
+
+bool bSynthSaveUserPreset(xFmDevice_t * pxPreset, uint8_t u8PresetId)
+{
+    return bSavePreset(u8PresetId, "UI User Preset", pxPreset);
 }
 
 bool bSynthTaskInit(void)

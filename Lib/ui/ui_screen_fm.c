@@ -10,9 +10,9 @@
 #include "ui_screen_fm.h"
 #include "printf.h"
 #include "ui_task.h"
+#include "synth_task.h"
 #include "cli_task.h"
 #include "ui_menu_main.h"
-#include "YM2612_driver.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -51,6 +51,7 @@ typedef enum
 
 /* Max len for element names */
 #define MAX_LEN_NAME                            (16U)
+#define MAX_LEN_NAME_SAVE_AUX                   (4U)
 
 #define NAME_FORMAT_LFO_FREQ                    "LFO FREQ   %d"
 #define NAME_FORMAT_LFO_EN                      "LFO EN     %s"
@@ -85,6 +86,7 @@ ui_element_t xScreenElementList[UI_NUM_ELEMENT];
 
 uint8_t u8VoiceIndex = 0U;
 uint8_t u8OperatorIndex = 0U;
+uint8_t u8SavePresetSelector = 0U;
 
 char pcElementLabelReturn[MAX_LEN_NAME] = {0U};
 char pcElementLabelLfoFreq[MAX_LEN_NAME] = {0U};
@@ -107,6 +109,8 @@ char pcElementLabelOperatorSustainLevel[MAX_LEN_NAME] = {0U};
 char pcElementLabelOperatorReleaseRate[MAX_LEN_NAME] = {0U};
 char pcElementLabelOperatorSsgEnvelope[MAX_LEN_NAME] = {0U};
 char pcElementLabelSave[MAX_LEN_NAME] = {0U};
+
+char pcFmSaveAuxName[MAX_LEN_NAME_SAVE_AUX] = {0};
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -1234,9 +1238,18 @@ static void vElementRenderSave(void * pvDisplay, void * pvScreen, void * pvEleme
 
         if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
         {
+            /* Clear aux string in case of not empty and not selection */
+            if (pxScreen->u32ElementSelectionIndex != pxElement->u32Index)
+            {
+                if (pcFmSaveAuxName[0U] != 0U)
+                {
+                    sprintf(pcFmSaveAuxName, "");
+                    u8SavePresetSelector = 0U;
+                }
+            }
 
             /* Prepare data on buffer */
-            sprintf(pxElement->pcName, NAME_FORMAT_SAVE, "");
+            sprintf(pxElement->pcName, NAME_FORMAT_SAVE, pcFmSaveAuxName);
 
             /* Print selection ico */
             vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
@@ -1893,7 +1906,55 @@ static void vElementActionOperatorSsgEnvelope(void * pvMenu, void * pvEventData)
 
 static void vElementActionSave(void * pvMenu, void * pvEventData)
 {
+    if (pvEventData != NULL)
+    {
+        ui_menu_t * pxMenu = pvMenu;
+        ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
+        uint32_t * pu32EventData = pvEventData;
 
+        if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        {
+            if (pxScreen->bElementSelection)
+            {
+                xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
+
+                vCliPrintf(UI_TASK_NAME, "FM Save User Preset");
+
+                if (bSynthSaveUserPreset(pxDeviceCfg, u8SavePresetSelector))
+                {
+                    sprintf(pcFmSaveAuxName, "OK");
+                }
+                else
+                {
+                    sprintf(pcFmSaveAuxName, "ERR");
+                }
+            }
+            else
+            {
+                sprintf(pcFmSaveAuxName, "%02d", u8SavePresetSelector);
+            }
+
+            pxScreen->bElementSelection = !pxScreen->bElementSelection;
+        }
+        else if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_CW))
+        {
+            if (u8SavePresetSelector != 0U)
+            {
+                u8SavePresetSelector--;
+            }
+
+            sprintf(pcFmSaveAuxName, "%02d", u8SavePresetSelector);
+        }
+        else if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_CCW))
+        {
+            if (u8SavePresetSelector < (SYNTH_MAX_NUM_USER_PRESET - 1))
+            {
+                u8SavePresetSelector++;
+            }
+
+            sprintf(pcFmSaveAuxName, "%02d", u8SavePresetSelector);
+        }
+    }
 }
 
 /* Public user code ----------------------------------------------------------*/

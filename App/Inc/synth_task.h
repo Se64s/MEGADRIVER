@@ -25,6 +25,9 @@ extern "C" {
 
 #include "YM2612_driver.h"
 
+#include "synth_app_data.h"
+#include "synth_app_data_const.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* Private defines -----------------------------------------------------------*/
 
@@ -35,7 +38,7 @@ extern "C" {
 
 /* SysEx CMD parameters */
 #define SYNTH_LEN_VENDOR_ID                 (3U)
-#define SYNTH_LEN_PRESET_NAME               (16U)
+#define SYNTH_LEN_PRESET_NAME               (SYNTH_APP_DATA_LEN_PRESET_NAME)
 #define SYNTH_LEN_PRESET_CODED_NAME         (30U)
 #define SYNTH_LEN_MIN_SYSEX_CMD             (4U)
 #define SYNTH_LEN_SET_REG_CMD               (300U)
@@ -44,10 +47,13 @@ extern "C" {
 #define SYNTH_LEN_LOAD_DEFAULT_PRESET_CMD   (5U)
 
 /* Synth message parameters */
-#define SYNTH_LEN_MSG               (4U)
+#define SYNTH_LEN_MSG                       (4U)
 
 /* Maximun number of voices */
-#define SYNTH_MAX_NUM_VOICE     (YM2612_MAX_NUM_VOICE)
+#define SYNTH_MAX_NUM_VOICE                 (YM2612_MAX_NUM_VOICE)
+
+/* Maximun number of user presets */
+#define SYNTH_MAX_NUM_USER_PRESET           (SYNTH_APP_DATA_NUM_PRESETS)
 
 /* Exported types ------------------------------------------------------------*/
 
@@ -119,6 +125,14 @@ typedef struct
   * @retval operation result, true for correct load, false for error
   */
 bool bSynthLoadPreset(SynthPresetSource_t u8PresetSource, uint8_t u8PresetId);
+
+/**
+  * @brief Save user preset
+  * @param pxPreset pointer to preset to save.
+  * @param u8PresetId preset position id.
+  * @retval operation result, true for correct save action, false for error.
+  */
+bool bSynthSaveUserPreset(xFmDevice_t * pxPreset, uint8_t u8PresetId);
 
 /**
   * @brief Init resources for SYNTH tasks
