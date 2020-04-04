@@ -25,9 +25,9 @@ extern "C" {
 /* Private defines -----------------------------------------------------------*/
 
 /* Task parameters */
-#define UI_TASK_NAME   "UI"
-#define UI_TASK_STACK  256U
-#define UI_TASK_PRIO   1
+#define UI_TASK_NAME                    "UI"
+#define UI_TASK_STACK                   (256U)
+#define UI_TASK_PRIO                    (1U)
 
 /* Check signals */
 #define CHECK_SIGNAL(VAR, SIG)          (((VAR) & (SIG)) == (SIG))
@@ -42,6 +42,7 @@ extern "C" {
 #define UI_SIGNAL_ADC_UPDATE            (1UL << 6U)
 #define UI_SIGNAL_MIDI_DATA             (1UL << 7U)
 #define UI_SIGNAL_ERROR                 (1UL << 8U)
+#define UI_SIGNAL_NOT_DEF               (1UL << 31U)
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/

@@ -27,6 +27,9 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* Private defines -----------------------------------------------------------*/
 
+/* Midi app parameter */
+#define MIDI_APP_MAX_BANK               ((uint8_t)SYNTH_PRESET_SOURCE_MAX)
+
 /* Task parameters */
 #define MIDI_TASK_NAME                  "MIDI"
 #define MIDI_TASK_STACK                 (128U)
@@ -55,6 +58,64 @@ typedef enum
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions prototypes ---------------------------------------------*/
+
+/**
+  * @brief Get parameter from midi conf
+  * @retval requested parameter
+  */
+midiMode_t xMidiTaskGetMode(void);
+
+/**
+  * @brief Get parameter from midi conf
+  * @retval requested parameter
+  */
+uint8_t u8MidiTaskGetChannel(void);
+
+/**
+  * @brief Get parameter from midi conf
+  * @retval requested parameter
+  */
+uint8_t u8MidiTaskGetBank(void);
+
+/**
+  * @brief Get parameter from midi conf
+  * @retval requested parameter
+  */
+uint8_t u8MidiTaskGetProgram(void);
+
+/**
+  * @brief Set parameter from midi conf
+  * @param xNewMode new value to set.
+  * @retval operation result
+  */
+bool bMidiTaskSetMode(midiMode_t xNewMode);
+
+/**
+  * @brief Set parameter from midi conf
+  * @param u8NewChannel new value to set.
+  * @retval operation result
+  */
+bool bMidiTaskSetChannel(uint8_t u8NewChannel);
+
+/**
+  * @brief Set parameter from midi conf
+  * @param u8NewBank new value to set.
+  * @retval operation result
+  */
+bool bMidiTaskSetBank(uint8_t u8NewBank);
+
+/**
+  * @brief Set parameter from midi conf
+  * @param u8NewBank new value to set.
+  * @retval operation result
+  */
+bool bMidiTaskSetProgram(uint8_t u8NewProgram);
+
+/**
+  * @brief Save current setup into flash
+  * @retval operation result
+  */
+bool bMidiTaskSaveCfg(void);
 
 /**
   * @brief Init resources for MIDI tasks

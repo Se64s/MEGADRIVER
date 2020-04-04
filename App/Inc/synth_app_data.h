@@ -16,7 +16,7 @@ extern "C"
 /* Includes ------------------------------------------------------------------*/
 
 #include "app_data_handler.h"
-#include "synth_task.h"
+#include "YM2612_driver.h"
 
 /* Exported defines ----------------------------------------------------------*/
 
@@ -30,12 +30,15 @@ extern "C"
 /** Init page for midi data  */
 #define SYNTH_APP_DATA_NUM_PRESETS          (8U)
 
+/** Init Len name preset data */
+#define SYNTH_APP_DATA_LEN_PRESET_NAME      (16U)
+
 /* Exported types  -----------------------------------------------------------*/
 
 /** Defined program data */
 typedef struct __packed
 {
-    uint8_t pu8Name[SYNTH_LEN_PRESET_NAME];
+    uint8_t pu8Name[SYNTH_APP_DATA_LEN_PRESET_NAME];
     xFmDevice_t xPresetData;
 } synth_app_data_t;
 /** Final size: 16 + 296 = 312B, 8B alligned */

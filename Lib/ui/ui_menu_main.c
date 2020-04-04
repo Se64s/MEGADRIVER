@@ -1,47 +1,53 @@
 /**
   ******************************************************************************
-  * @file           : ui_menu_test.c
-  * @brief          : UI definition for test menu.
+  * @file           : ui_menu_main.c
+  * @brief          : UI definition for synth app main menu.
   ******************************************************************************
   */
 
 /* Includes ------------------------------------------------------------------*/
 
-#include "ui_menu_test.h"
-#include "ui_screen_test.h"
+#include "ui_menu_main.h"
+#include "ui_screen_main.h"
+#include "ui_screen_midi.h"
+#include "ui_screen_fm.h"
+#include "ui_screen_mapping.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
 /* Max num of screens */
-#define UI_NUM_SCREEN       (1U)
+#define UI_NUM_SCREEN       (MENU_LAST_SCREEN_POSITION)
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 
 /* Ui screen variables */
-ui_screen_t xMenuScreenListTest[UI_NUM_SCREEN] = {0};
+ui_screen_t xMenuScreenListMenu[UI_NUM_SCREEN] = {0};
 
-char pcMenuTestName[] = "Test Menu";
+char pcMenuMainName[] = "Main Menu";
 
 /* Private function prototypes -----------------------------------------------*/
 /* Private user code ---------------------------------------------------------*/
 /* Public user code ----------------------------------------------------------*/
 
-ui_status_t UI_menu_test_init(ui_menu_t * pxMenuHandler)
+ui_status_t UI_menu_main_init(ui_menu_t * pxMenuHandler)
 {
     ui_status_t retval = UI_STATUS_ERROR;
 
     if (pxMenuHandler != NULL)
     {
         /* Populate menu elements */
-        pxMenuHandler->pcName = pcMenuTestName;
-        pxMenuHandler->u32ScreenSelectionIndex = 0;
-        pxMenuHandler->pxScreenList = xMenuScreenListTest;
+        pxMenuHandler->pcName = pcMenuMainName;
+        pxMenuHandler->u32ScreenSelectionIndex = 0U;
+        pxMenuHandler->pxScreenList = xMenuScreenListMenu;
 
         /* Populate screen elements */
-        UI_screen_test_init(xMenuScreenListTest);
+        UI_screen_main_init(&xMenuScreenListMenu[MENU_MAIN_SCREEN_POSITION]);
+        UI_screen_midi_init(&xMenuScreenListMenu[MENU_MIDI_SCREEN_POSITION]);
+        UI_screen_fm_init(&xMenuScreenListMenu[MENU_FM_SCREEN_POSITION]);
+        UI_screen_map_init(&xMenuScreenListMenu[MENU_MAPPING_SCREEN_POSITION]);
 
         retval = UI_STATUS_OK;
     }

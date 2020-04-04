@@ -67,6 +67,12 @@ typedef enum
 /* MIDI maximun channel value */
 #define MIDI_CHANNEL_MAX_VALUE  0x0F
 
+/* MIDI maximun program value */
+#define MIDI_PROGRAM_MAX_VALUE  0x0F
+
+/* MIDI maximun BANK value */
+#define MIDI_BANK_MAX_VALUE  0x0F
+
 /* MIDI status cmd with 1 bytes */
 #define MIDI_STATUS_PROG_CHANGE 0xC0
 #define MIDI_STATUS_CH_PRESS 0xD0

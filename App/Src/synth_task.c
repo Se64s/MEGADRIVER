@@ -11,8 +11,7 @@
 #include "ui_task.h"
 #include "midi_task.h"
 
-#include "synth_app_data.h"
-#include "synth_app_data_const.h"
+#include "printf.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -53,6 +52,12 @@ static void vCmdVoiceOff(SynthMsg_t * pxCmdMsg);
 static void vCmdVoiceOffAll(void);
 
 /**
+  * @brief  Init user preset.
+  * @retval True if preset has been initiated correctly, false inc.
+  */
+static bool bInitUserPreset(void);
+
+/**
   * @brief Save preset on fixed position.
   * @param u8Position Position where save the preset.
   * @param pu8Name Pointer with preset name.
@@ -76,10 +81,10 @@ static bool bLoadPreset(uint8_t u8Position);
 static bool bLoadDefaultPreset(uint8_t u8Position);
 
 /**
-  * @brief Initial YM2612 setup
-  * @retval None
+  * @brief  Default setup for YM2612
+  * @retval Operation result: true OK, false any error
   */
-static void _init_setup(void);
+static bool bInitPreset(void);
 
 /**
   * @brief Main task loop
@@ -138,6 +143,54 @@ static void vCmdVoiceOffAll(void)
         vYM2612_key_off(u8VoiceIndex);
     }
     bUiTaskNotify(UI_SIGNAL_SYNTH_OFF);
+}
+
+static bool bInitUserPreset(void)
+{
+    bool bRetVal = false;
+
+    bRetVal = bSYNTH_APP_DATA_init();
+
+    /* If init fails, data could be empty o corrupted so try to write default data on it */
+    if (!bRetVal)
+    {
+        uint8_t u8PresetId = 0U;
+        xFmDevice_t * pxInitPreset = pxSYNTH_APP_DATA_CONST_get(u8PresetId);
+
+        if (pxInitPreset != NULL)
+        {
+            bRetVal = true;
+            synth_app_data_t xInitPresetData = {0};
+
+            sprintf(xInitPresetData.pu8Name, "%s", "NOT INIT");
+            xInitPresetData.xPresetData = *pxInitPreset;
+
+            /* Write init preset in all user data */
+            for (uint8_t u8PresetIndex = 0U; u8PresetIndex < SYNTH_APP_DATA_NUM_PRESETS; u8PresetIndex++)
+            {
+                if (!bSYNTH_APP_DATA_write(u8PresetIndex, &xInitPresetData))
+                {
+                    bRetVal = false;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            vCliPrintf(SYNTH_TASK_NAME, "Error loading flash preset");
+        }
+    }
+
+    if (bRetVal)
+    {
+        vCliPrintf(SYNTH_TASK_NAME, "User Preset Data Init: OK");
+    }
+    else
+    {
+        vCliPrintf(SYNTH_TASK_NAME, "User Preset Data Init: ERROR");
+    }
+
+    return bRetVal;
 }
 
 static bool bSavePreset(uint8_t u8Position, uint8_t * pu8Name, xFmDevice_t * pxRegData)
@@ -263,21 +316,24 @@ static void vCmdMidiSysEx(void)
     }
 }
 
-static void _init_setup(void)
+static bool bInitPreset(void)
 {
-    vCliPrintf(SYNTH_TASK_NAME, "Initial register setup");
-
+    bool bRetval = false;
     uint8_t u8PresetId = 0U;
     xFmDevice_t * pxInitPreset = pxSYNTH_APP_DATA_CONST_get(u8PresetId);
 
     if (pxInitPreset != NULL)
     {
+        vCliPrintf(SYNTH_TASK_NAME, "Load initial preset: OK");
         vYM2612_set_reg_preset(pxInitPreset);
+        bRetval = true;
     }
     else
     {
-        vCliPrintf(SYNTH_TASK_NAME, "Error loading flash preset");
+        vCliPrintf(SYNTH_TASK_NAME, "Load initial preset: ERROR");
     }
+
+    return bRetval;
 }
 
 static void vSynthTaskMain( void *pvParameters )
@@ -285,17 +341,20 @@ static void vSynthTaskMain( void *pvParameters )
     /* Init delay to for pow stabilization */
     vTaskDelay(pdMS_TO_TICKS(500U));
 
-    /* Init YM2612 resources */
-    (void)xYM2612_init();
-
-    /* Init preset data */
-    (void)bSYNTH_APP_DATA_init();
-
     /* Show init msg */
     vCliPrintf(SYNTH_TASK_NAME, "Init");
 
+    /* Init YM2612 resources */
+    (void)xYM2612_init();
+
+    /* Init user preset */
+    if (!bInitUserPreset())
+    {
+        vCliPrintf(SYNTH_TASK_NAME, "User preset init ERROR");
+    }
+
     /* Basic register init */
-    _init_setup();
+    (void)bInitPreset();
 
     for(;;)
     {
@@ -334,6 +393,35 @@ static void vSynthTaskMain( void *pvParameters )
 }
 
 /* Public fuctions -----------------------------------------------------------*/
+
+bool bSynthLoadPreset(SynthPresetSource_t u8PresetSource, uint8_t u8PresetId)
+{
+    bool bRetval = false;
+
+    if (u8PresetSource < SYNTH_PRESET_SOURCE_MAX)
+    {
+        switch (u8PresetSource)
+        {
+            case SYNTH_PRESET_SOURCE_DEFAULT:
+                bRetval = bLoadDefaultPreset(u8PresetId);
+                break;
+
+            case SYNTH_PRESET_SOURCE_USER:
+                bRetval = bLoadPreset(u8PresetId);
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    return bRetval;
+}
+
+bool bSynthSaveUserPreset(xFmDevice_t * pxPreset, uint8_t u8PresetId)
+{
+    return bSavePreset(u8PresetId, "UI User Preset", pxPreset);
+}
 
 bool bSynthTaskInit(void)
 {

@@ -75,8 +75,12 @@ Lib/printf/printf.c \
 Lib/cbuf/circular_buffer.c \
 Lib/midi/midi_lib.c \
 Lib/ui/ui_sys.c \
-Lib/ui/ui_menu_test.c \
-Lib/ui/ui_screen_test.c \
+Lib/ui/ui_sys_misc.c \
+Lib/ui/ui_menu_main.c \
+Lib/ui/ui_screen_main.c \
+Lib/ui/ui_screen_midi.c \
+Lib/ui/ui_screen_fm.c \
+Lib/ui/ui_screen_mapping.c \
 Lib/app_data/app_data_handler.c \
 Lib/u8g2/u8g2_bitmap.c \
 Lib/u8g2/u8g2_box.c \
@@ -134,7 +138,7 @@ startup_stm32g070xx.s
 #######################################
 # binaries
 #######################################
-GCC_PATH = C:\Program Files (x86)\GNU Tools Arm Embedded\9 2019-q4-major\bin
+GCC_PATH = C:\Firmware\arm_toochain\bin
 PREFIX = arm-none-eabi-
 # The gcc compiler bin path can be either defined in make command via GCC_PATH variable (> make GCC_PATH=xxx)
 # either it can be added to the PATH environment variable.

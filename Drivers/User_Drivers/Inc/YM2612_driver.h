@@ -33,7 +33,25 @@ extern "C"
 #define YM2612_NUM_OP_CHANNEL   (4U)
 
 /* Device parameters */
-#define YM2612_MAX_NUM_VOICE    (6U)
+#define YM2612_MAX_NUM_VOICE    (YM2612_NUM_CHANNEL)
+
+/* Max and min values of FM parameters */
+#define MAX_VALUE_LFO_FREQ      (8U)
+#define MAX_VALUE_FEEDBACK      (8U)
+#define MAX_VALUE_ALGORITHM     (8U)
+#define MAX_VALUE_VOICE_OUT     (4U)
+#define MAX_VALUE_AMP_MOD_SENS  (4U)
+#define MAX_VALUE_PHA_MOD_SENS  (8U)
+#define MAX_VALUE_DETUNE        (16U)
+#define MAX_VALUE_MULTIPLE      (8U)
+#define MAX_VALUE_TOTAL_LEVEL   (128U)
+#define MAX_VALUE_KEY_SCALE     (4U)
+#define MAX_VALUE_ATTACK_RATE   (32U)
+#define MAX_VALUE_AMP_MOD_EN    (2U)
+#define MAX_VALUE_DECAY_RATE    (32U)
+#define MAX_VALUE_SUSTAIN_LEVEL (16U)
+#define MAX_VALUE_RELEASE_RATE  (16U)
+#define MAX_VALUE_SSG_ENVELOPE  (8U)
 
 /* GPIO definitions */
 #define YM2612_Dx_GPIO_PIN      (YM2612_D0_GPIO_PIN | YM2612_D1_GPIO_PIN | YM2612_D2_GPIO_PIN | YM2612_D3_GPIO_PIN | YM2612_D4_GPIO_PIN | YM2612_D5_GPIO_PIN | YM2612_D6_GPIO_PIN | YM2612_D7_GPIO_PIN)
@@ -102,6 +120,33 @@ extern "C"
 #define YM2612_CLK_GPIO_AF      GPIO_AF2_TIM14
 
 /* Exported types ------------------------------------------------------------*/
+
+/* Operator var id */
+typedef enum
+{
+  FM_VAR_OPERATOR_DETUNE = 0U,
+  FM_VAR_OPERATOR_MULTIPLE,
+  FM_VAR_OPERATOR_TOTAL_LEVEL,
+  FM_VAR_OPERATOR_KEY_SCALE,
+  FM_VAR_OPERATOR_ATTACK_RATE,
+  FM_VAR_OPERATOR_AMP_MOD,
+  FM_VAR_OPERATOR_DECAY_RATE,
+  FM_VAR_OPERATOR_SUSTAIN_RATE,
+  FM_VAR_OPERATOR_SUSTAIN_LEVEL,
+  FM_VAR_OPERATOR_RELEASE_RATE,
+  FM_VAR_OPERATOR_SSG_ENVELOPE,
+  FM_VAR_OPERATOR_NUM_VARIABLES,
+} eFmOperatorVar_t;
+
+typedef enum
+{
+  FM_VAR_FEEDBACK = 0U,
+  FM_VAR_ALGORITHM,
+  FM_VAR_AUDIO_OUT,
+  FM_VAR_AMP_MOD_SENS,
+  FM_VAR_PHA_MOD_SENS,
+  FM_VAR_VOICE_NUM_VARIABLES,
+} eFmVoiceVar_t;
 
 /* Operator structure */
 typedef struct 
@@ -216,6 +261,12 @@ void vYM2612_write_reg(uint8_t u8RegAddr, uint8_t u8RegData, YM2612_bank_t xBank
   * @retval None
   */
 void vYM2612_set_reg_preset(xFmDevice_t * pxRegPreset);
+
+/**
+  * @brief Get reg preset.
+  * @retval address of actual reg preset.
+  */
+xFmDevice_t * pxYM2612_get_reg_preset(void);
 
 /**
   * @brief Set midi note into channel

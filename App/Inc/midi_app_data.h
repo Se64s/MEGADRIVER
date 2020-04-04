@@ -21,7 +21,7 @@ extern "C"
 /* Exported defines ----------------------------------------------------------*/
 
 /** Padding bytes for 8B alligment */
-#define MIDI_APP_DATA_SPARE_SIZE    (13U)
+#define MIDI_APP_DATA_SPARE_SIZE    (12U)
 
 /** Init page for midi data  */
 /* WARNING: Change linker file to limit the user data area */
@@ -33,6 +33,7 @@ extern "C"
 /** Default values */
 #define MIDI_APP_DATA_DEFAULT_MODE   (MidiMode3)
 #define MIDI_APP_DATA_DEFAULT_CH     (0U)
+#define MIDI_APP_DATA_DEFAULT_BANK   (0U)
 #define MIDI_APP_DATA_DEFAULT_PROG   (0U)
 
 /* Exported types  -----------------------------------------------------------*/
@@ -42,10 +43,11 @@ typedef struct __packed
 {
     uint8_t u8Mode;
     uint8_t u8BaseChannel;
+    uint8_t u8Bank;
     uint8_t u8Program;
     uint8_t pu8Spare[MIDI_APP_DATA_SPARE_SIZE];
 } midi_app_data_t;
-/** Final size: 1 + 1 + 1 + 13 = 16B, 8B alligned */
+/** Final size: 1 + 1 + 1 + 1 + 12 = 16B, 8B alligned */
 
 /* Exported variables --------------------------------------------------------*/
 

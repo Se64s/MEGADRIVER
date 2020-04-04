@@ -36,6 +36,7 @@ bool bSYNTH_APP_DATA_init(void)
         if (xInitStatus == APP_DATA_NOT_INIT)
         {
             /* Init actions */
+            break;
         }
         else if (xInitStatus == APP_DATA_OK)
         {
