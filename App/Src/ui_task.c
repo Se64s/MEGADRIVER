@@ -9,7 +9,6 @@
 #include "ui_task.h"
 #include "cli_task.h"
 
-#include "adc_driver.h"
 #include "encoder_driver.h"
 #include "display_driver.h"
 
@@ -43,13 +42,6 @@ static ui_menu_t xUiMenuHandler = {0};
   * @retval None
   */
 static void encoder_cb(encoder_event_t event, uint32_t eventData);
-
-/**
-  * @brief callback for adc actions
-  * @param event type of event generated
-  * @retval None
-  */
-static void adc_cb(adc_event_t xEvent);
 
 /**
   * @brief Main task loop
@@ -96,16 +88,6 @@ static void encoder_cb(encoder_event_t event, uint32_t eventData)
     }
 }
 
-static void adc_cb(adc_event_t xEvent)
-{
-    BaseType_t xWakeTask;
-
-    if (xEvent == ADC_EVENT_UPDATE)
-    {
-        xTaskNotifyFromISR(ui_task_handle, UI_SIGNAL_ADC_UPDATE, eSetBits, &xWakeTask);
-    }
-}
-
 static void __ui_main( void *pvParameters )
 {
     /* Init delay to for pow stabilization */
@@ -113,12 +95,6 @@ static void __ui_main( void *pvParameters )
     
     /* Init encoder */
     ENCODER_init(ENCODER_ID_0, encoder_cb);
-
-    /* Init ADC peripheral */
-    ADC_init(ADC_0, NULL);
-
-    /* Init ADC conversion */
-    ADC_start(ADC_0);
 
     /* Init display */
     if (DISPLAY_init(DISPLAY_0, &xDisplayHandler) != DISPLAY_STATUS_OK)
@@ -154,8 +130,7 @@ static void __ui_main( void *pvParameters )
                                     UI_SIGNAL_ENC_UPDATE_SW_SET | 
                                     UI_SIGNAL_SYNTH_ON | 
                                     UI_SIGNAL_SYNTH_OFF | 
-                                    UI_SIGNAL_MIDI_DATA |
-                                    UI_SIGNAL_ADC_UPDATE
+                                    UI_SIGNAL_MIDI_DATA
                                 ), 
                                 &u32TmpEvent, 
                                 (UI_DISPLAY_UPDATE_RATE / portTICK_PERIOD_MS));

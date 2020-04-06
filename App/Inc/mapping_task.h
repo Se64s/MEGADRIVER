@@ -1,13 +1,13 @@
 /**
   ******************************************************************************
-  * @file           : ui_task.h
-  * @brief          : Task to handle ui actions
+  * @file           : mapping_task.h
+  * @brief          : Task to handle mapping actions
   ******************************************************************************
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __UI_TASK_H
-#define __UI_TASK_H
+#ifndef __MAPPING_TASK_H
+#define __MAPPING_TASK_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,7 +17,6 @@ extern "C" {
 
 #include <stdint.h>
 #include <stdbool.h>
-
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -25,46 +24,61 @@ extern "C" {
 /* Private defines -----------------------------------------------------------*/
 
 /* Task parameters */
-#define UI_TASK_NAME                    "UI"
-#define UI_TASK_STACK                   (256U)
-#define UI_TASK_PRIO                    (1U)
+#define MAP_TASK_NAME                   "MAP"
+#define MAP_TASK_STACK                  (128U)
+#define MAP_TASK_PRIO                   (1U)
+#define MAP_TASK_INIT_DELAY             (1000U)
 
-/* Check signals */
-#define CHECK_SIGNAL(VAR, SIG)          (((VAR) & (SIG)) == (SIG))
-
-/* UI signals */
-#define UI_SIGNAL_ENC_UPDATE_CCW        (1UL << 0U)
-#define UI_SIGNAL_ENC_UPDATE_CW         (1UL << 1U)
-#define UI_SIGNAL_ENC_UPDATE_SW_SET     (1UL << 2U)
-#define UI_SIGNAL_ENC_UPDATE_SW_RESET   (1UL << 3U)
-#define UI_SIGNAL_SYNTH_ON              (1UL << 4U)
-#define UI_SIGNAL_SYNTH_OFF             (1UL << 5U)
-#define UI_SIGNAL_MIDI_DATA             (1UL << 6U)
-#define UI_SIGNAL_ERROR                 (1UL << 7U)
-#define UI_SIGNAL_NOT_DEF               (1UL << 31U)
+/* MAPPING task signals */
+#define MAP_SIGNAL_ERROR                (1UL << 0U)
+#define MAP_SIGNAL_ADC_UPDATE           (1UL << 1U)
+#define MAP_SIGNAL_NOT_DEF              (1UL << 31U)
 
 /* Exported types ------------------------------------------------------------*/
+
+/** Defined mapping modes */
+typedef enum 
+{
+    MAP_MODE_NONE = 0x00,
+    MAP_MODE_V_OCT,
+    MAP_MODE_GATE,
+    MAP_MODE_PARAMETER,
+    MAP_NOT_DEF = 0xFF
+} MapMode_t;
+
+/** Mapping control element */
+typedef struct
+{
+    MapMode_t xMode;
+    uint8_t u8Voice;
+    uint8_t u8Operator;
+    uint8_t u8ParameterId;
+    uint16_t u16RangeMax;
+    uint16_t u16RangeMin;
+    uint16_t u16Value;
+} MapElement_t;
+
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions prototypes ---------------------------------------------*/
 
 /**
-  * @brief Init resources for UI tasks
+  * @brief Init resources for MAPPING tasks
   * @retval operation result, true for correct creation, false for error
   */
-bool bUiTaskInit(void);
+bool bMapTaskInit(void);
 
 /**
   * @brief Notify event to a task.
   * @param u32Event event to notify.
   * @retval operation result, true for correct read, false for error
   */
-bool bUiTaskNotify(uint32_t u32Event);
+bool bMapTaskNotify(uint32_t u32Event);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __UI_TASK_H */
+#endif /* __MAPPING_TASK_H */
 
 /*****END OF FILE****/

@@ -462,7 +462,6 @@ static void vMidiCmdOffMono(uint8_t * pu8MidiCmd)
                 if (xMidiCfg.pxChannelList[u8Voice].u8Note == u8Note)
                 {
                     /* Send cmd to synth task */
-                    size_t xBytesSent;
                     uint32_t u32Idata = 0U;
                     SynthMsg_t xSynthCmd = {0};
 
