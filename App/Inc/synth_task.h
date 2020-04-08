@@ -21,7 +21,7 @@ extern "C" {
 
 #include "FreeRTOS.h"
 #include "task.h"
-#include "message_buffer.h"
+#include "queue.h"
 
 #include "YM2612_driver.h"
 
@@ -85,6 +85,63 @@ typedef enum
   SYNTH_PRESET_SOURCE_MAX
 } SynthPresetSource_t;
 
+/** Synth task defined events */
+typedef enum
+{
+  SYNTH_EVENT_MIDI_MSG = 0U,
+  SYNTH_EVENT_LOAD_PRESET,
+  SYNTH_EVENT_SAVE_PRESET,
+  SYNTH_EVENT_NOTE_ON_OFF,
+  SYNTH_EVENT_CHANGE_NOTE,
+  SYNTH_EVENT_MOD_PARAM,
+  SYNTH_EVENT_NOT_DEF = 0xFFU
+} SynthEventType_t;
+
+/** Payload for MIDI msg event */
+typedef struct
+{
+  SynthMsgType_t xType;
+  uint8_t u8Data[SYNTH_LEN_MSG];
+} SynthEventPayloadMidi_t;
+
+/** Payload for event Load Preset */
+typedef struct
+{
+  SynthPresetSource_t xSource;
+  uint8_t u8PresetId;
+} SynthEventPayloadLoadPreset_t;
+
+/** Payload for event Save Preset */
+typedef struct
+{
+  uint8_t u8PresetId;
+  xFmDevice_t * pxPreset;
+} SynthEventPayloadSavePreset_t;
+
+/** Payload for Note On Off */
+typedef struct
+{
+  uint8_t u8VoiceId;
+  bool bGateState;
+} SynthEventPayloadNoteOnOff_t;
+
+/** Payload for Change Note */
+typedef struct
+{
+  uint8_t u8VoiceId;
+  uint8_t u8Note;
+} SynthEventPayloadChangeNote_t;
+
+/** Union definitions with all event payload */
+typedef union
+{
+  SynthEventPayloadMidi_t xMidi;
+  SynthEventPayloadLoadPreset_t xLoadPreset;
+  SynthEventPayloadSavePreset_t xSavePreset;
+  SynthEventPayloadNoteOnOff_t xNoteOnOff;
+  SynthEventPayloadChangeNote_t xChangeNote;
+} SynthPayload_t;
+
 /* SysEx command format */
 typedef struct 
 {
@@ -107,12 +164,12 @@ typedef struct
   uint8_t u8Position;
 } SynthSysExCmdLoadPreset_t;
 
-/* Synth cmd message structure */
+/** Synth Event definition */
 typedef struct
 {
-  SynthMsgType_t xType;
-  uint8_t u8Data[SYNTH_LEN_MSG];
-} SynthMsg_t;
+  SynthEventType_t eType;
+  SynthPayload_t uPayload;
+} SynthEvent_t;
 
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
@@ -146,6 +203,12 @@ bool bSynthTaskInit(void);
   * @retval operation result, true for correct read, false for error
   */
 bool bSynthTaskNotify(uint32_t u32Event);
+
+/**
+  * @brief Get task event queue handler.
+  * @retval Queue handler in case of queue init, NULL in other case.
+  */
+QueueHandle_t pxSynthTaskGetQueue(void);
 
 #ifdef __cplusplus
 }

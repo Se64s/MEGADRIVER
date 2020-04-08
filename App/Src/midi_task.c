@@ -22,9 +22,6 @@
 /* Timeout for store midi messages */
 #define MIDI_MSG_TIMEOUT                (100U)
 
-/* Size for storage midi commands */
-#define MIDI_CMD_BUF_STORAGE_SIZE       (32U)
-
 /* Size used fo midi channels to handle */
 #define MIDI_NUM_CHANNEL                (SYNTH_MAX_NUM_VOICE)
 
@@ -61,9 +58,6 @@ MidiCtrl_t xMidiCfg = {0};
 /* Task handler */
 TaskHandle_t xMidiTaskHandle = NULL;
 
-/* Message buffer control structrure */
-MessageBufferHandle_t xMidiMessageBuffer;
-
 /* Private function prototypes -----------------------------------------------*/
 
 /**
@@ -83,7 +77,7 @@ static bool bRestoreMidiCtrl(void);
   * @param pxSynthCmd pointer to synth command.
   * @retval Operation result, true OK, false, error.
   */
-static bool bSendSynthCmd(SynthMsg_t * pxSynthCmd);
+static bool bSendSynthCmd(SynthEventPayloadMidi_t * pxSynthCmd);
 
 /**
   * @brief Handle note on.
@@ -202,7 +196,7 @@ static void vResetMidiCtrl(void)
     xMidiCfg.pxTmpPolyChannel.u8Velocity = MIDI_DATA_NOT_VALID;
 
     /* Clear voices on synth */
-    SynthMsg_t xTmpCmd = {0U};
+    SynthEventPayloadMidi_t xTmpCmd = {0U};
     xTmpCmd.xType = SYNTH_CMD_NOTE_OFF_ALL;
     (void)bSendSynthCmd(&xTmpCmd);
 }
@@ -258,20 +252,28 @@ static bool bRestoreMidiCtrl(void)
     return bRetVal;
 }
 
-static bool bSendSynthCmd(SynthMsg_t * pxSynthCmd)
+static bool bSendSynthCmd(SynthEventPayloadMidi_t * pxSynthCmd)
 {
     bool bRetVal = false;
-    size_t xBytesSent;
-    /* Send command to synth task */
-    xBytesSent = xMessageBufferSend(xMidiMessageBuffer,(void *)pxSynthCmd, sizeof(SynthMsg_t), pdMS_TO_TICKS(MIDI_MSG_TIMEOUT));
-    if (xBytesSent == sizeof(SynthMsg_t))
+    QueueHandle_t xSynthQueue = pxSynthTaskGetQueue();
+
+    if (xSynthQueue != NULL)
     {
-        bRetVal = true;
+        SynthEvent_t xMidiEvent = {0U};
+
+        xMidiEvent.eType = SYNTH_EVENT_MIDI_MSG;
+        xMidiEvent.uPayload.xMidi = *pxSynthCmd;
+
+        if (xQueueSend( xSynthQueue, &xMidiEvent, pdMS_TO_TICKS(MIDI_MSG_TIMEOUT)) == pdPASS)
+        {
+            bRetVal = true;
+        }
+        else
+        {
+            vCliPrintf(MIDI_TASK_NAME, "CMD: Queue Error");
+        }
     }
-    else
-    {
-        vCliPrintf(MIDI_TASK_NAME, "CMD: Memory Error");
-    }
+
     return bRetVal;
 }
 
@@ -334,7 +336,7 @@ static void vMidiCmdOnMono(uint8_t * pu8MidiCmd)
                     {
                         /* Send cmd to synth task */
                         uint32_t u32Idata = 0U;
-                        SynthMsg_t xSynthCmd = {0};
+                        SynthEventPayloadMidi_t xSynthCmd = {0};
 
                         /* Build synth NOTE ON command */
                         xSynthCmd.xType = SYNTH_CMD_NOTE_ON;
@@ -410,7 +412,7 @@ static void vMidiCmdOnPoly(uint8_t * pu8MidiCmd)
                     {
                         /* Send cmd to synth task */
                         uint32_t u32Idata = 0U;
-                        SynthMsg_t xSynthCmd = {0};
+                        SynthEventPayloadMidi_t xSynthCmd = {0};
 
                         /* Build synth NOTE ON command */
                         xSynthCmd.xType = SYNTH_CMD_NOTE_ON;
@@ -463,7 +465,7 @@ static void vMidiCmdOffMono(uint8_t * pu8MidiCmd)
                 {
                     /* Send cmd to synth task */
                     uint32_t u32Idata = 0U;
-                    SynthMsg_t xSynthCmd = {0};
+                    SynthEventPayloadMidi_t xSynthCmd = {0};
 
                     /* Build synth NOTE ON command */
                     xSynthCmd.xType = SYNTH_CMD_NOTE_OFF;
@@ -529,7 +531,7 @@ static void vMidiCmdOffPoly(uint8_t * pu8MidiCmd)
                     {
                         /* Clear channel */
                         uint32_t u32Idata = 0U;
-                        SynthMsg_t xSynthCmd = {0};
+                        SynthEventPayloadMidi_t xSynthCmd = {0};
 
                         /* Build synth NOTE ON command */
                         xSynthCmd.xType = SYNTH_CMD_NOTE_OFF;
@@ -597,22 +599,25 @@ static void vHandleMidiCmd(uint8_t * pu8MidiCmd)
 
 static void vMidiCmdSysExCallBack(uint8_t *pu8Data, uint32_t u32LenData)
 {
-    if ((pu8Data) != NULL)
+    if (pu8Data != NULL)
     {
-        size_t xBytesSent;
-        SynthMsg_t xSynthCmd = {0};
+        QueueHandle_t xSynthQueue = pxSynthTaskGetQueue();
 
-        xSynthCmd.xType = SYNTH_CMD_SYSEX;
-
-        xBytesSent = xMessageBufferSend(xMidiMessageBuffer,(void *)&xSynthCmd, sizeof(SynthMsg_t), pdMS_TO_TICKS(MIDI_MSG_TIMEOUT));
-
-        if (xBytesSent == sizeof(SynthMsg_t))
+        if (xSynthQueue != NULL)
         {
-            vCliPrintf(MIDI_TASK_NAME, "SYSEX: CMD LEN %d", u32LenData);
-        }
-        else
-        {
-            vCliPrintf(MIDI_TASK_NAME, "SYSEX: Memory Error");
+            SynthEvent_t xMidiEvent = {0U};
+
+            xMidiEvent.eType = SYNTH_EVENT_MIDI_MSG;
+            xMidiEvent.uPayload.xMidi.xType = SYNTH_CMD_SYSEX;
+
+            if (xQueueSend( xSynthQueue, &xMidiEvent, pdMS_TO_TICKS(MIDI_MSG_TIMEOUT)) == pdPASS)
+            {
+                vCliPrintf(MIDI_TASK_NAME, "SYSEX: CMD LEN %d", u32LenData);
+            }
+            else
+            {
+                vCliPrintf(MIDI_TASK_NAME, "SYSEX: Queue Error");
+            }
         }
     }
 }
@@ -856,11 +861,8 @@ bool bMidiTaskInit(void)
     /* Create task */
     xTaskCreate(vMidiMain, MIDI_TASK_NAME, MIDI_TASK_STACK, NULL, MIDI_TASK_PRIO, &xMidiTaskHandle);
 
-    /* Init resources */
-    xMidiMessageBuffer = xMessageBufferCreate(MIDI_CMD_BUF_STORAGE_SIZE);
-
     /* Check resources */
-    if ((xMidiTaskHandle != NULL) && (xMidiMessageBuffer != NULL))
+    if (xMidiTaskHandle != NULL)
     {
         bRetval = true;
     }
@@ -877,11 +879,6 @@ bool bMidiTaskNotify(uint32_t u32Event)
         bRetval = true;
     }
     return bRetval;
-}
-
-MessageBufferHandle_t xMidiGetMessageBuffer(void)
-{
-    return xMidiMessageBuffer;
 }
 
 /*****END OF FILE****/

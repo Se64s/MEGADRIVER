@@ -19,8 +19,11 @@
 /* Timeout for rx a cmd */
 #define SYNTH_CMD_TIMEOUT       (1000U)
 
-/* Size of cmd buff */
-#define SYNTH_TMP_CMD_SIZE      (3U)
+/* Event queue size */
+#define SYNTH_EVENT_QUEUE_SIZE  (5U)
+
+/* Event queue item size */
+#define SYNTH_EVENT_QUEUE_SIZE  (sizeof(SynthEvent_t))
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
@@ -29,27 +32,43 @@
 /* Task handler */
 TaskHandle_t xSynthTaskHandle = NULL;
 
+/** Queue event handler */
+QueueHandle_t xSynthEventQueueHandle = NULL;
+
 /* Private function prototypes -----------------------------------------------*/
+
+/**
+  * @brief Handle Midi event.
+  * @param pxEventData pointer to event data.
+  * @retval None
+  */
+static void vHandleMidiEvent(SynthEventPayloadMidi_t * pxEventData);
 
 /**
   * @brief Activate voice.
   * @param pxCmdMsg pointer to synth cmd.
   * @retval None
   */
-static void vCmdVoiceOn(SynthMsg_t * pxCmdMsg);
+static void vCmdVoiceOn(SynthEventPayloadMidi_t * pxCmdMsg);
 
 /**
   * @brief Deactivate voice.
   * @param pxCmdMsg pointer to synth cmd.
   * @retval None
   */
-static void vCmdVoiceOff(SynthMsg_t * pxCmdMsg);
+static void vCmdVoiceOff(SynthEventPayloadMidi_t * pxCmdMsg);
 
 /**
   * @brief Deactivate all voices.
   * @retval None
   */
 static void vCmdVoiceOffAll(void);
+
+/**
+  * @brief Handler for SysEx commands.
+  * @retval None
+  */
+static void vCmdMidiSysEx(void);
 
 /**
   * @brief  Init user preset.
@@ -95,7 +114,32 @@ static void vSynthTaskMain(void *pvParameters);
 
 /* Private fuctions ----------------------------------------------------------*/
 
-static void vCmdVoiceOn(SynthMsg_t * pxCmdMsg)
+static void vHandleMidiEvent(SynthEventPayloadMidi_t * pxEventData)
+{
+    switch (pxEventData->xType)
+    {
+    case SYNTH_CMD_NOTE_ON:
+        vCmdVoiceOn(pxEventData);
+        break;
+
+    case SYNTH_CMD_NOTE_OFF:
+        vCmdVoiceOff(pxEventData);
+        break;
+
+    case SYNTH_CMD_NOTE_OFF_ALL:
+        vCmdVoiceOffAll();
+        break;
+
+    case SYNTH_CMD_SYSEX:
+        vCmdMidiSysEx();
+        break;
+    
+    default:
+        break;
+    }
+}
+
+static void vCmdVoiceOn(SynthEventPayloadMidi_t * pxCmdMsg)
 {
     if (pxCmdMsg->xType == SYNTH_CMD_NOTE_ON)
     {
@@ -115,7 +159,7 @@ static void vCmdVoiceOn(SynthMsg_t * pxCmdMsg)
     }
 }
 
-static void vCmdVoiceOff(SynthMsg_t * pxCmdMsg)
+static void vCmdVoiceOff(SynthEventPayloadMidi_t * pxCmdMsg)
 {
     if (pxCmdMsg->xType == SYNTH_CMD_NOTE_OFF)
     {
@@ -358,37 +402,21 @@ static void vSynthTaskMain( void *pvParameters )
 
     for(;;)
     {
-      MessageBufferHandle_t MsgBuff = xMidiGetMessageBuffer();
+        SynthEvent_t xEvent;
 
-      if (MsgBuff != NULL)
-      {
-        size_t xReceivedBytes;
-        SynthMsg_t xSynthCmd = {0};
-
-        /* Get cmd from buffer */
-        xReceivedBytes = xMessageBufferReceive(MsgBuff, (void *) &xSynthCmd, sizeof(SynthMsg_t), pdMS_TO_TICKS(SYNTH_CMD_TIMEOUT));
-
-        /* Handle cmd if not empty */
-        if (xReceivedBytes == sizeof(SynthMsg_t))
+        if (xQueueReceive(xSynthEventQueueHandle, &xEvent, portMAX_DELAY) == pdPASS)
         {
-            if (xSynthCmd.xType == SYNTH_CMD_NOTE_ON)
+            switch (xEvent.eType)
             {
-                vCmdVoiceOn(&xSynthCmd);
-            }
-            else if (xSynthCmd.xType == SYNTH_CMD_NOTE_OFF)
-            {
-                vCmdVoiceOff(&xSynthCmd);
-            }
-            else if (xSynthCmd.xType == SYNTH_CMD_NOTE_OFF_ALL)
-            {
-                vCmdVoiceOffAll();
-            }
-            else if (xSynthCmd.xType == SYNTH_CMD_SYSEX)
-            {
-                vCmdMidiSysEx();
+                case SYNTH_EVENT_MIDI_MSG:
+                    vHandleMidiEvent(&xEvent.uPayload.xMidi);
+                    break;
+
+                default:
+                    vCliPrintf(SYNTH_TASK_NAME, "Not defined event; %02X", xEvent.eType);
+                    break;
             }
         }
-      }
     }
 }
 
@@ -425,17 +453,21 @@ bool bSynthSaveUserPreset(xFmDevice_t * pxPreset, uint8_t u8PresetId)
 
 bool bSynthTaskInit(void)
 {
-    bool retval = false;
+    bool bRetval = false;
 
     /* Create task */
     xTaskCreate(vSynthTaskMain, SYNTH_TASK_NAME, SYNTH_TASK_STACK, NULL, SYNTH_TASK_PRIO, &xSynthTaskHandle);
 
+    /* Create task queue */
+    xSynthEventQueueHandle = xQueueCreate(SYNTH_EVENT_QUEUE_SIZE, SYNTH_EVENT_QUEUE_SIZE);
+
     /* Check resources */
-    if (xSynthTaskHandle != NULL)
+    if ((xSynthTaskHandle != NULL) && (xSynthEventQueueHandle != NULL))
     {
-        retval = true;
+        bRetval = true;
     }
-    return(retval);
+
+    return bRetval;
 }
 
 bool bSynthTaskNotify(uint32_t u32Event)
@@ -448,6 +480,11 @@ bool bSynthTaskNotify(uint32_t u32Event)
       bRetval = true;
     }
     return bRetval;
+}
+
+QueueHandle_t pxSynthTaskGetQueue(void)
+{
+    return xSynthEventQueueHandle;
 }
 
 /*****END OF FILE****/
