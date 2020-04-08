@@ -16,15 +16,30 @@
 /* Private define ------------------------------------------------------------*/
 
 /** Update rate for mapping actions in miliseconds */
-#define MAP_TASK_UPDATE_RATE_MS             (500U)
+#define MAP_TASK_UPDATE_RATE_MS             (50U)
 
 /** Number of elements to map */
 #define MAP_MAPPING_SIZE_LIST               (ADC_CH_NUM)
 
+/** Number of ADC steps by V_OCT note */
+#define ADC_STEPS_BY_NOTE                   (34U)    // (1000mV / 12notes) / (adc_range_mV / adc_num_steps)
+
+/** Minimal value to set gate */
+#define ADC_STEPS_GATE_ON                   (820)   // aprox 3V
+
+/** ADC 0 V value */
+#define ADC_ZERO_VOLT                       (2048U) // adc_num_steps / 2
+
 /* Private macro -------------------------------------------------------------*/
 
-/* Check signals */
+/** Check signals */
 #define MAP_CHECK_SIGNAL(VAR, SIG)          (((VAR) & (SIG)) == (SIG))
+
+/** Note from ADC count */
+#define NOTE_FROM_ADC(C_ADC)                ( (uint8_t) ( (C_ADC) / ADC_STEPS_BY_NOTE ) )
+
+/** Get gate status ADC count */
+#define GATE_FROM_ADC(C_ADC)                ( (bool) ( ( C_ADC ) < ADC_STEPS_GATE_ON ) )
 
 /* Private variables ---------------------------------------------------------*/
 
@@ -77,13 +92,44 @@ static void vMappingModeVoctHandler(uint8_t u8MapChannel, MapElement_t * pxMapCh
 
         if (ADC_get_value(ADC_0, u8MapChannel, &u16NewVoltage) == ADC_STATUS_OK)
         {
-            vCliPrintf(MAP_TASK_NAME, "ADC-%02d: %d", u8MapChannel, u16NewVoltage);
+            if (u16NewVoltage < ADC_ZERO_VOLT)
+            {
+                uint8_t u8NewNote = NOTE_FROM_ADC(ADC_ZERO_VOLT - u16NewVoltage);
+                uint8_t u8OldNote = NOTE_FROM_ADC(ADC_ZERO_VOLT - pxMapChannelCfg->u16Value);
+
+                // Update new note value to synth task
+                if (u8NewNote != u8OldNote)
+                {
+                    vCliPrintf(MAP_TASK_NAME, "SET NOTE: %d VOICE: %d", u8NewNote, pxMapChannelCfg->u8Voice);
+                    pxMapChannelCfg->u16Value = u16NewVoltage;
+                }
+            }
         }
     }
 }
 
 static void vMappingModeGateHandler(uint8_t u8MapChannel, MapElement_t * pxMapChannelCfg)
 {
+    if ((pxMapChannelCfg != NULL) && (u8MapChannel < MAP_MAPPING_SIZE_LIST))
+    {
+        uint16_t u16NewVoltage = 0U;
+
+        if (ADC_get_value(ADC_0, u8MapChannel, &u16NewVoltage) == ADC_STATUS_OK)
+        {
+            if (u16NewVoltage < ADC_ZERO_VOLT)
+            {
+                bool bNewGateStatus = GATE_FROM_ADC(u16NewVoltage);
+                bool bOldGateStatus = GATE_FROM_ADC(pxMapChannelCfg->u16Value);
+
+                // Update new note value to synth task
+                if (bNewGateStatus != bOldGateStatus)
+                {
+                    vCliPrintf(MAP_TASK_NAME, "SET GATE: %d VOICE: %d", bNewGateStatus, pxMapChannelCfg->u8Voice);
+                    pxMapChannelCfg->u16Value = u16NewVoltage;
+                }
+            }
+        }
+    }
 }
 
 static void vMappingModeParameterHandler(uint8_t u8MapChannel, MapElement_t * pxMapChannelCfg)
@@ -106,6 +152,7 @@ static void vMapMain( void *pvParameters )
 
     /* Test init */
     pxMapElementList[0U].xMode = MAP_MODE_V_OCT;
+    pxMapElementList[1U].xMode = MAP_MODE_GATE;
 
     for(;;)
     {
