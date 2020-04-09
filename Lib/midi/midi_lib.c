@@ -350,18 +350,4 @@ midiStatus_t midi_reset_fsm(void)
     return retval;
 }
 
-midiStatus_t midi_get_sysex_data(uint8_t ** pu8Data, uint32_t * pu32LenData)
-{
-    midiStatus_t xRetval = midiError;
-
-    if ((pu8Data != NULL) && (pu32LenData != NULL))
-    {
-        *pu8Data = sys_ex_buff_data;
-        *pu32LenData = i_data_sys_ex;
-        xRetval = midiOk;
-    }
-
-    return xRetval;
-}
-
 /* EOF */

@@ -45,6 +45,13 @@ QueueHandle_t xSynthEventQueueHandle = NULL;
 static void vHandleMidiEvent(SynthEventPayloadMidi_t * pxEventData);
 
 /**
+  * @brief Handle SysEx Midi event.
+  * @param pxEventData pointer to event data.
+  * @retval None
+  */
+static void vHandleMidiSysExEvent(SynthEventPayloadMidiSysEx_t * pxEventData);
+
+/**
   * @brief Activate voice.
   * @param pxCmdMsg pointer to synth cmd.
   * @retval None
@@ -66,9 +73,11 @@ static void vCmdVoiceOffAll(void);
 
 /**
   * @brief Handler for SysEx commands.
+  * @param pu8SysExData pointer to sysex data.
+  * @param u32LenData sysex payload len.
   * @retval None
   */
-static void vCmdMidiSysEx(void);
+static void vCmdMidiSysEx(uint8_t * pu8SysExData, uint32_t u32LenData);
 
 /**
   * @brief  Init user preset.
@@ -130,12 +139,16 @@ static void vHandleMidiEvent(SynthEventPayloadMidi_t * pxEventData)
         vCmdVoiceOffAll();
         break;
 
-    case SYNTH_CMD_SYSEX:
-        vCmdMidiSysEx();
-        break;
-    
     default:
         break;
+    }
+}
+
+static void vHandleMidiSysExEvent(SynthEventPayloadMidiSysEx_t * pxEventData)
+{
+    if ((pxEventData != NULL) && (pxEventData->pu8Data != NULL))
+    {
+        vCmdMidiSysEx(pxEventData->pu8Data, pxEventData->u32Len);
     }
 }
 
@@ -300,63 +313,57 @@ static bool bLoadDefaultPreset(uint8_t u8Position)
     return bRetVal;
 }
 
-static void vCmdMidiSysEx(void)
+static void vCmdMidiSysEx(uint8_t * pu8SysExData, uint32_t u32LenData)
 {
-    uint32_t u32SysExLenData = 0U;
-    uint8_t * pu8SysExData;
-
-    if (midi_get_sysex_data(&pu8SysExData, &u32SysExLenData) == midiOk)
+    if (u32LenData >= SYNTH_LEN_MIN_SYSEX_CMD)
     {
-        if (u32SysExLenData >= SYNTH_LEN_MIN_SYSEX_CMD)
+        SynthSysExCmd_t * pxSysExCmd = (SynthSysExCmd_t *)pu8SysExData;
+
+        vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD %02X LEN %d", pxSysExCmd->xSysExCmd, u32LenData);
+
+        if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_SET_PRESET) && (u32LenData == SYNTH_LEN_SET_REG_CMD))
         {
-            SynthSysExCmd_t * pxSysExCmd = (SynthSysExCmd_t *)pu8SysExData;
-
-            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD %02X LEN %d", pxSysExCmd->xSysExCmd, u32SysExLenData);
-
-            if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_SET_PRESET) && (u32SysExLenData == SYNTH_LEN_SET_REG_CMD))
-            {
-                xFmDevice_t * pxPresetData = &pxSysExCmd->pu8CmdData;
-                vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD SET PRESET");
-                vYM2612_set_reg_preset(pxPresetData);
-            }
-            else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_SAVE_PRESET) && (u32SysExLenData == SYNTH_LEN_SAVE_PRESET_CMD))
-            {
-                SynthSysExCmdSavePreset_t * pxSavePresetData = &pxSysExCmd->pu8CmdData;
-                uint8_t pu8PresetName[SYNTH_LEN_PRESET_NAME] = {0};
-
-                vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD SAVE PRESET");
-
-                /* Extract name from sysex frame */
-                for (uint32_t u32NameIndex = 0U; u32NameIndex < (SYNTH_LEN_PRESET_NAME - 1U); u32NameIndex++)
-                {
-                    pu8PresetName[u32NameIndex] = pxSavePresetData->u8CodedName[u32NameIndex * 2U];
-                    pu8PresetName[u32NameIndex] |= pxSavePresetData->u8CodedName[(u32NameIndex * 2U) + 1U] << 4U;
-                }
-                /* Process data */
-                bSavePreset(pxSavePresetData->u8Position, pu8PresetName, &pxSavePresetData->xRegData);
-            }
-            else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_LOAD_PRESET) && (u32SysExLenData == SYNTH_LEN_LOAD_PRESET_CMD))
-            {
-                SynthSysExCmdLoadPreset_t * pxLoadPresetData = &pxSysExCmd->pu8CmdData;
-
-                vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD LOAD PRESET");
-
-                /* Process data */
-                (void)bLoadPreset(pxLoadPresetData->u8Position);
-            }
-            else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_LOAD_DEFAULT_PRESET) && (u32SysExLenData == SYNTH_LEN_LOAD_DEFAULT_PRESET_CMD))
-            {
-                SynthSysExCmdLoadPreset_t * pxLoadPresetData = &pxSysExCmd->pu8CmdData;
-
-                vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD LOAD DEFAULT PRESET");
-
-                (void)bLoadDefaultPreset(pxLoadPresetData->u8Position);
-            }
+            xFmDevice_t * pxPresetData = &pxSysExCmd->pu8CmdData;
+            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD SET PRESET");
+            vYM2612_set_reg_preset(pxPresetData);
         }
-        else
+        else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_SAVE_PRESET) && (u32LenData == SYNTH_LEN_SAVE_PRESET_CMD))
         {
-            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD too short");
+            SynthSysExCmdSavePreset_t * pxSavePresetData = &pxSysExCmd->pu8CmdData;
+            uint8_t pu8PresetName[SYNTH_LEN_PRESET_NAME] = {0};
+
+            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD SAVE PRESET");
+
+            /* Extract name from sysex frame */
+            for (uint32_t u32NameIndex = 0U; u32NameIndex < (SYNTH_LEN_PRESET_NAME - 1U); u32NameIndex++)
+            {
+                pu8PresetName[u32NameIndex] = pxSavePresetData->u8CodedName[u32NameIndex * 2U];
+                pu8PresetName[u32NameIndex] |= pxSavePresetData->u8CodedName[(u32NameIndex * 2U) + 1U] << 4U;
+            }
+            /* Process data */
+            bSavePreset(pxSavePresetData->u8Position, pu8PresetName, &pxSavePresetData->xRegData);
         }
+        else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_LOAD_PRESET) && (u32LenData == SYNTH_LEN_LOAD_PRESET_CMD))
+        {
+            SynthSysExCmdLoadPreset_t * pxLoadPresetData = &pxSysExCmd->pu8CmdData;
+
+            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD LOAD PRESET");
+
+            /* Process data */
+            (void)bLoadPreset(pxLoadPresetData->u8Position);
+        }
+        else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_LOAD_DEFAULT_PRESET) && (u32LenData == SYNTH_LEN_LOAD_DEFAULT_PRESET_CMD))
+        {
+        SynthSysExCmdLoadPreset_t * pxLoadPresetData = &pxSysExCmd->pu8CmdData;
+
+            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD LOAD DEFAULT PRESET");
+
+            (void)bLoadDefaultPreset(pxLoadPresetData->u8Position);
+        }
+    }
+    else
+    {
+        vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD too short");
     }
 }
 
@@ -410,6 +417,10 @@ static void vSynthTaskMain( void *pvParameters )
             {
                 case SYNTH_EVENT_MIDI_MSG:
                     vHandleMidiEvent(&xEvent.uPayload.xMidi);
+                    break;
+
+                case SYNTH_EVENT_MIDI_SYSEX_MSG:
+                    vHandleMidiSysExEvent(&xEvent.uPayload.xMidiSysEx);
                     break;
 
                 default:

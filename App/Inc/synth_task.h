@@ -47,7 +47,7 @@ extern "C" {
 #define SYNTH_LEN_LOAD_DEFAULT_PRESET_CMD   (5U)
 
 /* Synth message parameters */
-#define SYNTH_LEN_MSG                       (4U)
+#define SYNTH_LEN_MIDI_MSG                  (3U)
 
 /* Maximun number of voices */
 #define SYNTH_MAX_NUM_VOICE                 (YM2612_MAX_NUM_VOICE)
@@ -63,7 +63,6 @@ typedef enum
     SYNTH_CMD_NOTE_ON = 0x00U,
     SYNTH_CMD_NOTE_OFF,
     SYNTH_CMD_NOTE_OFF_ALL,
-    SYNTH_CMD_SYSEX,
     SYNTH_CMD_NO_DEF = 0xFFU
 } SynthMsgType_t;
 
@@ -89,6 +88,7 @@ typedef enum
 typedef enum
 {
   SYNTH_EVENT_MIDI_MSG = 0U,
+  SYNTH_EVENT_MIDI_SYSEX_MSG,
   SYNTH_EVENT_LOAD_PRESET,
   SYNTH_EVENT_SAVE_PRESET,
   SYNTH_EVENT_NOTE_ON_OFF,
@@ -101,8 +101,16 @@ typedef enum
 typedef struct
 {
   SynthMsgType_t xType;
-  uint8_t u8Data[SYNTH_LEN_MSG];
+  uint8_t u8Data[SYNTH_LEN_MIDI_MSG];
 } SynthEventPayloadMidi_t;
+
+/** Payload for SYSEX MIDI msg event */
+typedef struct
+{
+  SynthMsgType_t xType;
+  uint32_t u32Len;
+  uint8_t * pu8Data;
+} SynthEventPayloadMidiSysEx_t;
 
 /** Payload for event Load Preset */
 typedef struct
@@ -136,6 +144,7 @@ typedef struct
 typedef union
 {
   SynthEventPayloadMidi_t xMidi;
+  SynthEventPayloadMidiSysEx_t xMidiSysEx;
   SynthEventPayloadLoadPreset_t xLoadPreset;
   SynthEventPayloadSavePreset_t xSavePreset;
   SynthEventPayloadNoteOnOff_t xNoteOnOff;

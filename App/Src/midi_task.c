@@ -605,12 +605,13 @@ static void vMidiCmdSysExCallBack(uint8_t *pu8Data, uint32_t u32LenData)
 
         if (xSynthQueue != NULL)
         {
-            SynthEvent_t xMidiEvent = {0U};
+            SynthEvent_t xMidiSysExEvent = {0U};
 
-            xMidiEvent.eType = SYNTH_EVENT_MIDI_MSG;
-            xMidiEvent.uPayload.xMidi.xType = SYNTH_CMD_SYSEX;
+            xMidiSysExEvent.eType = SYNTH_EVENT_MIDI_SYSEX_MSG;
+            xMidiSysExEvent.uPayload.xMidiSysEx.u32Len = u32LenData;
+            xMidiSysExEvent.uPayload.xMidiSysEx.pu8Data = pu8Data;
 
-            if (xQueueSend( xSynthQueue, &xMidiEvent, pdMS_TO_TICKS(MIDI_MSG_TIMEOUT)) == pdPASS)
+            if (xQueueSend(xSynthQueue, &xMidiSysExEvent, pdMS_TO_TICKS(MIDI_MSG_TIMEOUT)) == pdPASS)
             {
                 vCliPrintf(MIDI_TASK_NAME, "SYSEX: CMD LEN %d", u32LenData);
             }
