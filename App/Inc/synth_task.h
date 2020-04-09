@@ -57,7 +57,7 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 
-/* Synth commands */
+/** Synth commands */
 typedef enum
 {
     SYNTH_CMD_NOTE_ON = 0x00U,
@@ -66,7 +66,7 @@ typedef enum
     SYNTH_CMD_NO_DEF = 0xFFU
 } SynthMsgType_t;
 
-/* SysEx defined cmd */
+/** SysEx defined cmd */
 typedef enum
 {
   SYNTH_SYSEX_CMD_SET_PRESET = 0x00U,
@@ -76,7 +76,7 @@ typedef enum
   SYNTH_SYSEX_CMD_NO_DEF = 0x1FU
 } SynthSysExCmdDef_t;
 
-/* SysEx defined cmd */
+/** SysEx defined cmd */
 typedef enum
 {
   SYNTH_PRESET_SOURCE_DEFAULT = 0U,
@@ -89,8 +89,6 @@ typedef enum
 {
   SYNTH_EVENT_MIDI_MSG = 0U,
   SYNTH_EVENT_MIDI_SYSEX_MSG,
-  SYNTH_EVENT_LOAD_PRESET,
-  SYNTH_EVENT_SAVE_PRESET,
   SYNTH_EVENT_NOTE_ON_OFF,
   SYNTH_EVENT_CHANGE_NOTE,
   SYNTH_EVENT_MOD_PARAM,
@@ -112,20 +110,6 @@ typedef struct
   uint8_t * pu8Data;
 } SynthEventPayloadMidiSysEx_t;
 
-/** Payload for event Load Preset */
-typedef struct
-{
-  SynthPresetSource_t xSource;
-  uint8_t u8PresetId;
-} SynthEventPayloadLoadPreset_t;
-
-/** Payload for event Save Preset */
-typedef struct
-{
-  uint8_t u8PresetId;
-  xFmDevice_t * pxPreset;
-} SynthEventPayloadSavePreset_t;
-
 /** Payload for Note On Off */
 typedef struct
 {
@@ -145,13 +129,11 @@ typedef union
 {
   SynthEventPayloadMidi_t xMidi;
   SynthEventPayloadMidiSysEx_t xMidiSysEx;
-  SynthEventPayloadLoadPreset_t xLoadPreset;
-  SynthEventPayloadSavePreset_t xSavePreset;
   SynthEventPayloadNoteOnOff_t xNoteOnOff;
   SynthEventPayloadChangeNote_t xChangeNote;
 } SynthPayload_t;
 
-/* SysEx command format */
+/** SysEx command format */
 typedef struct 
 {
   uint8_t pu8VendorId[SYNTH_LEN_VENDOR_ID];

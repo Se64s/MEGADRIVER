@@ -10,20 +10,19 @@
 #include "cli_task.h"
 #include "ui_task.h"
 #include "midi_task.h"
-
 #include "printf.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
 /* Timeout for rx a cmd */
-#define SYNTH_CMD_TIMEOUT       (1000U)
+#define SYNTH_CMD_TIMEOUT           (1000U)
 
 /* Event queue size */
-#define SYNTH_EVENT_QUEUE_SIZE  (5U)
+#define SYNTH_EVENT_QUEUE_SIZE      (5U)
 
 /* Event queue item size */
-#define SYNTH_EVENT_QUEUE_SIZE  (sizeof(SynthEvent_t))
+#define SYNTH_EVENT_QUEUE_SIZE      (sizeof(SynthEvent_t))
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
@@ -50,6 +49,20 @@ static void vHandleMidiEvent(SynthEventPayloadMidi_t * pxEventData);
   * @retval None
   */
 static void vHandleMidiSysExEvent(SynthEventPayloadMidiSysEx_t * pxEventData);
+
+/**
+  * @brief Handle Note On Off event.
+  * @param pxEventData pointer to event data.
+  * @retval None
+  */
+static void vHandleNoteOnOffEvent(SynthEventPayloadNoteOnOff_t * pxEventData);
+
+/**
+  * @brief Handle Change Note event.
+  * @param pxEventData pointer to event data.
+  * @retval None
+  */
+static void vHandleChangeNoteEvent(SynthEventPayloadChangeNote_t * pxEventData);
 
 /**
   * @brief Activate voice.
@@ -125,22 +138,25 @@ static void vSynthTaskMain(void *pvParameters);
 
 static void vHandleMidiEvent(SynthEventPayloadMidi_t * pxEventData)
 {
-    switch (pxEventData->xType)
+    if (pxEventData != NULL)
     {
-    case SYNTH_CMD_NOTE_ON:
-        vCmdVoiceOn(pxEventData);
-        break;
+        switch (pxEventData->xType)
+        {
+        case SYNTH_CMD_NOTE_ON:
+            vCmdVoiceOn(pxEventData);
+            break;
 
-    case SYNTH_CMD_NOTE_OFF:
-        vCmdVoiceOff(pxEventData);
-        break;
+        case SYNTH_CMD_NOTE_OFF:
+            vCmdVoiceOff(pxEventData);
+            break;
 
-    case SYNTH_CMD_NOTE_OFF_ALL:
-        vCmdVoiceOffAll();
-        break;
+        case SYNTH_CMD_NOTE_OFF_ALL:
+            vCmdVoiceOffAll();
+            break;
 
-    default:
-        break;
+        default:
+            break;
+        }
     }
 }
 
@@ -149,6 +165,49 @@ static void vHandleMidiSysExEvent(SynthEventPayloadMidiSysEx_t * pxEventData)
     if ((pxEventData != NULL) && (pxEventData->pu8Data != NULL))
     {
         vCmdMidiSysEx(pxEventData->pu8Data, pxEventData->u32Len);
+    }
+}
+
+static void vHandleNoteOnOffEvent(SynthEventPayloadNoteOnOff_t * pxEventData)
+{
+    if (pxEventData != NULL)
+    {
+        uint8_t u8VoiceChannel = pxEventData->u8VoiceId;
+
+        /* Check voice range */
+        if (u8VoiceChannel < SYNTH_MAX_NUM_VOICE)
+        {
+            if (pxEventData->bGateState)
+            {
+                vYM2612_key_on(u8VoiceChannel);
+                bUiTaskNotify(UI_SIGNAL_SYNTH_ON);
+            }
+            else
+            {
+                vYM2612_key_off(u8VoiceChannel);
+                bUiTaskNotify(UI_SIGNAL_SYNTH_OFF);
+            }
+
+            // vCliPrintf(SYNTH_TASK_NAME, "VOICE: %d  STATUS: %d", u8VoiceChannel, pxEventData->bGateState);
+        }
+    }
+}
+
+static void vHandleChangeNoteEvent(SynthEventPayloadChangeNote_t * pxEventData)
+{
+    if (pxEventData != NULL)
+    {
+        uint8_t u8VoiceChannel = pxEventData->u8VoiceId;
+        uint8_t u8Note = pxEventData->u8Note;
+
+        /* Check voice range */
+        if (u8VoiceChannel < SYNTH_MAX_NUM_VOICE)
+        {
+            if (bYM2612_set_note(u8VoiceChannel, u8Note))
+            {
+                // vCliPrintf(SYNTH_TASK_NAME, "VOICE: %d  SET NOTE %03d", u8VoiceChannel, u8Note);
+            }
+        }
     }
 }
 
@@ -421,6 +480,14 @@ static void vSynthTaskMain( void *pvParameters )
 
                 case SYNTH_EVENT_MIDI_SYSEX_MSG:
                     vHandleMidiSysExEvent(&xEvent.uPayload.xMidiSysEx);
+                    break;
+
+                case SYNTH_EVENT_NOTE_ON_OFF:
+                    vHandleNoteOnOffEvent(&xEvent.uPayload.xNoteOnOff);
+                    break;
+
+                case SYNTH_EVENT_CHANGE_NOTE:
+                    vHandleChangeNoteEvent(&xEvent.uPayload.xChangeNote);
                     break;
 
                 default:
