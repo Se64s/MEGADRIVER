@@ -121,10 +121,17 @@ extern "C"
 
 /* Exported types ------------------------------------------------------------*/
 
-/* Operator var id */
+/** List of available parameters */
 typedef enum
 {
-  FM_VAR_OPERATOR_DETUNE = 0U,
+  FM_VAR_LFO_ON = 0U,
+  FM_VAR_LFO_FREQ,
+  FM_VAR_VOICE_FEEDBACK,
+  FM_VAR_VOICE_ALGORITHM,
+  FM_VAR_VOICE_AUDIO_OUT,
+  FM_VAR_VOICE_AMP_MOD_SENS,
+  FM_VAR_VOICE_PHA_MOD_SENS,
+  FM_VAR_OPERATOR_DETUNE,
   FM_VAR_OPERATOR_MULTIPLE,
   FM_VAR_OPERATOR_TOTAL_LEVEL,
   FM_VAR_OPERATOR_KEY_SCALE,
@@ -135,18 +142,8 @@ typedef enum
   FM_VAR_OPERATOR_SUSTAIN_LEVEL,
   FM_VAR_OPERATOR_RELEASE_RATE,
   FM_VAR_OPERATOR_SSG_ENVELOPE,
-  FM_VAR_OPERATOR_NUM_VARIABLES,
-} eFmOperatorVar_t;
-
-typedef enum
-{
-  FM_VAR_FEEDBACK = 0U,
-  FM_VAR_ALGORITHM,
-  FM_VAR_AUDIO_OUT,
-  FM_VAR_AMP_MOD_SENS,
-  FM_VAR_PHA_MOD_SENS,
-  FM_VAR_VOICE_NUM_VARIABLES,
-} eFmVoiceVar_t;
+  FM_VAR_NOT_DEF = 0xFFU
+} eFmParameter_t;
 
 /* Operator structure */
 typedef struct 

@@ -79,6 +79,14 @@ static void vMappingModeGateHandler(uint8_t u8MapChannel, MapElement_t * pxMapCh
 static void vMappingModeParameterHandler(uint8_t u8MapChannel, MapElement_t * pxMapChannelCfg);
 
 /**
+  * @brief Get parameter value from ADC count.
+  * @param u8ParameterId mapping channel to apply configuration.
+  * @param u16AdcValue value of ADC count.
+  * @retval Parameter value acording ADC input.
+  */
+static uint8_t u8GetParamValue(uint8_t u8ParameterId, uint16_t u16AdcValue);
+
+/**
   * @brief Main task loop
   * @param pvParameters function paramters
   * @retval None
@@ -117,6 +125,12 @@ static void vMappingModeVoctHandler(uint8_t u8MapChannel, MapElement_t * pxMapCh
                         {
                             vCliPrintf(MAP_TASK_NAME, "CMD: Queue Error");
                         }
+#ifdef MAP_DEBUG
+                        else
+                        {
+                            vCliPrintf(MAP_TASK_NAME, "CMD: V_OCT");
+                        }
+#endif
 
                         pxMapChannelCfg->u16Value = u16NewVoltage;
                     }
@@ -154,6 +168,12 @@ static void vMappingModeGateHandler(uint8_t u8MapChannel, MapElement_t * pxMapCh
                     {
                         vCliPrintf(MAP_TASK_NAME, "CMD: Queue Error");
                     }
+#ifdef MAP_DEBUG
+                    else
+                    {
+                        vCliPrintf(MAP_TASK_NAME, "CMD: GATE");
+                    }
+#endif
 
                     pxMapChannelCfg->u16Value = u16NewVoltage;
                 }
@@ -164,6 +184,52 @@ static void vMappingModeGateHandler(uint8_t u8MapChannel, MapElement_t * pxMapCh
 
 static void vMappingModeParameterHandler(uint8_t u8MapChannel, MapElement_t * pxMapChannelCfg)
 {
+    if ((pxMapChannelCfg != NULL) && (u8MapChannel < MAP_MAPPING_SIZE_LIST))
+    {
+        uint16_t u16NewVoltage = 0U;
+
+        if (ADC_get_value(ADC_0, u8MapChannel, &u16NewVoltage) == ADC_STATUS_OK)
+        {
+            /* Check if new value is different from old one */
+            uint8_t u8NewValue = u8GetParamValue(pxMapChannelCfg->u8ParameterId, u16NewVoltage);
+            uint8_t u8OldValue = u8GetParamValue(pxMapChannelCfg->u8ParameterId, pxMapChannelCfg->u16Value);
+
+            /* Update new note value to synth task */
+            if (u8NewValue != u8OldValue)
+            {
+                QueueHandle_t xSynthQueue = pxSynthTaskGetQueue();
+
+                if (xSynthQueue != NULL)
+                {
+                    SynthEvent_t xSynthEvent = {0U};
+
+                    xSynthEvent.eType = SYNTH_EVENT_MOD_PARAM;
+                    xSynthEvent.uPayload.xChangeParameter.u8VoiceId = pxMapChannelCfg->u8Voice;
+                    xSynthEvent.uPayload.xChangeParameter.u8operatorId = pxMapChannelCfg->u8Operator;
+                    xSynthEvent.uPayload.xChangeParameter.u8ParameterId = pxMapChannelCfg->u8ParameterId;
+                    xSynthEvent.uPayload.xChangeParameter.u8Value = u8NewValue;
+
+                    if (xQueueSend(xSynthQueue, &xSynthEvent, pdMS_TO_TICKS(MAP_SEND_EVENT_TIMEOUT)) != pdPASS)
+                    {
+                        vCliPrintf(MAP_TASK_NAME, "CMD: Queue Error");
+                    }
+#ifdef MAP_DEBUG
+                    else
+                    {
+                        vCliPrintf(MAP_TASK_NAME, "CMD: MOD PARAM");
+                    }
+#endif
+                    pxMapChannelCfg->u16Value = u16NewVoltage;
+                }
+            }
+        }
+    }
+}
+
+static uint8_t u8GetParamValue(uint8_t u8ParameterId, uint16_t u16AdcValue)
+{
+    uint8_t u8ParamValue = 0U;
+    return u8ParamValue;
 }
 
 static void vMapMain( void *pvParameters )
@@ -183,6 +249,8 @@ static void vMapMain( void *pvParameters )
     /* Test init */
     pxMapElementList[0U].xMode = MAP_MODE_V_OCT;
     pxMapElementList[1U].xMode = MAP_MODE_GATE;
+    pxMapElementList[2U].xMode = MAP_MODE_PARAMETER;
+    pxMapElementList[3U].xMode = MAP_MODE_NONE;
 
     for(;;)
     {

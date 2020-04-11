@@ -124,6 +124,15 @@ typedef struct
   uint8_t u8Note;
 } SynthEventPayloadChangeNote_t;
 
+/** Payload definition for change parameter event */
+typedef struct
+{
+  uint8_t u8VoiceId;
+  uint8_t u8operatorId;
+  uint8_t u8ParameterId;
+  uint8_t u8Value;
+} SynthEventPayloadChangeParameter_t;
+
 /** Union definitions with all event payload */
 typedef union
 {
@@ -131,6 +140,7 @@ typedef union
   SynthEventPayloadMidiSysEx_t xMidiSysEx;
   SynthEventPayloadNoteOnOff_t xNoteOnOff;
   SynthEventPayloadChangeNote_t xChangeNote;
+  SynthEventPayloadChangeParameter_t xChangeParameter;
 } SynthPayload_t;
 
 /** SysEx command format */

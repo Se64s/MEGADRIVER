@@ -23,6 +23,9 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* Private defines -----------------------------------------------------------*/
 
+/* Activate debug output */
+//#define MAP_DEBUG
+
 /* Task parameters */
 #define MAP_TASK_NAME                   "MAP"
 #define MAP_TASK_STACK                  (128U)
@@ -53,8 +56,6 @@ typedef struct
     uint8_t u8Voice;
     uint8_t u8Operator;
     uint8_t u8ParameterId;
-    uint16_t u16RangeMax;
-    uint16_t u16RangeMin;
     uint16_t u16Value;
 } MapElement_t;
 

@@ -187,8 +187,6 @@ static void vHandleNoteOnOffEvent(SynthEventPayloadNoteOnOff_t * pxEventData)
                 vYM2612_key_off(u8VoiceChannel);
                 bUiTaskNotify(UI_SIGNAL_SYNTH_OFF);
             }
-
-            // vCliPrintf(SYNTH_TASK_NAME, "VOICE: %d  STATUS: %d", u8VoiceChannel, pxEventData->bGateState);
         }
     }
 }
@@ -203,11 +201,18 @@ static void vHandleChangeNoteEvent(SynthEventPayloadChangeNote_t * pxEventData)
         /* Check voice range */
         if (u8VoiceChannel < SYNTH_MAX_NUM_VOICE)
         {
-            if (bYM2612_set_note(u8VoiceChannel, u8Note))
+            if (bYM2612_set_note(u8VoiceChannel, u8Note) != true)
             {
-                // vCliPrintf(SYNTH_TASK_NAME, "VOICE: %d  SET NOTE %03d", u8VoiceChannel, u8Note);
+                vCliPrintf(SYNTH_TASK_NAME, "VOICE: %d  SET NOTE %03d - ERROR", u8VoiceChannel, u8Note);
             }
         }
+    }
+}
+
+static void vHandleChangeParameterEvent(SynthEventPayloadChangeParameter_t * pxEventData)
+{
+    if (pxEventData != NULL)
+    {
     }
 }
 
@@ -488,6 +493,10 @@ static void vSynthTaskMain( void *pvParameters )
 
                 case SYNTH_EVENT_CHANGE_NOTE:
                     vHandleChangeNoteEvent(&xEvent.uPayload.xChangeNote);
+                    break;
+
+                case SYNTH_EVENT_MOD_PARAM:
+                    vHandleChangeParameterEvent(&xEvent.uPayload.xChangeParameter);
                     break;
 
                 default:
