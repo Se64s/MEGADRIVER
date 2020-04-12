@@ -77,7 +77,7 @@ void vErrorInit(err_print_data vPrintError);
   * @param line line of error.
   * @retval None.
   */
-void vErrorAssert(uint32_t *pc, uint32_t *lr, uint32_t line);
+void vErrorAssert(const void *pc, const void *lr, uint32_t line);
 
 #ifdef  __cplusplus
 }

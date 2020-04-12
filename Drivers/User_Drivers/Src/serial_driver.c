@@ -6,8 +6,10 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
+
 #include "serial_driver.h"
 #include "circular_buffer.h"
+#include "error.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -51,7 +53,7 @@ static void MX_USART3_UART_Deinit(void);
   */
 static void _error_handler(void)
 {
-    while(1);
+    ERR_ASSERT(0U);
 }
 
 /**
@@ -151,14 +153,6 @@ static void MX_USART3_UART_Init(void)
     huart3.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
 
     if (HAL_UART_Init(&huart3) != HAL_OK)
-    {
-        _error_handler();
-    }
-    if (HAL_UARTEx_SetRxFifoThreshold(&huart3, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
-    {
-        _error_handler();
-    }
-    if (HAL_UARTEx_DisableFifoMode(&huart3) != HAL_OK)
     {
         _error_handler();
     }

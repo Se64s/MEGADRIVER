@@ -8,11 +8,12 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "cli_cmd.h"
-#include "printf.h"
 #include "FreeRTOS.h"
 #include "FreeRTOS_CLI.h"
+#include "cli_task.h"
 
-#include <stdlib.h>
+ #include <stdlib.h>
+#include "printf.h"
 #include "stm32g0xx_hal.h"
 #include "YM2612_driver.h"
 #include "error.h"

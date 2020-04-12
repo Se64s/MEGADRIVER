@@ -13,6 +13,7 @@
 #include "cli_task.h"
 #include "serial_driver.h"
 #include "printf.h"
+#include "error.h"
 
 #include "FreeRTOS_CLI.h"
 #include "cli_cmd.h"
@@ -186,7 +187,7 @@ void vCliPrintf(const char *module_name, const char *Format, ...)
     {
         if (xSemaphoreTake(cli_serial_mutex, portMAX_DELAY) != pdTRUE)
         {
-            while(1);
+            ERR_ASSERT(0U);
         }
 
         int32_t len_data = 0;
@@ -231,7 +232,7 @@ void vCliPrintf(const char *module_name, const char *Format, ...)
 
         if (xSemaphoreGive(cli_serial_mutex) != pdTRUE)
         {
-            while(1);
+            ERR_ASSERT(0U);
         }
     }
 }
@@ -243,7 +244,7 @@ void vCliRawPrintf(const char *Format, ...)
     {
         if (xSemaphoreTake(cli_serial_mutex, portMAX_DELAY) != pdTRUE)
         {
-            while(1);
+            ERR_ASSERT(0U);
         }
 
         int32_t len_data = 0;
@@ -267,7 +268,7 @@ void vCliRawPrintf(const char *Format, ...)
 
         if (xSemaphoreGive(cli_serial_mutex) != pdTRUE)
         {
-            while(1);
+            ERR_ASSERT(0U);
         }
     }
 }

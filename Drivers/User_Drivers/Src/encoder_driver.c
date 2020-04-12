@@ -8,6 +8,7 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "encoder_driver.h"
+#include "error.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -48,7 +49,7 @@ static void __enc_0_low_level_deinit(void);
 
 static void __enc_error_handler(void)
 {
-    while (1);
+    ERR_ASSERT(0U);
 }
 
 static void __enc_0_low_level_init(void)

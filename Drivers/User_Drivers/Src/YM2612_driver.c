@@ -9,6 +9,7 @@
 
 #include "YM2612_driver.h"
 #include "stm32g0xx_hal.h"
+#include "error.h"
 
 #ifdef YM2612_USE_RTOS
 #include "FreeRTOS.h"
@@ -338,7 +339,7 @@ static void MX_TIM_Init(void)
     htim14.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
     if (HAL_TIM_OC_Init(&htim14) != HAL_OK)
     {
-        while (1);
+        ERR_ASSERT(0U);
     }
     sConfigOC.OCMode = TIM_OCMODE_TOGGLE;
     sConfigOC.Pulse = PULSE1_VALUE;
@@ -349,7 +350,7 @@ static void MX_TIM_Init(void)
     sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
     if (HAL_TIM_OC_ConfigChannel(&htim14, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
     {
-        while (1);
+        ERR_ASSERT(0U);
     }
 
     /* Setup gpio */

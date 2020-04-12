@@ -8,6 +8,7 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "adc_driver.h"
+#include "error.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -49,7 +50,7 @@ static void __adc_0_low_level_deinit(void);
 
 static void __adc_error_handler(void)
 {
-    while (1);
+    ERR_ASSERT(0U);
 }
 
 static void __adc_0_low_level_init(void)
