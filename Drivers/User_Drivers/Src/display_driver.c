@@ -9,6 +9,7 @@
 
 #include "display_driver.h"
 #include "i2c_driver.h"
+#include "error.h"
 
 #ifdef DISPLAY_USE_RTOS
 #include "FreeRTOS.h"
@@ -60,7 +61,7 @@ static void __HardwareInit(void)
 {
     if (I2C_init(I2C_0, NULL) != I2C_STATUS_OK)
     {
-        while (1);
+        ERR_ASSERT(0U);
     }
 }
 
@@ -68,7 +69,7 @@ static void __HardwareDeInit(void)
 {
     if (I2C_deinit(I2C_0) != I2C_STATUS_OK)
     {
-        while (1);
+        ERR_ASSERT(0U);
     }
 }
 

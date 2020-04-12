@@ -36,7 +36,7 @@ void vErrorInit(err_print_data vPrintError)
     }
 }
 
-void vErrorAssert(uint32_t *pc, uint32_t *lr, uint32_t line)
+void vErrorAssert(const void *pc, const void *lr, uint32_t line)
 {
     xGlobalAssert.pc = (uint32_t)pc;
     xGlobalAssert.lr = (uint32_t)lr;

@@ -14,6 +14,8 @@
 
 #include "ui_sys.h"
 
+#include "error.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -100,14 +102,14 @@ static void __ui_main( void *pvParameters )
     if (DISPLAY_init(DISPLAY_0, &xDisplayHandler) != DISPLAY_STATUS_OK)
     {
         vCliPrintf(UI_TASK_NAME, "Display init ERROR");
-        while (1);
+        ERR_ASSERT(0U);
     }
 
     /* Init ui menu engine */
     if (UI_init(&xUiMenuHandler) != UI_STATUS_OK)
     {
         vCliPrintf(UI_TASK_NAME, "UI engine init ERROR");
-        while (1);
+        ERR_ASSERT(0U);
     }
 
     /* Show init msg */

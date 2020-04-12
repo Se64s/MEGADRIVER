@@ -16,6 +16,7 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 /* Private includes ----------------------------------------------------------*/
 
+#include <stdbool.h>
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
