@@ -120,6 +120,7 @@ Lib/u8g2/u8x8_setup.c \
 Lib/u8g2/u8x8_string.c \
 Lib/u8g2/u8x8_u8toa.c \
 Lib/u8g2/u8x8_u16toa.c \
+Lib/error_handler/error.c \
 RTOS/FreeRTOS/Source/croutine.c \
 RTOS/FreeRTOS/Source/event_groups.c \
 RTOS/FreeRTOS/Source/list.c \
@@ -194,6 +195,7 @@ C_INCLUDES =  \
 -ILib/printf \
 -ILib/midi \
 -ILib/app_data \
+-ILib/error_handler \
 -IDrivers/User_Drivers/Inc \
 -IDrivers/STM32G0xx_HAL_Driver/Inc \
 -IDrivers/STM32G0xx_HAL_Driver/Inc/Legacy \

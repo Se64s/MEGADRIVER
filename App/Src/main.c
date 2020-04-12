@@ -13,10 +13,14 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+/* Defined tasks */
 #include "cli_task.h"
 #include "synth_task.h"
 #include "ui_task.h"
 #include "midi_task.h"
+
+/* Error handler */
+#include "error.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -51,6 +55,9 @@ int main(void)
 
   /* Configure the system clock */
   SystemClock_Config();
+
+  /* Register error output function */
+  vErrorInit(vCliRawPrintf);
 
   /* Task creation */
   bMidiTaskInit();
