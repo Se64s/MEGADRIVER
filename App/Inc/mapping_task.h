@@ -17,8 +17,6 @@ extern "C" {
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "FreeRTOS.h"
-#include "task.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private defines -----------------------------------------------------------*/

@@ -8,7 +8,6 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "YM2612_driver.h"
-#include "stm32g0xx_hal.h"
 #include "error.h"
 
 #ifdef YM2612_USE_RTOS
@@ -19,19 +18,12 @@
 #endif
 #endif
 
+/* External hardware */
+#include "stm32g0xx_hal.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
-
-/* Initialize TIMx peripheral as follows:
-   + Prescaler = (SystemCoreClock / 64000000) - 1
-   + Period = (4 - 1)
-   + ClockDivision = 0
-   + Counter direction = Up
-*/
-#define PRESCALER_VALUE (uint32_t)((SystemCoreClock / 64000000) - 1)
-#define PERIOD_VALUE    (uint32_t)(4 - 1)            /* Period Value  */
-#define PULSE1_VALUE    (uint32_t)(PERIOD_VALUE / 2) /* Capture Compare 1 Value  */
 
 /* Number of ticks per microsec */
 #define TICKS_USEC          (10U)
@@ -102,11 +94,15 @@ static bool _get_operator_register_value(xFmOperator_t * pxOperator, uint8_t u8R
 */
 static void _us_delay(uint32_t microsec);
 
+/* Low level implementation  -------------------------------------------------*/
+
+#ifdef YM2612_TEST_GPIO
 /**
   * @brief  Test output on each gpio out
   * @retval None
 */
 static void _low_level_test(void);
+#endif
 
 /**
   * @brief  Init low level resources
@@ -121,35 +117,41 @@ static void _low_level_init(void);
 static void _low_level_deinit(void);
 
 /**
-  * @brief TIM Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM_Init(void);
+  * @brief  Low level function to write register values.
+  * @param  u8RegAddr register address.
+  * @param  u8RegData register data.
+  * @param  xBank selected bank.
+  * @retval None.
+*/
+static void _low_level_writeRegister(uint8_t u8RegAddr, uint8_t u8RegData, YM2612_bank_t xBank);
 
 /**
-  * @brief TIM Deinitialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM_Deinit(void);
+  * @brief  Low level function to start clock line.
+  * @retval Operation result, true ok, false, error.
+*/
+static bool _low_level_startClock(void);
+
+/**
+  * @brief  Low level function to stop clock line.
+  * @retval Operation result, true ok, false, error.
+*/
+static bool _low_level_stopClock(void);
 
 /* Private user code ---------------------------------------------------------*/
 
 static bool _get_device_register_value(xFmDevice_t * pxDevice, uint8_t u8RegAddr, uint8_t * pu8RegData)
 {
+    ERR_ASSERT(pxDevice != NULL);
+    ERR_ASSERT(pu8RegData != NULL);
+
     uint8_t bRetVal = false;
+    uint8_t u8RegData = 0U;
 
-    if ((pxDevice != NULL) && (pu8RegData != NULL))
+    if (u8RegAddr == YM2612_ADDR_LFO)
     {
-        uint8_t u8RegData = 0U;
-
-        if (u8RegAddr == YM2612_ADDR_LFO)
-        {
-            u8RegData = ((pxDevice->u8LfoOn & 0x01) << 3U) | (pxDevice->u8LfoFreq & 0x07);
-            *pu8RegData = u8RegData;
-            bRetVal = true;
-        }
+        u8RegData = ((pxDevice->u8LfoOn & 0x01) << 3U) | (pxDevice->u8LfoFreq & 0x07);
+        *pu8RegData = u8RegData;
+        bRetVal = true;
     }
 
     return bRetVal;
@@ -157,26 +159,25 @@ static bool _get_device_register_value(xFmDevice_t * pxDevice, uint8_t u8RegAddr
 
 static bool _get_channel_register_value(xFmChannel_t * pxChannel, uint8_t u8RegAddr, uint8_t * pu8RegData)
 {
-    uint8_t bRetVal = false;
-    
-    if ((pxChannel != NULL) && (pu8RegData != NULL))
-    {
-        uint8_t u8RegData = 0U;
+    ERR_ASSERT(pxChannel != NULL);
+    ERR_ASSERT(pu8RegData != NULL);
 
-        if (u8RegAddr == YM2612_ADDR_FB_ALG)
-        {
-            u8RegData = ((pxChannel->u8Feedback & 0x07) << 3U) | (pxChannel->u8Algorithm & 0x07);
-            *pu8RegData = u8RegData;
-            bRetVal = true;
-        }
-        else if (u8RegAddr == YM2612_ADDR_LR_AMS_PMS)
-        {
-            u8RegData = ((pxChannel->u8AudioOut & 0x03) << 6U) | 
-            ((pxChannel->u8AmpModSens & 0x03) << 4U) | 
-            (pxChannel->u8PhaseModSens & 0x07);
-            *pu8RegData = u8RegData;
-            bRetVal = true;
-        }
+    uint8_t bRetVal = false;
+    uint8_t u8RegData = 0U;
+
+    if (u8RegAddr == YM2612_ADDR_FB_ALG)
+    {
+        u8RegData = ((pxChannel->u8Feedback & 0x07) << 3U) | (pxChannel->u8Algorithm & 0x07);
+        *pu8RegData = u8RegData;
+        bRetVal = true;
+    }
+    else if (u8RegAddr == YM2612_ADDR_LR_AMS_PMS)
+    {
+        u8RegData = ((pxChannel->u8AudioOut & 0x03) << 6U) | 
+        ((pxChannel->u8AmpModSens & 0x03) << 4U) | 
+        (pxChannel->u8PhaseModSens & 0x07);
+        *pu8RegData = u8RegData;
+        bRetVal = true;
     }
 
     return bRetVal;
@@ -184,56 +185,55 @@ static bool _get_channel_register_value(xFmChannel_t * pxChannel, uint8_t u8RegA
 
 static bool _get_operator_register_value(xFmOperator_t * pxOperator, uint8_t u8RegAddr, uint8_t * pu8RegData)
 {
-    uint8_t bRetVal = false;
-    
-    if ((pxOperator != NULL) && (pu8RegData != NULL))
-    {
-        uint8_t u8RegData = 0U;
+    ERR_ASSERT(pxOperator != NULL);
+    ERR_ASSERT(pu8RegData != NULL);
 
-        if (u8RegAddr == YM2612_ADDR_DET_MULT)
-        {
-            u8RegData = ((pxOperator->u8Detune & 0x07) << 4U) | (pxOperator->u8Multiple & 0x0F);
-            *pu8RegData = u8RegData;
-            bRetVal = true;
-        }
-        else if (u8RegAddr == YM2612_ADDR_TOT_LVL)
-        {
-            u8RegData = pxOperator->u8TotalLevel & 0x1F;
-            *pu8RegData = u8RegData;
-            bRetVal = true;
-        }
-        else if (u8RegAddr == YM2612_ADDR_KS_AR)
-        {
-            u8RegData = ((pxOperator->u8KeyScale & 0x03) << 6U) | (pxOperator->u8AttackRate & 0x1F);
-            *pu8RegData = u8RegData;
-            bRetVal = true;
-        }
-        else if (u8RegAddr == YM2612_ADDR_AM_DR)
-        {
-            u8RegData = ((pxOperator->u8AmpMod & 0x01) << 7U) | (pxOperator->u8DecayRate & 0x1F);
-            *pu8RegData = u8RegData;
-            bRetVal = true;
-        }
-        else if (u8RegAddr == YM2612_ADDR_SR)
-        {
-            u8RegData = pxOperator->u8SustainRate & 0x1F;
-            *pu8RegData = u8RegData;
-            bRetVal = true;
-        }
-        else if (u8RegAddr == YM2612_ADDR_SL_RR)
-        {
-            u8RegData = ((pxOperator->u8SustainLevel & 0x0F) << 4U) | (pxOperator->u8ReleaseRate & 0x0F);
-            *pu8RegData = u8RegData;
-            bRetVal = true;
-        }
-        else if (u8RegAddr == YM2612_ADDR_SSG_EG)
-        {
-            u8RegData = pxOperator->u8SsgEg & 0x0F;
-            *pu8RegData = u8RegData;
-            bRetVal = true;
-        }
+    uint8_t bRetVal = false;
+    uint8_t u8RegData = 0U;
+
+    if (u8RegAddr == YM2612_ADDR_DET_MULT)
+    {
+        u8RegData = ((pxOperator->u8Detune & 0x07) << 4U) | (pxOperator->u8Multiple & 0x0F);
+        *pu8RegData = u8RegData;
+        bRetVal = true;
     }
-    
+    else if (u8RegAddr == YM2612_ADDR_TOT_LVL)
+    {
+        u8RegData = pxOperator->u8TotalLevel & 0x1F;
+        *pu8RegData = u8RegData;
+        bRetVal = true;
+    }
+    else if (u8RegAddr == YM2612_ADDR_KS_AR)
+    {
+        u8RegData = ((pxOperator->u8KeyScale & 0x03) << 6U) | (pxOperator->u8AttackRate & 0x1F);
+        *pu8RegData = u8RegData;
+        bRetVal = true;
+    }
+    else if (u8RegAddr == YM2612_ADDR_AM_DR)
+    {
+        u8RegData = ((pxOperator->u8AmpMod & 0x01) << 7U) | (pxOperator->u8DecayRate & 0x1F);
+        *pu8RegData = u8RegData;
+        bRetVal = true;
+    }
+    else if (u8RegAddr == YM2612_ADDR_SR)
+    {
+        u8RegData = pxOperator->u8SustainRate & 0x1F;
+        *pu8RegData = u8RegData;
+        bRetVal = true;
+    }
+    else if (u8RegAddr == YM2612_ADDR_SL_RR)
+    {
+        u8RegData = ((pxOperator->u8SustainLevel & 0x0F) << 4U) | (pxOperator->u8ReleaseRate & 0x0F);
+        *pu8RegData = u8RegData;
+        bRetVal = true;
+    }
+    else if (u8RegAddr == YM2612_ADDR_SSG_EG)
+    {
+        u8RegData = pxOperator->u8SsgEg & 0x0F;
+        *pu8RegData = u8RegData;
+        bRetVal = true;
+    }
+
     return bRetVal;
 }
 
@@ -246,6 +246,7 @@ static void _us_delay(uint32_t microsec)
     }
 }
 
+#ifdef YM2612_TEST_GPIO
 static void _low_level_test(void)
 {
     YM_SET_BIT(YM2612_Dx_GPIO_PORT, YM2612_Dx_GPIO_PIN);
@@ -266,12 +267,14 @@ static void _low_level_test(void)
     YM_RESET_BIT(YM2612_CS_GPIO_PORT, YM2612_CS_GPIO_PIN);
     _us_delay(10);
 }
+#endif
 
 static void _low_level_init(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct;
 
-    /* GPIO init */
+    /* GPIO init -------------------------------------------------------------*/
+
     YM2612_Dx_GPIO_CLK();
     GPIO_InitStruct.Pin =   YM2612_Dx_GPIO_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -307,33 +310,24 @@ static void _low_level_init(void)
     _low_level_test();
 #endif
 
-    /* CLK_LINE */
-    MX_TIM_Init();
-}
+    /* CLK_LINE -------------------------------------------------------------*/
 
-static void _low_level_deinit(void)
-{
-    /* TODO: disable used gpio */
-    HAL_GPIO_DeInit(YM2612_Dx_GPIO_PORT, YM2612_Dx_GPIO_PIN);
-    HAL_GPIO_DeInit(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
-    HAL_GPIO_DeInit(YM2612_A1_GPIO_PORT, YM2612_A1_GPIO_PIN);
-    HAL_GPIO_DeInit(YM2612_A0_GPIO_PORT, YM2612_A0_GPIO_PIN);
-    HAL_GPIO_DeInit(YM2612_RD_GPIO_PORT, YM2612_RD_GPIO_PIN);
-    HAL_GPIO_DeInit(YM2612_WR_GPIO_PORT, YM2612_WR_GPIO_PIN);
-    HAL_GPIO_DeInit(YM2612_CS_GPIO_PORT, YM2612_CS_GPIO_PIN);
+    /* Initialize TIMx peripheral as follows:
+    + Prescaler = (SystemCoreClock / 64000000) - 1
+    + Period = (4 - 1)
+    + ClockDivision = 0
+    + Counter direction = Up
+    */
+    uint32_t u32Prescaler = (uint32_t)((SystemCoreClock / 64000000) - 1);
+    uint32_t u32Period = (uint32_t)(4 - 1);
+    uint32_t u32Pulse1 = (uint32_t)(u32Period / 2);
 
-    /* Timer clock deinit */
-    MX_TIM_Deinit();
-}
-
-static void MX_TIM_Init(void)
-{
     TIM_OC_InitTypeDef sConfigOC = {0};
 
     htim14.Instance = TIM14;
-    htim14.Init.Prescaler = PRESCALER_VALUE;
+    htim14.Init.Prescaler = u32Prescaler;
     htim14.Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim14.Init.Period = PERIOD_VALUE;
+    htim14.Init.Period = u32Period;
     htim14.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
     htim14.Init.RepetitionCounter = 0;
     htim14.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
@@ -342,7 +336,7 @@ static void MX_TIM_Init(void)
         ERR_ASSERT(0U);
     }
     sConfigOC.OCMode = TIM_OCMODE_TOGGLE;
-    sConfigOC.Pulse = PULSE1_VALUE;
+    sConfigOC.Pulse = u32Pulse1;
     sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
     sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
     sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
@@ -353,8 +347,7 @@ static void MX_TIM_Init(void)
         ERR_ASSERT(0U);
     }
 
-    /* Setup gpio */
-    GPIO_InitTypeDef GPIO_InitStruct;
+    /* Setup gpio for CLK line */
 
     __HAL_RCC_GPIOF_CLK_ENABLE();
     
@@ -369,8 +362,20 @@ static void MX_TIM_Init(void)
     HAL_GPIO_Init(YM2612_CLK_GPIO_PORT, &GPIO_InitStruct);
 }
 
-static void MX_TIM_Deinit(void)
+static void _low_level_deinit(void)
 {
+    /* Disable used gpio */
+    HAL_GPIO_DeInit(YM2612_Dx_GPIO_PORT, YM2612_Dx_GPIO_PIN);
+    HAL_GPIO_DeInit(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
+    HAL_GPIO_DeInit(YM2612_A1_GPIO_PORT, YM2612_A1_GPIO_PIN);
+    HAL_GPIO_DeInit(YM2612_A0_GPIO_PORT, YM2612_A0_GPIO_PIN);
+    HAL_GPIO_DeInit(YM2612_RD_GPIO_PORT, YM2612_RD_GPIO_PIN);
+    HAL_GPIO_DeInit(YM2612_WR_GPIO_PORT, YM2612_WR_GPIO_PIN);
+    HAL_GPIO_DeInit(YM2612_CS_GPIO_PORT, YM2612_CS_GPIO_PIN);
+
+    /* Timer clock deinit */
+    /* Stop clock line */
+    (void)_low_level_stopClock();
     /* Peripheral clock disable */
     HAL_TIM_OC_DeInit(&htim14);
     __HAL_RCC_TIM14_CLK_DISABLE();
@@ -378,51 +383,7 @@ static void MX_TIM_Deinit(void)
     HAL_GPIO_DeInit(YM2612_CLK_GPIO_PORT, YM2612_CLK_GPIO_PIN);
 }
 
-/* Callback ------------------------------------------------------------------*/
-/* Public user code ----------------------------------------------------------*/
-
-YM2612_status_t xYM2612_init(void)
-{
-    YM2612_status_t retval = YM2612_STATUS_ERROR;
-    
-    _low_level_init();
-    
-    /* Init clock */
-    if (HAL_TIM_OC_Start(&htim14, TIM_CHANNEL_1) == HAL_OK)
-    {
-        retval = YM2612_STATUS_OK;
-    }
-
-#ifdef YM2612_USE_RTOS
-    taskENTER_CRITICAL();
-#endif
-
-    /* Reset register values */
-    YM_SET_BIT(YM2612_RD_GPIO_PORT, YM2612_RD_GPIO_PIN);
-    YM_SET_BIT(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
-    _us_delay(10);
-    YM_RESET_BIT(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
-    _us_delay(10);
-    YM_SET_BIT(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
-    _us_delay(100);
-
-#ifdef YM2612_USE_RTOS
-    taskEXIT_CRITICAL();
-#endif
-
-    return (retval);
-}
-
-YM2612_status_t xYM2612_deinit(void)
-{
-    YM2612_status_t retval = YM2612_STATUS_OK;
-    
-    _low_level_deinit();
-    
-    return (retval);
-}
-
-void vYM2612_write_reg(uint8_t u8RegAddr, uint8_t u8RegData, YM2612_bank_t xBank)
+static void _low_level_writeRegister(uint8_t u8RegAddr, uint8_t u8RegData, YM2612_bank_t xBank)
 {
 #ifdef YM2612_DEBUG
     vCliPrintf("DBG", "WR REG: %02X-%02X-%02X", u8RegAddr, u8RegData, xBank);
@@ -475,8 +436,80 @@ void vYM2612_write_reg(uint8_t u8RegAddr, uint8_t u8RegData, YM2612_bank_t xBank
 #endif
 }
 
+static bool _low_level_startClock(void)
+{
+    bool bRetval = false;
+    if (HAL_TIM_OC_Start(&htim14, TIM_CHANNEL_1) == HAL_OK)
+    {
+        bRetval = true;
+    }
+    return bRetval;
+}
+
+static bool _low_level_stopClock(void)
+{
+    bool bRetval = false;
+    if (HAL_TIM_OC_Stop(&htim14, TIM_CHANNEL_1) == HAL_OK)
+    {
+        bRetval = true;
+    }
+    return bRetval;
+}
+
+/* Callback ------------------------------------------------------------------*/
+/* Public user code ----------------------------------------------------------*/
+
+YM2612_status_t xYM2612_init(void)
+{
+    YM2612_status_t retval = YM2612_STATUS_ERROR;
+
+    _low_level_init();
+
+    /* Init clock */
+    if (_low_level_startClock())
+    {
+        retval = YM2612_STATUS_OK;
+    }
+
+#ifdef YM2612_USE_RTOS
+    taskENTER_CRITICAL();
+#endif
+
+    /* Reset register values */
+    YM_SET_BIT(YM2612_RD_GPIO_PORT, YM2612_RD_GPIO_PIN);
+    YM_SET_BIT(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
+    _us_delay(10);
+    YM_RESET_BIT(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
+    _us_delay(10);
+    YM_SET_BIT(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
+    _us_delay(100);
+
+#ifdef YM2612_USE_RTOS
+    taskEXIT_CRITICAL();
+#endif
+
+    return (retval);
+}
+
+YM2612_status_t xYM2612_deinit(void)
+{
+    YM2612_status_t retval = YM2612_STATUS_OK;
+    
+    _low_level_deinit();
+    
+    return (retval);
+}
+
+void vYM2612_write_reg(uint8_t u8RegAddr, uint8_t u8RegData, YM2612_bank_t xBank)
+{
+    /* Wrapper for low level abstraction */
+    _low_level_writeRegister(u8RegAddr, u8RegData, xBank);
+}
+
 void vYM2612_set_reg_preset(xFmDevice_t * pxRegPreset)
 {
+    ERR_ASSERT(pxRegPreset != NULL);
+
     uint8_t u8RegValue = 0U;
 
     /* Copy register preset */
@@ -532,6 +565,8 @@ xFmDevice_t * pxYM2612_get_reg_preset (void)
 
 bool bYM2612_set_note(YM2612_ch_id_t xChannel, uint8_t u8MidiNote)
 {
+    ERR_ASSERT(xChannel < YM2612_NUM_CH);
+
     bool bRetval = false;
     bool bBankSelection = xChannel / 3;
     uint8_t u8Addr = 0U;
@@ -580,12 +615,16 @@ bool bYM2612_set_note(YM2612_ch_id_t xChannel, uint8_t u8MidiNote)
 
 void vYM2612_key_on(YM2612_ch_id_t xChannel)
 {
+    ERR_ASSERT(xChannel < YM2612_NUM_CH);
+
     uint8_t u8ChannelOffset = (xChannel % 3U) | ((xChannel / 3U) << 2U);
     vYM2612_write_reg(YM2612_ADDR_KEY_ON_OFF, 0xF0 | u8ChannelOffset, 0);
 }
 
 void vYM2612_key_off(YM2612_ch_id_t xChannel)
 {
+    ERR_ASSERT(xChannel < YM2612_NUM_CH);
+
     uint8_t u8ChannelOffset = (xChannel % 3U) | ((xChannel / 3U) << 2U);
     vYM2612_write_reg(YM2612_ADDR_KEY_ON_OFF, 0x00 | u8ChannelOffset, 0);
 }

@@ -50,7 +50,7 @@ extern "C" {
 #define SYNTH_LEN_MIDI_MSG                  (3U)
 
 /* Maximun number of voices */
-#define SYNTH_MAX_NUM_VOICE                 (YM2612_MAX_NUM_VOICE)
+#define SYNTH_MAX_NUM_VOICE                 (YM2612_NUM_CHANNEL)
 
 /* Maximun number of user presets */
 #define SYNTH_MAX_NUM_USER_PRESET           (SYNTH_APP_DATA_NUM_PRESETS)

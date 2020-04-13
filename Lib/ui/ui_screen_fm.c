@@ -36,6 +36,7 @@ typedef enum
     FM_SCREEN_ELEMENT_OP_ATTACK_RATE,
     FM_SCREEN_ELEMENT_OP_AMP_MOD_EN,
     FM_SCREEN_ELEMENT_OP_DECAY_RATE,
+    FM_SCREEN_ELEMENT_OP_SUSTAIN_RATE,
     FM_SCREEN_ELEMENT_OP_SUSTAIN_LEVEL,
     FM_SCREEN_ELEMENT_OP_RELEASE_RATE,
     FM_SCREEN_ELEMENT_OP_SSG_ENVELOPE,
@@ -71,6 +72,7 @@ typedef enum
 #define NAME_FORMAT_OP_ATTACK_RATE              " ATT RATE  %d"
 #define NAME_FORMAT_OP_AMP_MOD_EN               " AMP MOD   %s"
 #define NAME_FORMAT_OP_DECAY_RATE               " DEC RATE  %d"
+#define NAME_FORMAT_OP_SUSTAIN_RATE             " SUST RATE %d"
 #define NAME_FORMAT_OP_SUSTAIN_LEVEL            " SUST LVL  %d"
 #define NAME_FORMAT_OP_RELEASE_RATE             " REL RATE  %d"
 #define NAME_FORMAT_OP_SSG_ENVELOPE             " SSG ENV   %d"
@@ -105,6 +107,7 @@ char pcElementLabelOperatorKeyScale[MAX_LEN_NAME] = {0U};
 char pcElementLabelOperatorAttackRate[MAX_LEN_NAME] = {0U};
 char pcElementLabelOperatorAmpModEn[MAX_LEN_NAME] = {0U};
 char pcElementLabelOperatorDecayRate[MAX_LEN_NAME] = {0U};
+char pcElementLabelOperatorSustainRate[MAX_LEN_NAME] = {0U};
 char pcElementLabelOperatorSustainLevel[MAX_LEN_NAME] = {0U};
 char pcElementLabelOperatorReleaseRate[MAX_LEN_NAME] = {0U};
 char pcElementLabelOperatorSsgEnvelope[MAX_LEN_NAME] = {0U};
@@ -142,6 +145,7 @@ static void vElementRenderOperatorKeyScale(void * pvDisplay, void * pvScreen, vo
 static void vElementRenderOperatorAttackRate(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementRenderOperatorAmpModEn(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementRenderOperatorDecayRate(void * pvDisplay, void * pvScreen, void * pvElement);
+static void vElementRenderOperatorSustainRate(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementRenderOperatorSustainLevel(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementRenderOperatorReleaseRate(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementRenderOperatorSsgEnvelope(void * pvDisplay, void * pvScreen, void * pvElement);
@@ -166,6 +170,7 @@ static void vElementActionOperatorKeyScale(void * pvMenu, void * pvEventData);
 static void vElementActionOperatorAttackRate(void * pvMenu, void * pvEventData);
 static void vElementActionOperatorAmpModEn(void * pvMenu, void * pvEventData);
 static void vElementActionOperatorDecayRate(void * pvMenu, void * pvEventData);
+static void vElementActionOperatorSustainRate(void * pvMenu, void * pvEventData);
 static void vElementActionOperatorSustainLevel(void * pvMenu, void * pvEventData);
 static void vElementActionOperatorReleaseRate(void * pvMenu, void * pvEventData);
 static void vElementActionOperatorSsgEnvelope(void * pvMenu, void * pvEventData);
@@ -558,7 +563,7 @@ static void vElementRenderVoice(void * pvDisplay, void * pvScreen, void * pvElem
         if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
         {
             /* Prepare data on buffer */
-            if (u8VoiceIndex == YM2612_MAX_NUM_VOICE)
+            if (u8VoiceIndex == YM2612_NUM_CHANNEL)
             {
                 sprintf(pxElement->pcName, NAME_FORMAT_VOICE_ALL);
             }
@@ -1095,6 +1100,44 @@ static void vElementRenderOperatorDecayRate(void * pvDisplay, void * pvScreen, v
                 uint8_t u8TmpOperatorIndex = (u8OperatorIndex == YM2612_NUM_OP_CHANNEL) ? 0U : u8OperatorIndex;
 
                 sprintf(pxElement->pcName, NAME_FORMAT_OP_DECAY_RATE, pxDeviceCfg->xChannel[u8TmpVoiceIndex].xOperator[u8TmpOperatorIndex].u8DecayRate);
+            }
+            else
+            {
+                sprintf(pxElement->pcName, "ERROR");
+            }
+
+            /* Print selection ico */
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
+
+            u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
+        }
+    }
+}
+
+static void vElementRenderOperatorSustainRate(void * pvDisplay, void * pvScreen, void * pvElement)
+{
+    if ((pvDisplay != NULL) && (pvScreen != NULL) && (pvElement != NULL))
+    {
+        u8g2_t * pxDisplayHandler = pvDisplay;
+        ui_screen_t * pxScreen = pvScreen;
+        ui_element_t * pxElement = pvElement;
+        uint32_t u32IndX = UI_OFFSET_ELEMENT_X;
+        uint32_t u32IndY = UI_OFFSET_ELEMENT_Y;
+
+        /* Compute element offset */
+        u32IndY += u32UI_MISC_GetDrawIndexY(pxDisplayHandler, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
+
+        if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
+        {
+            xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
+
+            /* Prepare data on buffer */
+            if ((u8VoiceIndex <= YM2612_NUM_CHANNEL) && (u8OperatorIndex <= YM2612_NUM_OP_CHANNEL))
+            {
+                uint8_t u8TmpVoiceIndex = (u8VoiceIndex == YM2612_NUM_CHANNEL) ? 0U : u8VoiceIndex;
+                uint8_t u8TmpOperatorIndex = (u8OperatorIndex == YM2612_NUM_OP_CHANNEL) ? 0U : u8OperatorIndex;
+
+                sprintf(pxElement->pcName, NAME_FORMAT_OP_SUSTAIN_RATE, pxDeviceCfg->xChannel[u8TmpVoiceIndex].xOperator[u8TmpOperatorIndex].u8SustainRate);
             }
             else
             {
@@ -1826,6 +1869,32 @@ static void vElementActionOperatorDecayRate(void * pvMenu, void * pvEventData)
     }
 }
 
+static void vElementActionOperatorSustainRate(void * pvMenu, void * pvEventData)
+{
+    if ((pvMenu != NULL) && (pvEventData != NULL))
+    {
+        uint32_t * pu32Event = pvEventData;
+        ui_menu_t * pxMenu = pvMenu;
+        ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
+
+        /* Handle encoder events */
+        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        {
+            if (pxScreen->bElementSelection)
+            {
+                xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
+
+                vActionOperatorElement(pxDeviceCfg, FM_VAR_OPERATOR_SUSTAIN_RATE, *pu32Event, MAX_VALUE_SUSTAIN_RATE);
+            }
+        }
+        /* Element selection action */
+        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        {
+            pxScreen->bElementSelection = !pxScreen->bElementSelection;
+        }
+    }
+}
+
 static void vElementActionOperatorSustainLevel(void * pvMenu, void * pvEventData)
 {
     if ((pvMenu != NULL) && (pvEventData != NULL))
@@ -2055,6 +2124,11 @@ ui_status_t UI_screen_fm_init(ui_screen_t * pxScreenHandler)
         xScreenElementList[FM_SCREEN_ELEMENT_OP_DECAY_RATE].u32Index = FM_SCREEN_ELEMENT_OP_DECAY_RATE;
         xScreenElementList[FM_SCREEN_ELEMENT_OP_DECAY_RATE].render_cb = vElementRenderOperatorDecayRate;
         xScreenElementList[FM_SCREEN_ELEMENT_OP_DECAY_RATE].action_cb = vElementActionOperatorDecayRate;
+
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_SUSTAIN_RATE].pcName = pcElementLabelOperatorSustainRate;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_SUSTAIN_RATE].u32Index = FM_SCREEN_ELEMENT_OP_SUSTAIN_RATE;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_SUSTAIN_RATE].render_cb = vElementRenderOperatorSustainRate;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_SUSTAIN_RATE].action_cb = vElementActionOperatorSustainRate;
 
         xScreenElementList[FM_SCREEN_ELEMENT_OP_SUSTAIN_LEVEL].pcName = pcElementLabelOperatorSustainLevel;
         xScreenElementList[FM_SCREEN_ELEMENT_OP_SUSTAIN_LEVEL].u32Index = FM_SCREEN_ELEMENT_OP_SUSTAIN_LEVEL;
