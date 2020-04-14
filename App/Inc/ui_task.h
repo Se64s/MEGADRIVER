@@ -18,9 +18,6 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "FreeRTOS.h"
-#include "task.h"
-
 /* Private includes ----------------------------------------------------------*/
 /* Private defines -----------------------------------------------------------*/
 
@@ -41,7 +38,8 @@ extern "C" {
 #define UI_SIGNAL_SYNTH_OFF             (1UL << 5U)
 #define UI_SIGNAL_ADC_UPDATE            (1UL << 6U)
 #define UI_SIGNAL_MIDI_DATA             (1UL << 7U)
-#define UI_SIGNAL_ERROR                 (1UL << 8U)
+#define UI_SIGNAL_SCREEN_UPDATE         (1UL << 8U)
+#define UI_SIGNAL_ERROR                 (1UL << 9U)
 #define UI_SIGNAL_NOT_DEF               (1UL << 31U)
 
 /* Exported types ------------------------------------------------------------*/
