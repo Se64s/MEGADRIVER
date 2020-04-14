@@ -66,6 +66,20 @@ static void vHandleNoteOnOffEvent(SynthEventPayloadNoteOnOff_t * pxEventData);
 static void vHandleChangeNoteEvent(SynthEventPayloadChangeNote_t * pxEventData);
 
 /**
+  * @brief Handle Change Parameter event.
+  * @param pxEventData pointer to event data.
+  * @retval None
+  */
+static void vHandleChangeParameterEvent(SynthEventPayloadChangeParameter_t * pxEventData);
+
+/**
+  * @brief Handle Update Preset parameter event.
+  * @param pxEventData pointer to event data.
+  * @retval None
+  */
+static void vHandleUpdatePresetEvent(SynthEventPayloadUpdatePreset_t * pxEventData);
+
+/**
   * @brief Activate voice.
   * @param pxCmdMsg pointer to synth cmd.
   * @retval None
@@ -230,6 +244,14 @@ static void vHandleChangeParameterEvent(SynthEventPayloadChangeParameter_t * pxE
     }
 }
 
+static void vHandleUpdatePresetEvent(SynthEventPayloadUpdatePreset_t * pxEventData)
+{
+    ERR_ASSERT(pxEventData != NULL);
+
+    /* Update preset values */
+    vYM2612_set_reg_preset(pxEventData->pxPreset);
+}
+
 static void vCmdVoiceOn(SynthEventPayloadMidi_t * pxCmdMsg)
 {
     ERR_ASSERT(pxCmdMsg != NULL);
@@ -364,9 +386,11 @@ static bool bLoadPreset(uint8_t u8Position)
 
     if (bSYNTH_APP_DATA_read(u8Position, &pxPresetData))
     {
-        vCliPrintf(SYNTH_TASK_NAME, "LOAD PRESET %d - %s: OK", u8Position, pxPresetData->pu8Name);
-        vYM2612_set_reg_preset(&pxPresetData->xPresetData);
-        bRetVal = true;
+        if (bSynthSetPreset(pxPresetData))
+        {
+            vCliPrintf(SYNTH_TASK_NAME, "LOAD PRESET %d - %s: OK", u8Position, pxPresetData->pu8Name);
+            bRetVal = true;
+        }
     }
     else
     {
@@ -383,9 +407,11 @@ static bool bLoadDefaultPreset(uint8_t u8Position)
 
     if (pxPresetData != NULL)
     {
-        vCliPrintf(SYNTH_TASK_NAME, "LOAD DEFAULT PRESET %d", u8Position);
-        vYM2612_set_reg_preset(pxPresetData);
-        bRetVal = true;
+        if (bSynthSetPreset(pxPresetData))
+        {
+            vCliPrintf(SYNTH_TASK_NAME, "LOAD DEFAULT PRESET %d", u8Position);
+            bRetVal = true;
+        }
     }
     else
     {
@@ -517,6 +543,10 @@ static void vSynthTaskMain( void *pvParameters )
                     vHandleChangeParameterEvent(&xEvent.uPayload.xChangeParameter);
                     break;
 
+                case SYNTH_EVENT_UPDATE_PRESET:
+                    vHandleUpdatePresetEvent(&xEvent.uPayload.xUpdatePreset);
+                    break;
+
                 default:
                     vCliPrintf(SYNTH_TASK_NAME, "Not defined event; %02X", xEvent.eType);
                     break;
@@ -554,6 +584,20 @@ bool bSynthLoadPreset(SynthPresetSource_t u8PresetSource, uint8_t u8PresetId)
 bool bSynthSaveUserPreset(xFmDevice_t * pxPreset, uint8_t u8PresetId)
 {
     return bSavePreset(u8PresetId, "UI User Preset", pxPreset);
+}
+
+bool bSynthSetPreset(xFmDevice_t * pxPreset)
+{
+    ERR_ASSERT(pxPreset != NULL);
+    ERR_ASSERT(xSynthEventQueueHandle != NULL);
+
+    bool bRetval = false;
+    SynthEvent_t xSynthEvent = {.eType = SYNTH_EVENT_UPDATE_PRESET, .uPayload.xUpdatePreset.pxPreset = pxPreset};
+
+    if (xQueueSend(xSynthEventQueueHandle, &xSynthEvent, pdMS_TO_TICKS(SYNTH_QUEUE_TIMEOUT)) != pdPASS)
+    {
+        vCliPrintf(SYNTH_TASK_NAME, "CMD: Queue Error");
+    }
 }
 
 bool bSynthTaskInit(void)

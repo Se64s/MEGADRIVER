@@ -46,6 +46,9 @@ extern "C" {
 #define SYNTH_LEN_LOAD_PRESET_CMD           (5U)
 #define SYNTH_LEN_LOAD_DEFAULT_PRESET_CMD   (5U)
 
+/* Synth internal queue send timeout */
+#define SYNTH_QUEUE_TIMEOUT                 (100U)
+
 /* Synth message parameters */
 #define SYNTH_LEN_MIDI_MSG                  (3U)
 
@@ -92,6 +95,7 @@ typedef enum
   SYNTH_EVENT_NOTE_ON_OFF,
   SYNTH_EVENT_CHANGE_NOTE,
   SYNTH_EVENT_MOD_PARAM,
+  SYNTH_EVENT_UPDATE_PRESET,
   SYNTH_EVENT_NOT_DEF = 0xFFU
 } SynthEventType_t;
 
@@ -133,6 +137,12 @@ typedef struct
   uint8_t u8Value;
 } SynthEventPayloadChangeParameter_t;
 
+/** Payload definition for update preset event */
+typedef struct
+{
+  xFmDevice_t * pxPreset;
+}SynthEventPayloadUpdatePreset_t;
+
 /** Union definitions with all event payload */
 typedef union
 {
@@ -141,6 +151,7 @@ typedef union
   SynthEventPayloadNoteOnOff_t xNoteOnOff;
   SynthEventPayloadChangeNote_t xChangeNote;
   SynthEventPayloadChangeParameter_t xChangeParameter;
+  SynthEventPayloadUpdatePreset_t xUpdatePreset;
 } SynthPayload_t;
 
 /** SysEx command format */
@@ -191,6 +202,13 @@ bool bSynthLoadPreset(SynthPresetSource_t u8PresetSource, uint8_t u8PresetId);
   * @retval operation result, true for correct save action, false for error.
   */
 bool bSynthSaveUserPreset(xFmDevice_t * pxPreset, uint8_t u8PresetId);
+
+/**
+  * @brief Set preset into device now.
+  * @param pxPreset pointer to preset to save.
+  * @retval operation result, true for correct save action, false for error.
+  */
+bool bSynthSetPreset(xFmDevice_t * pxPreset);
 
 /**
   * @brief Init resources for SYNTH tasks

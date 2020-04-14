@@ -368,7 +368,8 @@ static void vActionVoiceElement(xFmDevice_t * pxDeviceCfg, eFmParameter_t eVarTy
                 vSetVoiceVariable(pxDeviceCfg, u8TmpChannel, eVarType, u8ValueTmp);
             }
 
-            vYM2612_set_reg_preset(pxDeviceCfg);
+            /* Generate task event */
+            (void)bSynthSetPreset(pxDeviceCfg);
         }
     }
 }
@@ -421,7 +422,8 @@ static void vActionOperatorElement(xFmDevice_t * pxDeviceCfg, eFmParameter_t eVa
                 }
             }
 
-            vYM2612_set_reg_preset(pxDeviceCfg);
+            /* Generate task event */
+            (void)bSynthSetPreset(pxDeviceCfg);
         }
     }
 }
@@ -1383,7 +1385,7 @@ static void vElementActionLfoFreq(void * pvMenu, void * pvEventData)
 
                 if (pxDeviceCfg->u8LfoFreq != u8TmpValue)
                 {
-                    vYM2612_set_reg_preset(pxDeviceCfg);
+                    (void)bSynthSetPreset(pxDeviceCfg);
                 }
             }
         }
@@ -1428,7 +1430,7 @@ static void vElementActionLfoEn(void * pvMenu, void * pvEventData)
 
                 if (pxDeviceCfg->u8LfoOn != u8TmpValue)
                 {
-                    vYM2612_set_reg_preset(pxDeviceCfg);
+                    (void)bSynthSetPreset(pxDeviceCfg);
                 }
             }
         }
@@ -1480,7 +1482,7 @@ static void vElementActionVoice(void * pvMenu, void * pvEventData)
                         }
 
                         /* Apply changes to register */
-                        vYM2612_set_reg_preset(pxDeviceCfg);
+                        (void)bSynthSetPreset(pxDeviceCfg);
                     }
                 }
             }
@@ -1674,7 +1676,7 @@ static void vElementActionOperator(void * pvMenu, void * pvEventData)
                         }
 
                         /* Apply changes to register */
-                        vYM2612_set_reg_preset(pxDeviceCfg);
+                        (void)bSynthSetPreset(pxDeviceCfg);
                     }
                 }
             }
