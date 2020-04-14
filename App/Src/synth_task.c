@@ -228,8 +228,93 @@ static void vHandleChangeParameterEvent(SynthEventPayloadChangeParameter_t * pxE
 
     switch (pxEventData->u8ParameterId)
     {
+    case FM_VAR_LFO_ON:
+        pxDevCfg->u8LfoOn = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    case FM_VAR_LFO_FREQ:
+        pxDevCfg->u8LfoFreq = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    case FM_VAR_VOICE_FEEDBACK:
+        pxDevCfg->xChannel[pxEventData->u8VoiceId].u8Feedback = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    case FM_VAR_VOICE_ALGORITHM:
+        pxDevCfg->xChannel[pxEventData->u8VoiceId].u8Algorithm = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    case FM_VAR_VOICE_AUDIO_OUT:
+        pxDevCfg->xChannel[pxEventData->u8VoiceId].u8AudioOut = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    case FM_VAR_VOICE_AMP_MOD_SENS:
+        pxDevCfg->xChannel[pxEventData->u8VoiceId].u8AmpModSens = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    case FM_VAR_VOICE_PHA_MOD_SENS:
+        pxDevCfg->xChannel[pxEventData->u8VoiceId].u8PhaseModSens = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    case FM_VAR_OPERATOR_DETUNE:
+        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8Detune = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    case FM_VAR_OPERATOR_MULTIPLE:
+        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8Multiple = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
     case FM_VAR_OPERATOR_TOTAL_LEVEL:
         pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8TotalLevel = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    case FM_VAR_OPERATOR_KEY_SCALE:
+        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8KeyScale = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    case FM_VAR_OPERATOR_ATTACK_RATE:
+        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8AttackRate = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    case FM_VAR_OPERATOR_AMP_MOD:
+        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8AmpMod = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    case FM_VAR_OPERATOR_DECAY_RATE:
+        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8DecayRate = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    case FM_VAR_OPERATOR_SUSTAIN_RATE:
+        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8SustainRate = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    case FM_VAR_OPERATOR_SUSTAIN_LEVEL:
+        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8SustainLevel = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    case FM_VAR_OPERATOR_RELEASE_RATE:
+        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8ReleaseRate = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    case FM_VAR_OPERATOR_SSG_ENVELOPE:
+        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8SsgEg = pxEventData->u8Value;
         bRegUpdate = true;
         break;
 
@@ -591,13 +676,16 @@ bool bSynthSetPreset(xFmDevice_t * pxPreset)
     ERR_ASSERT(pxPreset != NULL);
     ERR_ASSERT(xSynthEventQueueHandle != NULL);
 
-    bool bRetval = false;
+    bool bRetval = true;
     SynthEvent_t xSynthEvent = {.eType = SYNTH_EVENT_UPDATE_PRESET, .uPayload.xUpdatePreset.pxPreset = pxPreset};
 
     if (xQueueSend(xSynthEventQueueHandle, &xSynthEvent, pdMS_TO_TICKS(SYNTH_QUEUE_TIMEOUT)) != pdPASS)
     {
         vCliPrintf(SYNTH_TASK_NAME, "CMD: Queue Error");
+        bRetval = false;
     }
+
+    return bRetval;
 }
 
 bool bSynthTaskInit(void)

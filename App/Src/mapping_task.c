@@ -422,7 +422,7 @@ static void vMapMain(void *pvParameters)
     pxMapElementList[0U].xMode = MAP_MODE_V_OCT;
     pxMapElementList[1U].xMode = MAP_MODE_GATE;
     pxMapElementList[2U].xMode = MAP_MODE_PARAMETER;
-    pxMapElementList[2U].u8ParameterId = FM_VAR_OPERATOR_TOTAL_LEVEL;
+    pxMapElementList[2U].u8ParameterId = FM_VAR_OPERATOR_MULTIPLE;
     pxMapElementList[3U].xMode = MAP_MODE_NONE;
 
     for(;;)
