@@ -9,6 +9,10 @@
 #include "ui_task.h"
 #include "cli_task.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+#include "timers.h"
+
 #include "encoder_driver.h"
 #include "display_driver.h"
 
@@ -21,13 +25,16 @@
 /* Private define ------------------------------------------------------------*/
 
 /* Update rate in ms */
-#define UI_DISPLAY_UPDATE_RATE      (100U)
+#define UI_DISPLAY_UPDATE_RATE_MS   (100U)
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 
 /* Task handler */
 TaskHandle_t ui_task_handle = NULL;
+
+/* Timer to handle refresh */
+TimerHandle_t xUpdateTimer = NULL;
 
 /* Pointer to display lib handler */
 static u8g2_t xDisplayHandler = {0};
@@ -44,6 +51,13 @@ static ui_menu_t xUiMenuHandler = {0};
   * @retval None
   */
 static void encoder_cb(encoder_event_t event, uint32_t eventData);
+
+/**
+  * @brief Timer callback to generate update event.
+  * @param xTimer handler that generates the event.
+  * @retval None.
+  */
+static void vScreenUpdateCallback(TimerHandle_t xTimer);
 
 /**
   * @brief Main task loop
@@ -90,6 +104,11 @@ static void encoder_cb(encoder_event_t event, uint32_t eventData)
     }
 }
 
+static void vScreenUpdateCallback(TimerHandle_t xTimer)
+{
+    xTaskNotify(ui_task_handle, UI_SIGNAL_SCREEN_UPDATE, eSetBits);
+}
+
 static void __ui_main( void *pvParameters )
 {
     /* Init delay to for pow stabilization */
@@ -118,11 +137,12 @@ static void __ui_main( void *pvParameters )
     /* Update display for first time */
     DISPLAY_update(DISPLAY_0, &xDisplayHandler);
 
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    /* Init update timer */
+    xTimerStart(xUpdateTimer, 0U);
 
     for(;;)
     {
-        uint32_t u32TmpEvent;
+        uint32_t u32TmpEvent = 0U;
 
         BaseType_t xEventWait = xTaskNotifyWait(0, 
                                 (
@@ -132,17 +152,22 @@ static void __ui_main( void *pvParameters )
                                     UI_SIGNAL_ENC_UPDATE_SW_SET | 
                                     UI_SIGNAL_SYNTH_ON | 
                                     UI_SIGNAL_SYNTH_OFF | 
-                                    UI_SIGNAL_MIDI_DATA
+                                    UI_SIGNAL_MIDI_DATA |
+                                    UI_SIGNAL_ADC_UPDATE |
+                                    UI_SIGNAL_SCREEN_UPDATE
                                 ), 
                                 &u32TmpEvent, 
-                                (UI_DISPLAY_UPDATE_RATE / portTICK_PERIOD_MS));
+                                portMAX_DELAY);
 
         if (xEventWait == pdPASS)
         {
+            if (CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_SCREEN_UPDATE))
+            {
+                UI_render(&xDisplayHandler, &xUiMenuHandler);
+            }
+
             UI_action(&xUiMenuHandler, &u32TmpEvent);
         }
-
-        UI_render(&xDisplayHandler, &xUiMenuHandler);
     }
 }
 
@@ -155,8 +180,15 @@ bool bUiTaskInit(void)
     /* Create task */
     xTaskCreate(__ui_main, UI_TASK_NAME, UI_TASK_STACK, NULL, UI_TASK_PRIO, &ui_task_handle);
 
+    /* Create timer resources */
+    xUpdateTimer = xTimerCreate("ScreenUpdateTimer", 
+                                pdMS_TO_TICKS(UI_DISPLAY_UPDATE_RATE_MS), 
+                                pdTRUE, 
+                                (void *)0U, 
+                                vScreenUpdateCallback);
+
     /* Check resources */
-    if (ui_task_handle != NULL)
+    if ((ui_task_handle != NULL) && (xUpdateTimer != NULL))
     {
         retval = true;
     }
