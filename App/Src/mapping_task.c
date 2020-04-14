@@ -228,7 +228,7 @@ static void vMappingModeParameterHandler(uint8_t u8MapChannel, MapElement_t * px
 #ifdef MAP_DEBUG
                 else
                 {
-                    vCliPrintf(MAP_TASK_NAME, "CMD: MOD PARAM");
+                    vCliPrintf(MAP_TASK_NAME, "CMD PARAM: %d-%d", pxMapChannelCfg->u8ParameterId, u8NewValue);
                 }
 #endif
                 pxMapChannelCfg->u16Value = u16NewVoltage;
@@ -246,8 +246,157 @@ static uint8_t u8GetParamValue(uint8_t u8ParameterId, uint16_t u16AdcValue)
     switch (u8ParameterId)
     {
     case FM_VAR_LFO_ON:
+        /* Map value like a gate */
+        if (GATE_FROM_ADC(u16AdcValue))
+        {
+            u8ParamValue = 1U;
+        }
+        else
+        {
+            u8ParamValue = 0U;
+        }
         break;
-    
+
+    case FM_VAR_LFO_FREQ:
+        {
+            uint32_t tmp_param_max_value = MAX_VALUE_LFO_FREQ;
+            uint32_t tmp_value = ((ADC_FULL_RANGE - (uint32_t)u16AdcValue) * tmp_param_max_value) / ADC_FULL_RANGE;
+            u8ParamValue = (uint8_t)tmp_value;
+        }
+        break;
+
+    case FM_VAR_VOICE_FEEDBACK:
+        {
+            uint32_t tmp_param_max_value = MAX_VALUE_FEEDBACK;
+            uint32_t tmp_value = ((ADC_FULL_RANGE - (uint32_t)u16AdcValue) * tmp_param_max_value) / ADC_FULL_RANGE;
+            u8ParamValue = (uint8_t)tmp_value;
+        }
+        break;
+
+    case FM_VAR_VOICE_ALGORITHM:
+        {
+            uint32_t tmp_param_max_value = MAX_VALUE_ALGORITHM;
+            uint32_t tmp_value = ((ADC_FULL_RANGE - (uint32_t)u16AdcValue) * tmp_param_max_value) / ADC_FULL_RANGE;
+            u8ParamValue = (uint8_t)tmp_value;
+        }
+        break;
+
+    case FM_VAR_VOICE_AUDIO_OUT:
+        {
+            uint32_t tmp_param_max_value = MAX_VALUE_VOICE_OUT;
+            uint32_t tmp_value = ((ADC_FULL_RANGE - (uint32_t)u16AdcValue) * tmp_param_max_value) / ADC_FULL_RANGE;
+            u8ParamValue = (uint8_t)tmp_value;
+        }
+        break;
+
+    case FM_VAR_VOICE_AMP_MOD_SENS:
+        {
+            uint32_t tmp_param_max_value = MAX_VALUE_AMP_MOD_SENS;
+            uint32_t tmp_value = ((ADC_FULL_RANGE - (uint32_t)u16AdcValue) * tmp_param_max_value) / ADC_FULL_RANGE;
+            u8ParamValue = (uint8_t)tmp_value;
+        }
+        break;
+
+    case FM_VAR_VOICE_PHA_MOD_SENS:
+        {
+            uint32_t tmp_param_max_value = MAX_VALUE_PHA_MOD_SENS;
+            uint32_t tmp_value = ((ADC_FULL_RANGE - (uint32_t)u16AdcValue) * tmp_param_max_value) / ADC_FULL_RANGE;
+            u8ParamValue = (uint8_t)tmp_value;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_DETUNE:
+        {
+            uint32_t tmp_param_max_value = MAX_VALUE_DETUNE;
+            uint32_t tmp_value = ((ADC_FULL_RANGE - (uint32_t)u16AdcValue) * tmp_param_max_value) / ADC_FULL_RANGE;
+            u8ParamValue = (uint8_t)tmp_value;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_MULTIPLE:
+        {
+            uint32_t tmp_param_max_value = MAX_VALUE_MULTIPLE;
+            uint32_t tmp_value = ((ADC_FULL_RANGE - (uint32_t)u16AdcValue) * tmp_param_max_value) / ADC_FULL_RANGE;
+            u8ParamValue = (uint8_t)tmp_value;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_TOTAL_LEVEL:
+        {
+            uint32_t tmp_param_max_value = MAX_VALUE_TOTAL_LEVEL;
+            uint32_t tmp_value = ((ADC_FULL_RANGE - (uint32_t)u16AdcValue) * tmp_param_max_value) / ADC_FULL_RANGE;
+            u8ParamValue = (uint8_t)tmp_value;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_KEY_SCALE:
+        {
+            uint32_t tmp_param_max_value = MAX_VALUE_KEY_SCALE;
+            uint32_t tmp_value = ((ADC_FULL_RANGE - (uint32_t)u16AdcValue) * tmp_param_max_value) / ADC_FULL_RANGE;
+            u8ParamValue = (uint8_t)tmp_value;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_ATTACK_RATE:
+        {
+            uint32_t tmp_param_max_value = MAX_VALUE_ATTACK_RATE;
+            uint32_t tmp_value = ((ADC_FULL_RANGE - (uint32_t)u16AdcValue) * tmp_param_max_value) / ADC_FULL_RANGE;
+            u8ParamValue = (uint8_t)tmp_value;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_AMP_MOD:
+        /* Map value like a gate */
+        if (GATE_FROM_ADC(u16AdcValue))
+        {
+            u8ParamValue = 1U;
+        }
+        else
+        {
+            u8ParamValue = 0U;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_DECAY_RATE:
+        {
+            uint32_t tmp_param_max_value = MAX_VALUE_DECAY_RATE;
+            uint32_t tmp_value = ((ADC_FULL_RANGE - (uint32_t)u16AdcValue) * tmp_param_max_value) / ADC_FULL_RANGE;
+            u8ParamValue = (uint8_t)tmp_value;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_SUSTAIN_RATE:
+        {
+            uint32_t tmp_param_max_value = MAX_VALUE_SUSTAIN_RATE;
+            uint32_t tmp_value = ((ADC_FULL_RANGE - (uint32_t)u16AdcValue) * tmp_param_max_value) / ADC_FULL_RANGE;
+            u8ParamValue = (uint8_t)tmp_value;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_SUSTAIN_LEVEL:
+        {
+            uint32_t tmp_param_max_value = MAX_VALUE_SUSTAIN_LEVEL;
+            uint32_t tmp_value = ((ADC_FULL_RANGE - (uint32_t)u16AdcValue) * tmp_param_max_value) / ADC_FULL_RANGE;
+            u8ParamValue = (uint8_t)tmp_value;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_RELEASE_RATE:
+        {
+            uint32_t tmp_param_max_value = MAX_VALUE_RELEASE_RATE;
+            uint32_t tmp_value = ((ADC_FULL_RANGE - (uint32_t)u16AdcValue) * tmp_param_max_value) / ADC_FULL_RANGE;
+            u8ParamValue = (uint8_t)tmp_value;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_SSG_ENVELOPE:
+        {
+            uint32_t tmp_param_max_value = MAX_VALUE_SSG_ENVELOPE;
+            uint32_t tmp_value = ((ADC_FULL_RANGE - (uint32_t)u16AdcValue) * tmp_param_max_value) / ADC_FULL_RANGE;
+            u8ParamValue = (uint8_t)tmp_value;
+        }
+        break;
+
     default:
         break;
     }
@@ -273,6 +422,7 @@ static void vMapMain(void *pvParameters)
     pxMapElementList[0U].xMode = MAP_MODE_V_OCT;
     pxMapElementList[1U].xMode = MAP_MODE_GATE;
     pxMapElementList[2U].xMode = MAP_MODE_PARAMETER;
+    pxMapElementList[2U].u8ParameterId = FM_VAR_OPERATOR_TOTAL_LEVEL;
     pxMapElementList[3U].xMode = MAP_MODE_NONE;
 
     for(;;)

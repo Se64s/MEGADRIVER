@@ -11,24 +11,25 @@
 #include "ui_task.h"
 #include "midi_task.h"
 #include "printf.h"
+#include "error.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
 /* Timeout for rx a cmd */
-#define SYNTH_CMD_TIMEOUT           (1000U)
+#define SYNTH_CMD_TIMEOUT                   (1000U)
 
 /* Event queue size */
-#define SYNTH_EVENT_QUEUE_SIZE      (5U)
+#define SYNTH_EVENT_QUEUE_SIZE              (5U)
 
 /* Event queue item size */
-#define SYNTH_EVENT_QUEUE_SIZE      (sizeof(SynthEvent_t))
+#define SYNTH_EVENT_QUEUE_ELEMENT_SIZE      (sizeof(SynthEvent_t))
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 
-/* Task handler */
+/** Task handler */
 TaskHandle_t xSynthTaskHandle = NULL;
 
 /** Queue event handler */
@@ -170,54 +171,69 @@ static void vHandleMidiSysExEvent(SynthEventPayloadMidiSysEx_t * pxEventData)
 
 static void vHandleNoteOnOffEvent(SynthEventPayloadNoteOnOff_t * pxEventData)
 {
-    if (pxEventData != NULL)
-    {
-        uint8_t u8VoiceChannel = pxEventData->u8VoiceId;
+    ERR_ASSERT(pxEventData != NULL);
 
-        /* Check voice range */
-        if (u8VoiceChannel < SYNTH_MAX_NUM_VOICE)
+    uint8_t u8VoiceChannel = pxEventData->u8VoiceId;
+
+    /* Check voice range */
+    if (u8VoiceChannel < SYNTH_MAX_NUM_VOICE)
+    {
+        if (pxEventData->bGateState)
         {
-            if (pxEventData->bGateState)
-            {
-                vYM2612_key_on(u8VoiceChannel);
-                bUiTaskNotify(UI_SIGNAL_SYNTH_ON);
-            }
-            else
-            {
-                vYM2612_key_off(u8VoiceChannel);
-                bUiTaskNotify(UI_SIGNAL_SYNTH_OFF);
-            }
+            vYM2612_key_on(u8VoiceChannel);
+            bUiTaskNotify(UI_SIGNAL_SYNTH_ON);
+        }
+        else
+        {
+            vYM2612_key_off(u8VoiceChannel);
+            bUiTaskNotify(UI_SIGNAL_SYNTH_OFF);
         }
     }
 }
 
 static void vHandleChangeNoteEvent(SynthEventPayloadChangeNote_t * pxEventData)
 {
-    if (pxEventData != NULL)
-    {
-        uint8_t u8VoiceChannel = pxEventData->u8VoiceId;
-        uint8_t u8Note = pxEventData->u8Note;
+    ERR_ASSERT(pxEventData != NULL);
 
-        /* Check voice range */
-        if (u8VoiceChannel < SYNTH_MAX_NUM_VOICE)
-        {
-            if (bYM2612_set_note(u8VoiceChannel, u8Note) != true)
-            {
-                vCliPrintf(SYNTH_TASK_NAME, "VOICE: %d  SET NOTE %03d - ERROR", u8VoiceChannel, u8Note);
-            }
-        }
+    uint8_t u8VoiceChannel = pxEventData->u8VoiceId;
+    uint8_t u8Note = pxEventData->u8Note;
+
+    /* Check voice range */
+    if (u8VoiceChannel < SYNTH_MAX_NUM_VOICE)
+    {
+        vCliPrintf(SYNTH_TASK_NAME, "VOICE: %d  SET NOTE %03d - ERROR", u8VoiceChannel, u8Note);
     }
 }
 
 static void vHandleChangeParameterEvent(SynthEventPayloadChangeParameter_t * pxEventData)
 {
-    if (pxEventData != NULL)
+    ERR_ASSERT(pxEventData != NULL);
+
+    xFmDevice_t * pxDevCfg = pxYM2612_get_reg_preset();
+    bool bRegUpdate = false;
+
+    switch (pxEventData->u8ParameterId)
     {
+    case FM_VAR_OPERATOR_TOTAL_LEVEL:
+        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8TotalLevel = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    default:
+        break;
+    }
+
+    /* If value updated, apply new cfg */
+    if (bRegUpdate)
+    {
+        vYM2612_set_reg_preset(pxDevCfg);
     }
 }
 
 static void vCmdVoiceOn(SynthEventPayloadMidi_t * pxCmdMsg)
 {
+    ERR_ASSERT(pxCmdMsg != NULL);
+
     if (pxCmdMsg->xType == SYNTH_CMD_NOTE_ON)
     {
         uint8_t u8VoiceChannel = pxCmdMsg->u8Data[0U];
@@ -238,6 +254,8 @@ static void vCmdVoiceOn(SynthEventPayloadMidi_t * pxCmdMsg)
 
 static void vCmdVoiceOff(SynthEventPayloadMidi_t * pxCmdMsg)
 {
+    ERR_ASSERT(pxCmdMsg != NULL);
+
     if (pxCmdMsg->xType == SYNTH_CMD_NOTE_OFF)
     {
         uint8_t u8VoiceChannel = pxCmdMsg->u8Data[0U];
@@ -546,7 +564,7 @@ bool bSynthTaskInit(void)
     xTaskCreate(vSynthTaskMain, SYNTH_TASK_NAME, SYNTH_TASK_STACK, NULL, SYNTH_TASK_PRIO, &xSynthTaskHandle);
 
     /* Create task queue */
-    xSynthEventQueueHandle = xQueueCreate(SYNTH_EVENT_QUEUE_SIZE, SYNTH_EVENT_QUEUE_SIZE);
+    xSynthEventQueueHandle = xQueueCreate(SYNTH_EVENT_QUEUE_SIZE, SYNTH_EVENT_QUEUE_ELEMENT_SIZE);
 
     /* Check resources */
     if ((xSynthTaskHandle != NULL) && (xSynthEventQueueHandle != NULL))
