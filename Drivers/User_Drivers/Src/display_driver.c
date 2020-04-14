@@ -77,7 +77,7 @@ static void __UsDelay(uint32_t u32UsCount)
 {
 #ifdef DISPLAY_USE_RTOS
     // Use RTOS interface for implement delays
-    vTaskDelay(1);
+    vTaskDelay(pdMS_TO_TICKS(1U));
 #else
     uint32_t tick_count = DISPLAY_TICKS_USEC * u32UsCount;
     while (tick_count-- != 0)

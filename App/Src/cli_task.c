@@ -209,7 +209,7 @@ void vCliPrintf(const char *module_name, const char *Format, ...)
             SERIAL_send(SERIAL_1, (uint8_t *)print_output_buffer, len_data);
             while (ser_tx_done != true)
             {
-                vTaskDelay(1U / portTICK_PERIOD_MS);
+                vTaskDelay(pdMS_TO_TICKS(1U));
             }
         }
 
@@ -226,7 +226,7 @@ void vCliPrintf(const char *module_name, const char *Format, ...)
             SERIAL_send(SERIAL_1, (uint8_t *)print_output_buffer, len_data);
             while (ser_tx_done != true)
             {
-                vTaskDelay(1U / portTICK_PERIOD_MS);
+                vTaskDelay(pdMS_TO_TICKS(1U));
             }
         }
 
