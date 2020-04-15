@@ -150,8 +150,6 @@ static void __ui_main( void *pvParameters )
                                     UI_SIGNAL_ENC_UPDATE_CCW | 
                                     UI_SIGNAL_ENC_UPDATE_SW_RESET | 
                                     UI_SIGNAL_ENC_UPDATE_SW_SET | 
-                                    UI_SIGNAL_SYNTH_ON | 
-                                    UI_SIGNAL_SYNTH_OFF | 
                                     UI_SIGNAL_MIDI_DATA |
                                     UI_SIGNAL_SCREEN_UPDATE
                                 ), 
@@ -169,8 +167,6 @@ static void __ui_main( void *pvParameters )
                                 UI_SIGNAL_ENC_UPDATE_CCW | 
                                 UI_SIGNAL_ENC_UPDATE_SW_RESET | 
                                 UI_SIGNAL_ENC_UPDATE_SW_SET | 
-                                UI_SIGNAL_SYNTH_ON | 
-                                UI_SIGNAL_SYNTH_OFF | 
                                 UI_SIGNAL_MIDI_DATA))
             {
                 UI_action(&xUiMenuHandler, &u32TmpEvent);

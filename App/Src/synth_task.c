@@ -195,12 +195,24 @@ static void vHandleNoteOnOffEvent(SynthEventPayloadNoteOnOff_t * pxEventData)
         if (pxEventData->bGateState)
         {
             vYM2612_key_on(u8VoiceChannel);
-            bUiTaskNotify(UI_SIGNAL_SYNTH_ON);
         }
         else
         {
             vYM2612_key_off(u8VoiceChannel);
-            bUiTaskNotify(UI_SIGNAL_SYNTH_OFF);
+        }
+    }
+    else if (u8VoiceChannel == SYNTH_MAX_NUM_VOICE)
+    {
+        for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+        {
+            if (pxEventData->bGateState)
+            {
+                vYM2612_key_on(u8Index);
+            }
+            else
+            {
+                vYM2612_key_off(u8Index);
+            }
         }
     }
 }
@@ -215,7 +227,20 @@ static void vHandleChangeNoteEvent(SynthEventPayloadChangeNote_t * pxEventData)
     /* Check voice range */
     if (u8VoiceChannel < SYNTH_MAX_NUM_VOICE)
     {
-        vCliPrintf(SYNTH_TASK_NAME, "VOICE: %d  SET NOTE %03d - ERROR", u8VoiceChannel, u8Note);
+        if (!bYM2612_set_note(u8VoiceChannel, u8Note))
+        {
+            vCliPrintf(SYNTH_TASK_NAME, "VOICE: %d  SET NOTE %03d - ERROR", u8VoiceChannel, u8Note);
+        }
+    }
+    else if (u8VoiceChannel == SYNTH_MAX_NUM_VOICE)
+    {
+        for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+        {
+            if (!bYM2612_set_note(u8Index, u8Note))
+            {
+                vCliPrintf(SYNTH_TASK_NAME, "VOICE: %d  SET NOTE %03d - ERROR", u8Index, u8Note);
+            }
+        }
     }
 }
 
@@ -239,83 +264,259 @@ static void vHandleChangeParameterEvent(SynthEventPayloadChangeParameter_t * pxE
         break;
 
     case FM_VAR_VOICE_FEEDBACK:
-        pxDevCfg->xChannel[pxEventData->u8VoiceId].u8Feedback = pxEventData->u8Value;
-        bRegUpdate = true;
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].u8Feedback = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].u8Feedback = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
         break;
 
     case FM_VAR_VOICE_ALGORITHM:
-        pxDevCfg->xChannel[pxEventData->u8VoiceId].u8Algorithm = pxEventData->u8Value;
-        bRegUpdate = true;
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].u8Algorithm = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].u8Algorithm = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
         break;
 
     case FM_VAR_VOICE_AUDIO_OUT:
-        pxDevCfg->xChannel[pxEventData->u8VoiceId].u8AudioOut = pxEventData->u8Value;
-        bRegUpdate = true;
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].u8AudioOut = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].u8AudioOut = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
         break;
 
     case FM_VAR_VOICE_AMP_MOD_SENS:
-        pxDevCfg->xChannel[pxEventData->u8VoiceId].u8AmpModSens = pxEventData->u8Value;
-        bRegUpdate = true;
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].u8AmpModSens = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].u8AmpModSens = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
         break;
 
     case FM_VAR_VOICE_PHA_MOD_SENS:
-        pxDevCfg->xChannel[pxEventData->u8VoiceId].u8PhaseModSens = pxEventData->u8Value;
-        bRegUpdate = true;
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].u8PhaseModSens = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].u8PhaseModSens = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
         break;
 
     case FM_VAR_OPERATOR_DETUNE:
-        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8Detune = pxEventData->u8Value;
-        bRegUpdate = true;
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8Detune = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8Detune = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
         break;
 
     case FM_VAR_OPERATOR_MULTIPLE:
-        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8Multiple = pxEventData->u8Value;
-        bRegUpdate = true;
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8Multiple = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8Multiple = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
         break;
 
     case FM_VAR_OPERATOR_TOTAL_LEVEL:
-        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8TotalLevel = pxEventData->u8Value;
-        bRegUpdate = true;
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8TotalLevel = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8TotalLevel = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
         break;
 
     case FM_VAR_OPERATOR_KEY_SCALE:
-        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8KeyScale = pxEventData->u8Value;
-        bRegUpdate = true;
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8KeyScale = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8KeyScale = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
         break;
 
     case FM_VAR_OPERATOR_ATTACK_RATE:
-        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8AttackRate = pxEventData->u8Value;
-        bRegUpdate = true;
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8AttackRate = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8AttackRate = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
         break;
 
     case FM_VAR_OPERATOR_AMP_MOD:
-        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8AmpMod = pxEventData->u8Value;
-        bRegUpdate = true;
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8AmpMod = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8AmpMod = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
         break;
 
     case FM_VAR_OPERATOR_DECAY_RATE:
-        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8DecayRate = pxEventData->u8Value;
-        bRegUpdate = true;
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8DecayRate = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8DecayRate = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
         break;
 
     case FM_VAR_OPERATOR_SUSTAIN_RATE:
-        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8SustainRate = pxEventData->u8Value;
-        bRegUpdate = true;
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8SustainRate = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8SustainRate = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
         break;
 
     case FM_VAR_OPERATOR_SUSTAIN_LEVEL:
-        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8SustainLevel = pxEventData->u8Value;
-        bRegUpdate = true;
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8SustainLevel = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8SustainLevel = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
         break;
 
     case FM_VAR_OPERATOR_RELEASE_RATE:
-        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8ReleaseRate = pxEventData->u8Value;
-        bRegUpdate = true;
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8ReleaseRate = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8ReleaseRate = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
         break;
 
     case FM_VAR_OPERATOR_SSG_ENVELOPE:
-        pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8SsgEg = pxEventData->u8Value;
-        bRegUpdate = true;
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8SsgEg = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8SsgEg = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
         break;
 
     default:
@@ -353,7 +554,6 @@ static void vCmdVoiceOn(SynthEventPayloadMidi_t * pxCmdMsg)
             {
                 vCliPrintf(SYNTH_TASK_NAME, "Key  ON: %02d - %03d", u8VoiceChannel, u8Note);
                 vYM2612_key_on(u8VoiceChannel);
-                bUiTaskNotify(UI_SIGNAL_SYNTH_ON);
             }
         }
     }
@@ -375,7 +575,6 @@ static void vCmdVoiceOff(SynthEventPayloadMidi_t * pxCmdMsg)
             {
                 vCliPrintf(SYNTH_TASK_NAME, "Key OFF: %02d - %03d", u8VoiceChannel, u8Note);
                 vYM2612_key_off(u8VoiceChannel);
-                bUiTaskNotify(UI_SIGNAL_SYNTH_OFF);
             }
         }
     }

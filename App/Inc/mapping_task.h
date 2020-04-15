@@ -55,7 +55,7 @@ typedef enum
     MAP_MODE_V_OCT,
     MAP_MODE_GATE,
     MAP_MODE_PARAMETER,
-    MAP_NOT_DEF = 0xFF
+    MAP_MODE_NUM
 } MapMode_t;
 
 /** Mapping control element */

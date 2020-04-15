@@ -26,11 +26,14 @@ extern "C"
 // #define YM2612_DEBUG
 // #define YM2612_TEST_GPIO
 
-/* Number of channels by device */
+/** Number of channels by device */
 #define YM2612_NUM_CHANNEL      (YM2612_NUM_CH)
 
-/* Number of operator by channel */
+/** Number of operator by channel */
 #define YM2612_NUM_OP_CHANNEL   (YM2612_NUM_OP)
+
+/** Number of total parameters */
+#define YM2612_NUM_PARAMETERS   (FM_VAR_SIZE_NUMBER)
 
 /* Max and min values of FM parameters */
 #define MAX_VALUE_LFO_ON        (2U)

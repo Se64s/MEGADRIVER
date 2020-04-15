@@ -20,6 +20,7 @@
 #include "cli_task.h"
 
 #include "adc_driver.h"
+#include "YM2612_driver.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
