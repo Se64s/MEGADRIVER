@@ -467,13 +467,6 @@ static void vMapMain(void *pvParameters)
     /* Show init msg */
     vCliPrintf(MAP_TASK_NAME, "Init");
 
-    /* Test init */
-    pxMapElementList[0U].xMode = MAP_MODE_V_OCT;
-    pxMapElementList[1U].xMode = MAP_MODE_GATE;
-    pxMapElementList[2U].xMode = MAP_MODE_PARAMETER;
-    pxMapElementList[2U].u8ParameterId = FM_VAR_OPERATOR_MULTIPLE;
-    pxMapElementList[3U].xMode = MAP_MODE_NONE;
-
     /* Init update timer */
     xTimerStart(xMappingUpdateTimer, 0U);
 
