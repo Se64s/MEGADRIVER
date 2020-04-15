@@ -33,9 +33,20 @@ extern "C" {
 /* MAPPING task signals */
 #define MAP_SIGNAL_ERROR                (1UL << 0U)
 #define MAP_SIGNAL_ADC_UPDATE           (1UL << 1U)
+#define MAP_SIGNAL_MAPPING_UPDATE       (1UL << 2U)
 #define MAP_SIGNAL_NOT_DEF              (1UL << 31U)
 
 /* Exported types ------------------------------------------------------------*/
+
+/** Defined mapping channels */
+typedef enum 
+{
+    MAP_CH_1 = 0x00,
+    MAP_CH_2,
+    MAP_CH_3,
+    MAP_CH_4,
+    MAP_CH_NUM
+} MapChannel_t;
 
 /** Defined mapping modes */
 typedef enum 
@@ -60,6 +71,21 @@ typedef struct
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions prototypes ---------------------------------------------*/
+
+/**
+  * @brief Get mapping cfg mapping
+  * @param u8MapId id of cfg to get.
+  * @retval Copy of Map cfg value.
+  */
+MapElement_t xMapGetCfg(uint8_t u8MapId);
+
+/**
+  * @brief Set mapping cfg mapping
+  * @param u8MapId id of cfg to set.
+  * @param xMapValue cfg value.
+  * @retval None.
+  */
+void vMapSetCfg(uint8_t u8MapId, MapElement_t xMapValue);
 
 /**
   * @brief Init resources for MAPPING tasks

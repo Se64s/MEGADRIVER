@@ -13,6 +13,8 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "semphr.h"
+#include "timers.h"
 
 #include "synth_task.h"
 #include "cli_task.h"
@@ -28,9 +30,6 @@
 
 /** Send event timeout */
 #define MAP_SEND_EVENT_TIMEOUT              (100U)
-
-/** Number of elements to map */
-#define MAP_MAPPING_SIZE_LIST               (ADC_CH_NUM)
 
 /** Number of ADC steps by V_OCT note */
 #define ADC_STEPS_BY_NOTE                   (34U)    // (1000mV / 12notes) / (adc_range_mV / adc_num_steps)
@@ -58,10 +57,16 @@
 /* Private variables ---------------------------------------------------------*/
 
 /** List of mappig elements to handle */
-MapElement_t pxMapElementList[MAP_MAPPING_SIZE_LIST] = {0U};
+MapElement_t pxMapElementList[MAP_CH_NUM] = {0U};
 
 /** Task handler */
 TaskHandle_t map_task_handle = NULL;
+
+/** Timer to handle refresh */
+TimerHandle_t xMappingUpdateTimer = NULL;
+
+/** Mutex to protect mapping cfg access */
+SemaphoreHandle_t xMappingCfgMutex = NULL;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -98,6 +103,19 @@ static void vMappingModeParameterHandler(uint8_t u8MapChannel, MapElement_t * px
 static uint8_t u8GetParamValue(uint8_t u8ParameterId, uint16_t u16AdcValue);
 
 /**
+  * @brief Execute an update loop on all channels.
+  * @retval None.
+  */
+static void vMappingUpdateLoop(void);
+
+/**
+  * @brief Timer callback to generate update event.
+  * @param xTimer handler that generates the event.
+  * @retval None.
+  */
+static void vMappingUpdateCallback(TimerHandle_t xTimer);
+
+/**
   * @brief Main task loop
   * @param pvParameters function paramters
   * @retval None
@@ -109,7 +127,7 @@ static void vMapMain(void *pvParameters);
 static void vMappingModeVoctHandler(uint8_t u8MapChannel, MapElement_t * pxMapChannelCfg)
 {
     ERR_ASSERT(pxMapChannelCfg != NULL);
-    ERR_ASSERT(u8MapChannel < MAP_MAPPING_SIZE_LIST);
+    ERR_ASSERT(u8MapChannel < MAP_CH_NUM);
 
     uint16_t u16NewVoltage = 0U;
 
@@ -154,7 +172,7 @@ static void vMappingModeVoctHandler(uint8_t u8MapChannel, MapElement_t * pxMapCh
 static void vMappingModeGateHandler(uint8_t u8MapChannel, MapElement_t * pxMapChannelCfg)
 {
     ERR_ASSERT(pxMapChannelCfg != NULL);
-    ERR_ASSERT(u8MapChannel < MAP_MAPPING_SIZE_LIST);
+    ERR_ASSERT(u8MapChannel < MAP_CH_NUM);
 
     uint16_t u16NewVoltage = 0U;
 
@@ -196,7 +214,7 @@ static void vMappingModeGateHandler(uint8_t u8MapChannel, MapElement_t * pxMapCh
 static void vMappingModeParameterHandler(uint8_t u8MapChannel, MapElement_t * pxMapChannelCfg)
 {
     ERR_ASSERT(pxMapChannelCfg != NULL);
-    ERR_ASSERT(u8MapChannel < MAP_MAPPING_SIZE_LIST);
+    ERR_ASSERT(u8MapChannel < MAP_CH_NUM);
 
     uint16_t u16NewVoltage = 0U;
 
@@ -404,6 +422,37 @@ static uint8_t u8GetParamValue(uint8_t u8ParameterId, uint16_t u16AdcValue)
     return u8ParamValue;
 }
 
+static void vMappingUpdateLoop(void)
+{
+    /* Loop for channels */
+    for (uint32_t u8Index = 0U; u8Index < MAP_CH_NUM; u8Index++)
+    {
+        switch (pxMapElementList[u8Index].xMode)
+        {
+            case MAP_MODE_V_OCT:
+                vMappingModeVoctHandler(u8Index, &pxMapElementList[u8Index]);
+                break;
+
+            case MAP_MODE_GATE:
+                vMappingModeGateHandler(u8Index, &pxMapElementList[u8Index]);
+                break;
+
+            case MAP_MODE_PARAMETER:
+                vMappingModeParameterHandler(u8Index, &pxMapElementList[u8Index]);
+                break;
+
+            default:
+                /* Nothing to handle */
+                break;
+        }
+    }
+}
+
+static void vMappingUpdateCallback(TimerHandle_t xTimer)
+{
+    xTaskNotify(map_task_handle, MAP_SIGNAL_MAPPING_UPDATE, eSetBits);
+}
+
 static void vMapMain(void *pvParameters)
 {
     /* Init delay to for pow stabilization */
@@ -425,37 +474,60 @@ static void vMapMain(void *pvParameters)
     pxMapElementList[2U].u8ParameterId = FM_VAR_OPERATOR_MULTIPLE;
     pxMapElementList[3U].xMode = MAP_MODE_NONE;
 
+    /* Init update timer */
+    xTimerStart(xMappingUpdateTimer, 0U);
+
     for(;;)
     {
-        /* Loop for channels */
-        for (uint32_t u8Index = 0U; u8Index < MAP_MAPPING_SIZE_LIST; u8Index++)
+        uint32_t u32TaskEvent = 0U;
+
+        BaseType_t xEventWait = xTaskNotifyWait(0U, 
+                                (
+                                    MAP_SIGNAL_MAPPING_UPDATE
+                                ), 
+                                &u32TaskEvent, 
+                                portMAX_DELAY);
+
+        if (xEventWait == pdPASS)
         {
-            switch (pxMapElementList[u8Index].xMode)
+            if (MAP_CHECK_SIGNAL(u32TaskEvent, MAP_SIGNAL_MAPPING_UPDATE))
             {
-                case MAP_MODE_V_OCT:
-                vMappingModeVoctHandler(u8Index, &pxMapElementList[u8Index]);
-                break;
-
-                case MAP_MODE_GATE:
-                vMappingModeGateHandler(u8Index, &pxMapElementList[u8Index]);
-                break;
-
-                case MAP_MODE_PARAMETER:
-                vMappingModeParameterHandler(u8Index, &pxMapElementList[u8Index]);
-                break;
-
-                default:
-                /* Nothing to handle */
-                break;
+                vMappingUpdateLoop();
+            }
+            else
+            {
+                /* Nothing to do here */
             }
         }
-
-        /* Wait until next processing period */
-        vTaskDelay(pdMS_TO_TICKS(MAP_TASK_UPDATE_RATE_MS));
     }
 }
 
 /* Public fuctions -----------------------------------------------------------*/
+
+MapElement_t xMapGetCfg(uint8_t u8MapId)
+{
+    ERR_ASSERT(u8MapId < MAP_CH_NUM);
+
+    return pxMapElementList[u8MapId];
+}
+
+void vMapSetCfg(uint8_t u8MapId, MapElement_t xMapValue)
+{
+    ERR_ASSERT(u8MapId < MAP_CH_NUM);
+
+    if (xSemaphoreTake(xMappingCfgMutex, portMAX_DELAY) != pdTRUE)
+    {
+        ERR_ASSERT(0U);
+    }
+
+    pxMapElementList[u8MapId] = xMapValue;
+
+    if (xSemaphoreGive(xMappingCfgMutex) != pdTRUE)
+    {
+        ERR_ASSERT(0U);
+    }
+
+}
 
 bool bMapTaskInit(void)
 {
@@ -464,8 +536,18 @@ bool bMapTaskInit(void)
     /* Create task */
     xTaskCreate(vMapMain, MAP_TASK_NAME, MAP_TASK_STACK, NULL, MAP_TASK_PRIO, &map_task_handle);
 
+    /* Create mutex */
+    xMappingCfgMutex = xSemaphoreCreateMutex();
+
+    /* Create timer resources */
+    xMappingUpdateTimer = xTimerCreate("MappingUpdateTimer", 
+                                pdMS_TO_TICKS(MAP_TASK_UPDATE_RATE_MS), 
+                                pdTRUE, 
+                                (void *)0U, 
+                                vMappingUpdateCallback);
+
     /* Check resources */
-    if (map_task_handle != NULL)
+    if ((map_task_handle != NULL) && (xMappingCfgMutex != NULL) && (xMappingUpdateTimer != NULL))
     {
         bRetval = true;
     }
