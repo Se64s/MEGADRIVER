@@ -93,7 +93,7 @@ adc_status_t ADC_stop(adc_port_t dev);
 /**
   * @brief  Init ADC interface.
   * @param  dev interface number to init.
-  * @param  xChId callback to report events from interface.
+  * @param  xChId adc channel to check.
   * @param  pu16AdcData pointer where store ADC read.
   * @retval Operation status.
 */

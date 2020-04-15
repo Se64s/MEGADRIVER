@@ -21,7 +21,7 @@ extern "C" {
 
 #include "FreeRTOS.h"
 #include "task.h"
-#include "message_buffer.h"
+#include "queue.h"
 
 #include "YM2612_driver.h"
 
@@ -46,28 +46,30 @@ extern "C" {
 #define SYNTH_LEN_LOAD_PRESET_CMD           (5U)
 #define SYNTH_LEN_LOAD_DEFAULT_PRESET_CMD   (5U)
 
+/* Synth internal queue send timeout */
+#define SYNTH_QUEUE_TIMEOUT                 (100U)
+
 /* Synth message parameters */
-#define SYNTH_LEN_MSG                       (4U)
+#define SYNTH_LEN_MIDI_MSG                  (3U)
 
 /* Maximun number of voices */
-#define SYNTH_MAX_NUM_VOICE                 (YM2612_MAX_NUM_VOICE)
+#define SYNTH_MAX_NUM_VOICE                 (YM2612_NUM_CHANNEL)
 
 /* Maximun number of user presets */
 #define SYNTH_MAX_NUM_USER_PRESET           (SYNTH_APP_DATA_NUM_PRESETS)
 
 /* Exported types ------------------------------------------------------------*/
 
-/* Synth commands */
+/** Synth commands */
 typedef enum
 {
     SYNTH_CMD_NOTE_ON = 0x00U,
     SYNTH_CMD_NOTE_OFF,
     SYNTH_CMD_NOTE_OFF_ALL,
-    SYNTH_CMD_SYSEX,
     SYNTH_CMD_NO_DEF = 0xFFU
 } SynthMsgType_t;
 
-/* SysEx defined cmd */
+/** SysEx defined cmd */
 typedef enum
 {
   SYNTH_SYSEX_CMD_SET_PRESET = 0x00U,
@@ -77,7 +79,7 @@ typedef enum
   SYNTH_SYSEX_CMD_NO_DEF = 0x1FU
 } SynthSysExCmdDef_t;
 
-/* SysEx defined cmd */
+/** SysEx defined cmd */
 typedef enum
 {
   SYNTH_PRESET_SOURCE_DEFAULT = 0U,
@@ -85,7 +87,74 @@ typedef enum
   SYNTH_PRESET_SOURCE_MAX
 } SynthPresetSource_t;
 
-/* SysEx command format */
+/** Synth task defined events */
+typedef enum
+{
+  SYNTH_EVENT_MIDI_MSG = 0U,
+  SYNTH_EVENT_MIDI_SYSEX_MSG,
+  SYNTH_EVENT_NOTE_ON_OFF,
+  SYNTH_EVENT_CHANGE_NOTE,
+  SYNTH_EVENT_MOD_PARAM,
+  SYNTH_EVENT_UPDATE_PRESET,
+  SYNTH_EVENT_NOT_DEF = 0xFFU
+} SynthEventType_t;
+
+/** Payload for MIDI msg event */
+typedef struct
+{
+  SynthMsgType_t xType;
+  uint8_t u8Data[SYNTH_LEN_MIDI_MSG];
+} SynthEventPayloadMidi_t;
+
+/** Payload for SYSEX MIDI msg event */
+typedef struct
+{
+  SynthMsgType_t xType;
+  uint32_t u32Len;
+  uint8_t * pu8Data;
+} SynthEventPayloadMidiSysEx_t;
+
+/** Payload for Note On Off */
+typedef struct
+{
+  uint8_t u8VoiceId;
+  bool bGateState;
+} SynthEventPayloadNoteOnOff_t;
+
+/** Payload for Change Note */
+typedef struct
+{
+  uint8_t u8VoiceId;
+  uint8_t u8Note;
+} SynthEventPayloadChangeNote_t;
+
+/** Payload definition for change parameter event */
+typedef struct
+{
+  uint8_t u8VoiceId;
+  uint8_t u8operatorId;
+  uint8_t u8ParameterId;
+  uint8_t u8Value;
+} SynthEventPayloadChangeParameter_t;
+
+/** Payload definition for update preset event */
+typedef struct
+{
+  xFmDevice_t * pxPreset;
+}SynthEventPayloadUpdatePreset_t;
+
+/** Union definitions with all event payload */
+typedef union
+{
+  SynthEventPayloadMidi_t xMidi;
+  SynthEventPayloadMidiSysEx_t xMidiSysEx;
+  SynthEventPayloadNoteOnOff_t xNoteOnOff;
+  SynthEventPayloadChangeNote_t xChangeNote;
+  SynthEventPayloadChangeParameter_t xChangeParameter;
+  SynthEventPayloadUpdatePreset_t xUpdatePreset;
+} SynthPayload_t;
+
+/** SysEx command format */
 typedef struct 
 {
   uint8_t pu8VendorId[SYNTH_LEN_VENDOR_ID];
@@ -107,12 +176,12 @@ typedef struct
   uint8_t u8Position;
 } SynthSysExCmdLoadPreset_t;
 
-/* Synth cmd message structure */
+/** Synth Event definition */
 typedef struct
 {
-  SynthMsgType_t xType;
-  uint8_t u8Data[SYNTH_LEN_MSG];
-} SynthMsg_t;
+  SynthEventType_t eType;
+  SynthPayload_t uPayload;
+} SynthEvent_t;
 
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
@@ -135,6 +204,13 @@ bool bSynthLoadPreset(SynthPresetSource_t u8PresetSource, uint8_t u8PresetId);
 bool bSynthSaveUserPreset(xFmDevice_t * pxPreset, uint8_t u8PresetId);
 
 /**
+  * @brief Set preset into device now.
+  * @param pxPreset pointer to preset to save.
+  * @retval operation result, true for correct save action, false for error.
+  */
+bool bSynthSetPreset(xFmDevice_t * pxPreset);
+
+/**
   * @brief Init resources for SYNTH tasks
   * @retval operation result, true for correct creation, false for error
   */
@@ -146,6 +222,12 @@ bool bSynthTaskInit(void);
   * @retval operation result, true for correct read, false for error
   */
 bool bSynthTaskNotify(uint32_t u32Event);
+
+/**
+  * @brief Get task event queue handler.
+  * @retval Queue handler in case of queue init, NULL in other case.
+  */
+QueueHandle_t pxSynthTaskGetQueue(void);
 
 #ifdef __cplusplus
 }

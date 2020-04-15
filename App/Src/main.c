@@ -18,6 +18,7 @@
 #include "synth_task.h"
 #include "ui_task.h"
 #include "midi_task.h"
+#include "mapping_task.h"
 
 /* Error managing */
 #include "error.h"
@@ -52,7 +53,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
   
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+  (void)HAL_Init();
 
   /* Configure the system clock */
   SystemClock_Config();
@@ -61,10 +62,11 @@ int main(void)
   vErrorInit(vCliRawPrintf);
 
   /* Task creation */
-  bMidiTaskInit();
-  bCliTaskInit();
-  bSynthTaskInit();
-  bUiTaskInit();
+  (void)bMidiTaskInit();
+  (void)bCliTaskInit();
+  (void)bSynthTaskInit();
+  (void)bUiTaskInit();
+  (void)bMapTaskInit();
 
   /* Start the scheduler so the tasks start executing. */
   vTaskStartScheduler();

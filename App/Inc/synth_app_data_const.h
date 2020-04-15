@@ -15,6 +15,8 @@ extern "C"
 
 /* Includes ------------------------------------------------------------------*/
 
+#include <stddef.h>
+#include <stdint.h>
 #include "YM2612_driver.h"
 
 /* Exported defines ----------------------------------------------------------*/

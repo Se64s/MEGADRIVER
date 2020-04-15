@@ -36,10 +36,9 @@ extern "C" {
 #define UI_SIGNAL_ENC_UPDATE_SW_RESET   (1UL << 3U)
 #define UI_SIGNAL_SYNTH_ON              (1UL << 4U)
 #define UI_SIGNAL_SYNTH_OFF             (1UL << 5U)
-#define UI_SIGNAL_ADC_UPDATE            (1UL << 6U)
-#define UI_SIGNAL_MIDI_DATA             (1UL << 7U)
-#define UI_SIGNAL_SCREEN_UPDATE         (1UL << 8U)
-#define UI_SIGNAL_ERROR                 (1UL << 9U)
+#define UI_SIGNAL_MIDI_DATA             (1UL << 6U)
+#define UI_SIGNAL_SCREEN_UPDATE         (1UL << 7U)
+#define UI_SIGNAL_ERROR                 (1UL << 8U)
 #define UI_SIGNAL_NOT_DEF               (1UL << 31U)
 
 /* Exported types ------------------------------------------------------------*/

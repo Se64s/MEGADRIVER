@@ -13,7 +13,6 @@
 #include "task.h"
 #include "timers.h"
 
-#include "adc_driver.h"
 #include "encoder_driver.h"
 #include "display_driver.h"
 
@@ -26,7 +25,7 @@
 /* Private define ------------------------------------------------------------*/
 
 /* Update rate in ms */
-#define UI_DISPLAY_UPDATE_RATE_MS   (33U)
+#define UI_DISPLAY_UPDATE_RATE_MS   (100U)
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
@@ -52,13 +51,6 @@ static ui_menu_t xUiMenuHandler = {0};
   * @retval None
   */
 static void encoder_cb(encoder_event_t event, uint32_t eventData);
-
-/**
-  * @brief callback for adc actions
-  * @param event type of event generated
-  * @retval None
-  */
-static void adc_cb(adc_event_t xEvent);
 
 /**
   * @brief Timer callback to generate update event.
@@ -112,16 +104,6 @@ static void encoder_cb(encoder_event_t event, uint32_t eventData)
     }
 }
 
-static void adc_cb(adc_event_t xEvent)
-{
-    BaseType_t xWakeTask;
-
-    if (xEvent == ADC_EVENT_UPDATE)
-    {
-        xTaskNotifyFromISR(ui_task_handle, UI_SIGNAL_ADC_UPDATE, eSetBits, &xWakeTask);
-    }
-}
-
 static void vScreenUpdateCallback(TimerHandle_t xTimer)
 {
     xTaskNotify(ui_task_handle, UI_SIGNAL_SCREEN_UPDATE, eSetBits);
@@ -134,12 +116,6 @@ static void __ui_main( void *pvParameters )
     
     /* Init encoder */
     ENCODER_init(ENCODER_ID_0, encoder_cb);
-
-    /* Init ADC peripheral */
-    ADC_init(ADC_0, NULL);
-
-    /* Init ADC conversion */
-    ADC_start(ADC_0);
 
     /* Init display */
     if (DISPLAY_init(DISPLAY_0, &xDisplayHandler) != DISPLAY_STATUS_OK)
@@ -174,10 +150,7 @@ static void __ui_main( void *pvParameters )
                                     UI_SIGNAL_ENC_UPDATE_CCW | 
                                     UI_SIGNAL_ENC_UPDATE_SW_RESET | 
                                     UI_SIGNAL_ENC_UPDATE_SW_SET | 
-                                    UI_SIGNAL_SYNTH_ON | 
-                                    UI_SIGNAL_SYNTH_OFF | 
                                     UI_SIGNAL_MIDI_DATA |
-                                    UI_SIGNAL_ADC_UPDATE |
                                     UI_SIGNAL_SCREEN_UPDATE
                                 ), 
                                 &u32TmpEvent, 
@@ -190,7 +163,14 @@ static void __ui_main( void *pvParameters )
                 UI_render(&xDisplayHandler, &xUiMenuHandler);
             }
 
-            UI_action(&xUiMenuHandler, &u32TmpEvent);
+            if (u32TmpEvent & ( UI_SIGNAL_ENC_UPDATE_CW | 
+                                UI_SIGNAL_ENC_UPDATE_CCW | 
+                                UI_SIGNAL_ENC_UPDATE_SW_RESET | 
+                                UI_SIGNAL_ENC_UPDATE_SW_SET | 
+                                UI_SIGNAL_MIDI_DATA))
+            {
+                UI_action(&xUiMenuHandler, &u32TmpEvent);
+            }
         }
     }
 }
@@ -212,7 +192,7 @@ bool bUiTaskInit(void)
                                 vScreenUpdateCallback);
 
     /* Check resources */
-    if (ui_task_handle != NULL)
+    if ((ui_task_handle != NULL) && (xUpdateTimer != NULL))
     {
         retval = true;
     }

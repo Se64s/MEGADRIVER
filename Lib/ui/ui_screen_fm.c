@@ -36,6 +36,7 @@ typedef enum
     FM_SCREEN_ELEMENT_OP_ATTACK_RATE,
     FM_SCREEN_ELEMENT_OP_AMP_MOD_EN,
     FM_SCREEN_ELEMENT_OP_DECAY_RATE,
+    FM_SCREEN_ELEMENT_OP_SUSTAIN_RATE,
     FM_SCREEN_ELEMENT_OP_SUSTAIN_LEVEL,
     FM_SCREEN_ELEMENT_OP_RELEASE_RATE,
     FM_SCREEN_ELEMENT_OP_SSG_ENVELOPE,
@@ -71,6 +72,7 @@ typedef enum
 #define NAME_FORMAT_OP_ATTACK_RATE              " ATT RATE  %d"
 #define NAME_FORMAT_OP_AMP_MOD_EN               " AMP MOD   %s"
 #define NAME_FORMAT_OP_DECAY_RATE               " DEC RATE  %d"
+#define NAME_FORMAT_OP_SUSTAIN_RATE             " SUST RATE %d"
 #define NAME_FORMAT_OP_SUSTAIN_LEVEL            " SUST LVL  %d"
 #define NAME_FORMAT_OP_RELEASE_RATE             " REL RATE  %d"
 #define NAME_FORMAT_OP_SSG_ENVELOPE             " SSG ENV   %d"
@@ -105,6 +107,7 @@ char pcElementLabelOperatorKeyScale[MAX_LEN_NAME] = {0U};
 char pcElementLabelOperatorAttackRate[MAX_LEN_NAME] = {0U};
 char pcElementLabelOperatorAmpModEn[MAX_LEN_NAME] = {0U};
 char pcElementLabelOperatorDecayRate[MAX_LEN_NAME] = {0U};
+char pcElementLabelOperatorSustainRate[MAX_LEN_NAME] = {0U};
 char pcElementLabelOperatorSustainLevel[MAX_LEN_NAME] = {0U};
 char pcElementLabelOperatorReleaseRate[MAX_LEN_NAME] = {0U};
 char pcElementLabelOperatorSsgEnvelope[MAX_LEN_NAME] = {0U};
@@ -115,13 +118,13 @@ char pcFmSaveAuxName[MAX_LEN_NAME_SAVE_AUX] = {0};
 /* Private function prototypes -----------------------------------------------*/
 
 /* Auc functions */
-static uint8_t u8GetVoiceVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, eFmVoiceVar_t eVarType);
-static void vSetVoiceVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, eFmVoiceVar_t eVarType, uint8_t u8Value);
-static void vActionVoiceElement(xFmDevice_t * pxDeviceCfg, eFmVoiceVar_t eVarType, uint32_t u32Event, uint8_t u8MaxValue);
+static uint8_t u8GetVoiceVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, eFmParameter_t eVarType);
+static void vSetVoiceVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, eFmParameter_t eVarType, uint8_t u8Value);
+static void vActionVoiceElement(xFmDevice_t * pxDeviceCfg, eFmParameter_t eVarType, uint32_t u32Event, uint8_t u8MaxValue);
 
-static uint8_t u8GetOperatorVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, uint8_t u8Operator, eFmOperatorVar_t eVarType);
-static void vSetOperatorVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, uint8_t u8Operator, eFmOperatorVar_t eVarType, uint8_t u8Value);
-static void vActionOperatorElement(xFmDevice_t * pxDeviceCfg, eFmOperatorVar_t eVarType, uint32_t u32Event, uint8_t u8MaxValue);
+static uint8_t u8GetOperatorVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, uint8_t u8Operator, eFmParameter_t eVarType);
+static void vSetOperatorVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, uint8_t u8Operator, eFmParameter_t eVarType, uint8_t u8Value);
+static void vActionOperatorElement(xFmDevice_t * pxDeviceCfg, eFmParameter_t eVarType, uint32_t u32Event, uint8_t u8MaxValue);
 
 /* Render functions */
 static void vScreenRender(void * pvDisplay, void * pvScreen);
@@ -142,6 +145,7 @@ static void vElementRenderOperatorKeyScale(void * pvDisplay, void * pvScreen, vo
 static void vElementRenderOperatorAttackRate(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementRenderOperatorAmpModEn(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementRenderOperatorDecayRate(void * pvDisplay, void * pvScreen, void * pvElement);
+static void vElementRenderOperatorSustainRate(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementRenderOperatorSustainLevel(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementRenderOperatorReleaseRate(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementRenderOperatorSsgEnvelope(void * pvDisplay, void * pvScreen, void * pvElement);
@@ -166,6 +170,7 @@ static void vElementActionOperatorKeyScale(void * pvMenu, void * pvEventData);
 static void vElementActionOperatorAttackRate(void * pvMenu, void * pvEventData);
 static void vElementActionOperatorAmpModEn(void * pvMenu, void * pvEventData);
 static void vElementActionOperatorDecayRate(void * pvMenu, void * pvEventData);
+static void vElementActionOperatorSustainRate(void * pvMenu, void * pvEventData);
 static void vElementActionOperatorSustainLevel(void * pvMenu, void * pvEventData);
 static void vElementActionOperatorReleaseRate(void * pvMenu, void * pvEventData);
 static void vElementActionOperatorSsgEnvelope(void * pvMenu, void * pvEventData);
@@ -173,7 +178,7 @@ static void vElementActionSave(void * pvMenu, void * pvEventData);
 
 /* Private user code ---------------------------------------------------------*/
 
-static uint8_t u8GetVoiceVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, eFmVoiceVar_t eVarType)
+static uint8_t u8GetVoiceVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, eFmParameter_t eVarType)
 {
     uint8_t u8RetVal = 0U;
 
@@ -181,19 +186,19 @@ static uint8_t u8GetVoiceVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, e
     {
         switch (eVarType)
         {
-            case FM_VAR_FEEDBACK:
+            case FM_VAR_VOICE_FEEDBACK:
                 u8RetVal = pxDeviceCfg->xChannel[u8Voice].u8Feedback;
                 break;
-            case FM_VAR_ALGORITHM:
+            case FM_VAR_VOICE_ALGORITHM:
                 u8RetVal = pxDeviceCfg->xChannel[u8Voice].u8Algorithm;
                 break;
-            case FM_VAR_AUDIO_OUT:
+            case FM_VAR_VOICE_AUDIO_OUT:
                 u8RetVal = pxDeviceCfg->xChannel[u8Voice].u8AudioOut;
                 break;
-            case FM_VAR_AMP_MOD_SENS:
+            case FM_VAR_VOICE_AMP_MOD_SENS:
                 u8RetVal = pxDeviceCfg->xChannel[u8Voice].u8AmpModSens;
                 break;
-            case FM_VAR_PHA_MOD_SENS:
+            case FM_VAR_VOICE_PHA_MOD_SENS:
                 u8RetVal = pxDeviceCfg->xChannel[u8Voice].u8PhaseModSens;
                 break;
             default:
@@ -204,25 +209,25 @@ static uint8_t u8GetVoiceVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, e
     return u8RetVal;
 }
 
-static void vSetVoiceVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, eFmVoiceVar_t eVarType, uint8_t u8Value)
+static void vSetVoiceVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, eFmParameter_t eVarType, uint8_t u8Value)
 {
     if ((pxDeviceCfg != NULL) && (u8Voice < YM2612_NUM_CHANNEL))
     {
         switch (eVarType)
         {
-            case FM_VAR_FEEDBACK:
+            case FM_VAR_VOICE_FEEDBACK:
                 pxDeviceCfg->xChannel[u8Voice].u8Feedback = u8Value;
                 break;
-            case FM_VAR_ALGORITHM:
+            case FM_VAR_VOICE_ALGORITHM:
                 pxDeviceCfg->xChannel[u8Voice].u8Algorithm = u8Value;
                 break;
-            case FM_VAR_AUDIO_OUT:
+            case FM_VAR_VOICE_AUDIO_OUT:
                 pxDeviceCfg->xChannel[u8Voice].u8AudioOut = u8Value;
                 break;
-            case FM_VAR_AMP_MOD_SENS:
+            case FM_VAR_VOICE_AMP_MOD_SENS:
                 pxDeviceCfg->xChannel[u8Voice].u8AmpModSens = u8Value;
                 break;
-            case FM_VAR_PHA_MOD_SENS:
+            case FM_VAR_VOICE_PHA_MOD_SENS:
                 pxDeviceCfg->xChannel[u8Voice].u8PhaseModSens = u8Value;
                 break;
             default:
@@ -231,7 +236,7 @@ static void vSetVoiceVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, eFmVo
     }
 }
 
-static uint8_t u8GetOperatorVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, uint8_t u8Operator, eFmOperatorVar_t eVarType)
+static uint8_t u8GetOperatorVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, uint8_t u8Operator, eFmParameter_t eVarType)
 {
     uint8_t u8RetVal = 0U;
 
@@ -280,7 +285,7 @@ static uint8_t u8GetOperatorVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice
     return u8RetVal;
 }
 
-static void vSetOperatorVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, uint8_t u8Operator, eFmOperatorVar_t eVarType, uint8_t u8Value)
+static void vSetOperatorVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, uint8_t u8Operator, eFmParameter_t eVarType, uint8_t u8Value)
 {
     if ((pxDeviceCfg != NULL) && (u8Voice < YM2612_NUM_CHANNEL) && (u8Operator < YM2612_NUM_OP_CHANNEL))
     {
@@ -325,7 +330,7 @@ static void vSetOperatorVariable(xFmDevice_t * pxDeviceCfg , uint8_t u8Voice, ui
     }
 }
 
-static void vActionVoiceElement(xFmDevice_t * pxDeviceCfg, eFmVoiceVar_t eVarType, uint32_t u32Event, uint8_t u8MaxValue)
+static void vActionVoiceElement(xFmDevice_t * pxDeviceCfg, eFmParameter_t eVarType, uint32_t u32Event, uint8_t u8MaxValue)
 {
     if ((u8VoiceIndex <= YM2612_NUM_CHANNEL) && (pxDeviceCfg != NULL))
     {
@@ -363,12 +368,13 @@ static void vActionVoiceElement(xFmDevice_t * pxDeviceCfg, eFmVoiceVar_t eVarTyp
                 vSetVoiceVariable(pxDeviceCfg, u8TmpChannel, eVarType, u8ValueTmp);
             }
 
-            vYM2612_set_reg_preset(pxDeviceCfg);
+            /* Generate task event */
+            (void)bSynthSetPreset(pxDeviceCfg);
         }
     }
 }
 
-static void vActionOperatorElement(xFmDevice_t * pxDeviceCfg, eFmOperatorVar_t eVarType, uint32_t u32Event, uint8_t u8MaxValue)
+static void vActionOperatorElement(xFmDevice_t * pxDeviceCfg, eFmParameter_t eVarType, uint32_t u32Event, uint8_t u8MaxValue)
 {
     if ((u8VoiceIndex <= YM2612_NUM_CHANNEL) && (u8OperatorIndex <= YM2612_NUM_OP_CHANNEL) && (pxDeviceCfg != NULL))
     {
@@ -416,7 +422,8 @@ static void vActionOperatorElement(xFmDevice_t * pxDeviceCfg, eFmOperatorVar_t e
                 }
             }
 
-            vYM2612_set_reg_preset(pxDeviceCfg);
+            /* Generate task event */
+            (void)bSynthSetPreset(pxDeviceCfg);
         }
     }
 }
@@ -558,7 +565,7 @@ static void vElementRenderVoice(void * pvDisplay, void * pvScreen, void * pvElem
         if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
         {
             /* Prepare data on buffer */
-            if (u8VoiceIndex == YM2612_MAX_NUM_VOICE)
+            if (u8VoiceIndex == YM2612_NUM_CHANNEL)
             {
                 sprintf(pxElement->pcName, NAME_FORMAT_VOICE_ALL);
             }
@@ -1109,6 +1116,44 @@ static void vElementRenderOperatorDecayRate(void * pvDisplay, void * pvScreen, v
     }
 }
 
+static void vElementRenderOperatorSustainRate(void * pvDisplay, void * pvScreen, void * pvElement)
+{
+    if ((pvDisplay != NULL) && (pvScreen != NULL) && (pvElement != NULL))
+    {
+        u8g2_t * pxDisplayHandler = pvDisplay;
+        ui_screen_t * pxScreen = pvScreen;
+        ui_element_t * pxElement = pvElement;
+        uint32_t u32IndX = UI_OFFSET_ELEMENT_X;
+        uint32_t u32IndY = UI_OFFSET_ELEMENT_Y;
+
+        /* Compute element offset */
+        u32IndY += u32UI_MISC_GetDrawIndexY(pxDisplayHandler, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
+
+        if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
+        {
+            xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
+
+            /* Prepare data on buffer */
+            if ((u8VoiceIndex <= YM2612_NUM_CHANNEL) && (u8OperatorIndex <= YM2612_NUM_OP_CHANNEL))
+            {
+                uint8_t u8TmpVoiceIndex = (u8VoiceIndex == YM2612_NUM_CHANNEL) ? 0U : u8VoiceIndex;
+                uint8_t u8TmpOperatorIndex = (u8OperatorIndex == YM2612_NUM_OP_CHANNEL) ? 0U : u8OperatorIndex;
+
+                sprintf(pxElement->pcName, NAME_FORMAT_OP_SUSTAIN_RATE, pxDeviceCfg->xChannel[u8TmpVoiceIndex].xOperator[u8TmpOperatorIndex].u8SustainRate);
+            }
+            else
+            {
+                sprintf(pxElement->pcName, "ERROR");
+            }
+
+            /* Print selection ico */
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
+
+            u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
+        }
+    }
+}
+
 static void vElementRenderOperatorSustainLevel(void * pvDisplay, void * pvScreen, void * pvElement)
 {
     if ((pvDisplay != NULL) && (pvScreen != NULL) && (pvElement != NULL))
@@ -1340,7 +1385,7 @@ static void vElementActionLfoFreq(void * pvMenu, void * pvEventData)
 
                 if (pxDeviceCfg->u8LfoFreq != u8TmpValue)
                 {
-                    vYM2612_set_reg_preset(pxDeviceCfg);
+                    (void)bSynthSetPreset(pxDeviceCfg);
                 }
             }
         }
@@ -1385,7 +1430,7 @@ static void vElementActionLfoEn(void * pvMenu, void * pvEventData)
 
                 if (pxDeviceCfg->u8LfoOn != u8TmpValue)
                 {
-                    vYM2612_set_reg_preset(pxDeviceCfg);
+                    (void)bSynthSetPreset(pxDeviceCfg);
                 }
             }
         }
@@ -1437,7 +1482,7 @@ static void vElementActionVoice(void * pvMenu, void * pvEventData)
                         }
 
                         /* Apply changes to register */
-                        vYM2612_set_reg_preset(pxDeviceCfg);
+                        (void)bSynthSetPreset(pxDeviceCfg);
                     }
                 }
             }
@@ -1465,7 +1510,7 @@ static void vElementActionVoiceFeedback(void * pvMenu, void * pvEventData)
             {
                 xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
 
-                vActionVoiceElement(pxDeviceCfg, FM_VAR_FEEDBACK, *pu32Event, MAX_VALUE_FEEDBACK);
+                vActionVoiceElement(pxDeviceCfg, FM_VAR_VOICE_FEEDBACK, *pu32Event, MAX_VALUE_FEEDBACK);
             }
         }
         /* Element selection action */
@@ -1491,7 +1536,7 @@ static void vElementActionVoiceAlgorithm(void * pvMenu, void * pvEventData)
             {
                 xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
 
-                vActionVoiceElement(pxDeviceCfg, FM_VAR_ALGORITHM, *pu32Event, MAX_VALUE_ALGORITHM);
+                vActionVoiceElement(pxDeviceCfg, FM_VAR_VOICE_ALGORITHM, *pu32Event, MAX_VALUE_ALGORITHM);
             }
         }
         /* Element selection action */
@@ -1517,7 +1562,7 @@ static void vElementActionVoiceOut(void * pvMenu, void * pvEventData)
             {
                 xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
 
-                vActionVoiceElement(pxDeviceCfg, FM_VAR_AUDIO_OUT, *pu32Event, MAX_VALUE_VOICE_OUT);
+                vActionVoiceElement(pxDeviceCfg, FM_VAR_VOICE_AUDIO_OUT, *pu32Event, MAX_VALUE_VOICE_OUT);
             }
         }
         /* Element selection action */
@@ -1543,7 +1588,7 @@ static void vElementActionVoiceAmpModSens(void * pvMenu, void * pvEventData)
             {
                 xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
 
-                vActionVoiceElement(pxDeviceCfg, FM_VAR_AMP_MOD_SENS, *pu32Event, MAX_VALUE_AMP_MOD_SENS);
+                vActionVoiceElement(pxDeviceCfg, FM_VAR_VOICE_AMP_MOD_SENS, *pu32Event, MAX_VALUE_AMP_MOD_SENS);
             }
         }
         /* Element selection action */
@@ -1569,7 +1614,7 @@ static void vElementActionVoicePhaModSens(void * pvMenu, void * pvEventData)
             {
                 xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
 
-                vActionVoiceElement(pxDeviceCfg, FM_VAR_PHA_MOD_SENS, *pu32Event, MAX_VALUE_PHA_MOD_SENS);
+                vActionVoiceElement(pxDeviceCfg, FM_VAR_VOICE_PHA_MOD_SENS, *pu32Event, MAX_VALUE_PHA_MOD_SENS);
             }
         }
         /* Element selection action */
@@ -1631,7 +1676,7 @@ static void vElementActionOperator(void * pvMenu, void * pvEventData)
                         }
 
                         /* Apply changes to register */
-                        vYM2612_set_reg_preset(pxDeviceCfg);
+                        (void)bSynthSetPreset(pxDeviceCfg);
                     }
                 }
             }
@@ -1816,6 +1861,32 @@ static void vElementActionOperatorDecayRate(void * pvMenu, void * pvEventData)
                 xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
 
                 vActionOperatorElement(pxDeviceCfg, FM_VAR_OPERATOR_DECAY_RATE, *pu32Event, MAX_VALUE_DECAY_RATE);
+            }
+        }
+        /* Element selection action */
+        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        {
+            pxScreen->bElementSelection = !pxScreen->bElementSelection;
+        }
+    }
+}
+
+static void vElementActionOperatorSustainRate(void * pvMenu, void * pvEventData)
+{
+    if ((pvMenu != NULL) && (pvEventData != NULL))
+    {
+        uint32_t * pu32Event = pvEventData;
+        ui_menu_t * pxMenu = pvMenu;
+        ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
+
+        /* Handle encoder events */
+        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        {
+            if (pxScreen->bElementSelection)
+            {
+                xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
+
+                vActionOperatorElement(pxDeviceCfg, FM_VAR_OPERATOR_SUSTAIN_RATE, *pu32Event, MAX_VALUE_SUSTAIN_RATE);
             }
         }
         /* Element selection action */
@@ -2055,6 +2126,11 @@ ui_status_t UI_screen_fm_init(ui_screen_t * pxScreenHandler)
         xScreenElementList[FM_SCREEN_ELEMENT_OP_DECAY_RATE].u32Index = FM_SCREEN_ELEMENT_OP_DECAY_RATE;
         xScreenElementList[FM_SCREEN_ELEMENT_OP_DECAY_RATE].render_cb = vElementRenderOperatorDecayRate;
         xScreenElementList[FM_SCREEN_ELEMENT_OP_DECAY_RATE].action_cb = vElementActionOperatorDecayRate;
+
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_SUSTAIN_RATE].pcName = pcElementLabelOperatorSustainRate;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_SUSTAIN_RATE].u32Index = FM_SCREEN_ELEMENT_OP_SUSTAIN_RATE;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_SUSTAIN_RATE].render_cb = vElementRenderOperatorSustainRate;
+        xScreenElementList[FM_SCREEN_ELEMENT_OP_SUSTAIN_RATE].action_cb = vElementActionOperatorSustainRate;
 
         xScreenElementList[FM_SCREEN_ELEMENT_OP_SUSTAIN_LEVEL].pcName = pcElementLabelOperatorSustainLevel;
         xScreenElementList[FM_SCREEN_ELEMENT_OP_SUSTAIN_LEVEL].u32Index = FM_SCREEN_ELEMENT_OP_SUSTAIN_LEVEL;

@@ -17,7 +17,7 @@ extern "C"
 /* Includes ------------------------------------------------------------------*/
 
 #include <stdbool.h>
-#include "stm32g0xx_hal.h"
+#include <stdint.h>
 
 /* Private defines -----------------------------------------------------------*/
 
@@ -26,29 +26,31 @@ extern "C"
 // #define YM2612_DEBUG
 // #define YM2612_TEST_GPIO
 
-/* Number of channels by device */
-#define YM2612_NUM_CHANNEL      (6U)
+/** Number of channels by device */
+#define YM2612_NUM_CHANNEL      (YM2612_NUM_CH)
 
-/* Number of operator by channel */
-#define YM2612_NUM_OP_CHANNEL   (4U)
+/** Number of operator by channel */
+#define YM2612_NUM_OP_CHANNEL   (YM2612_NUM_OP)
 
-/* Device parameters */
-#define YM2612_MAX_NUM_VOICE    (YM2612_NUM_CHANNEL)
+/** Number of total parameters */
+#define YM2612_NUM_PARAMETERS   (FM_VAR_SIZE_NUMBER)
 
 /* Max and min values of FM parameters */
+#define MAX_VALUE_LFO_ON        (2U)
 #define MAX_VALUE_LFO_FREQ      (8U)
 #define MAX_VALUE_FEEDBACK      (8U)
 #define MAX_VALUE_ALGORITHM     (8U)
 #define MAX_VALUE_VOICE_OUT     (4U)
 #define MAX_VALUE_AMP_MOD_SENS  (4U)
 #define MAX_VALUE_PHA_MOD_SENS  (8U)
-#define MAX_VALUE_DETUNE        (16U)
-#define MAX_VALUE_MULTIPLE      (8U)
+#define MAX_VALUE_DETUNE        (8U)
+#define MAX_VALUE_MULTIPLE      (16U)
 #define MAX_VALUE_TOTAL_LEVEL   (128U)
 #define MAX_VALUE_KEY_SCALE     (4U)
 #define MAX_VALUE_ATTACK_RATE   (32U)
 #define MAX_VALUE_AMP_MOD_EN    (2U)
 #define MAX_VALUE_DECAY_RATE    (32U)
+#define MAX_VALUE_SUSTAIN_RATE  (32U)
 #define MAX_VALUE_SUSTAIN_LEVEL (16U)
 #define MAX_VALUE_RELEASE_RATE  (16U)
 #define MAX_VALUE_SSG_ENVELOPE  (8U)
@@ -121,10 +123,17 @@ extern "C"
 
 /* Exported types ------------------------------------------------------------*/
 
-/* Operator var id */
+/** List of available parameters */
 typedef enum
 {
-  FM_VAR_OPERATOR_DETUNE = 0U,
+  FM_VAR_LFO_ON = 0U,
+  FM_VAR_LFO_FREQ,
+  FM_VAR_VOICE_FEEDBACK,
+  FM_VAR_VOICE_ALGORITHM,
+  FM_VAR_VOICE_AUDIO_OUT,
+  FM_VAR_VOICE_AMP_MOD_SENS,
+  FM_VAR_VOICE_PHA_MOD_SENS,
+  FM_VAR_OPERATOR_DETUNE,
   FM_VAR_OPERATOR_MULTIPLE,
   FM_VAR_OPERATOR_TOTAL_LEVEL,
   FM_VAR_OPERATOR_KEY_SCALE,
@@ -135,55 +144,10 @@ typedef enum
   FM_VAR_OPERATOR_SUSTAIN_LEVEL,
   FM_VAR_OPERATOR_RELEASE_RATE,
   FM_VAR_OPERATOR_SSG_ENVELOPE,
-  FM_VAR_OPERATOR_NUM_VARIABLES,
-} eFmOperatorVar_t;
+  FM_VAR_SIZE_NUMBER
+} eFmParameter_t;
 
-typedef enum
-{
-  FM_VAR_FEEDBACK = 0U,
-  FM_VAR_ALGORITHM,
-  FM_VAR_AUDIO_OUT,
-  FM_VAR_AMP_MOD_SENS,
-  FM_VAR_PHA_MOD_SENS,
-  FM_VAR_VOICE_NUM_VARIABLES,
-} eFmVoiceVar_t;
-
-/* Operator structure */
-typedef struct 
-{
-  uint8_t u8Detune;
-  uint8_t u8Multiple;
-  uint8_t u8TotalLevel;
-  uint8_t u8KeyScale;
-  uint8_t u8AttackRate;
-  uint8_t u8AmpMod;
-  uint8_t u8DecayRate;
-  uint8_t u8SustainRate;
-  uint8_t u8SustainLevel;
-  uint8_t u8ReleaseRate;
-  uint8_t u8SsgEg;
-} xFmOperator_t;
-
-/* Channel voice structure */
-typedef struct 
-{
-  uint8_t u8Feedback;
-  uint8_t u8Algorithm;
-  uint8_t u8AudioOut;
-  uint8_t u8AmpModSens;
-  uint8_t u8PhaseModSens;
-  xFmOperator_t xOperator[YM2612_NUM_OP_CHANNEL];
-} xFmChannel_t;
-
-/* Chip voice structure */
-typedef struct 
-{
-  uint8_t u8LfoOn;
-  uint8_t u8LfoFreq;
-  xFmChannel_t xChannel[YM2612_NUM_CHANNEL];
-} xFmDevice_t;
-
-/* Operation status */
+/** Operation status */
 typedef enum
 {
     YM2612_STATUS_ERROR = 0U,
@@ -191,7 +155,7 @@ typedef enum
     YM2612_STATUS_NODEF = 0xFFU,
 } YM2612_status_t;
 
-/* YM2612 register addresses */
+/** YM2612 register addresses */
 typedef enum
 {
     YM2612_ADDR_LFO = 0x22U,
@@ -212,14 +176,14 @@ typedef enum
     YM2612_ADDR_NODEF = 0xFFU,
 } YM2612_addr_t;
 
-/* Bank selection */
+/** Bank selection options */
 typedef enum
 {
     YM2612_BANK_0 = 0x00U,
     YM2612_BANK_1 = 0x01U
 } YM2612_bank_t;
 
-/* Synth channels */
+/** Synth voice channels */
 typedef enum
 {
     YM2612_CH_1 = 0x00U,
@@ -227,8 +191,54 @@ typedef enum
     YM2612_CH_3 = 0x02U,
     YM2612_CH_4 = 0x03U,
     YM2612_CH_5 = 0x04U,
-    YM2612_CH_6 = 0x05U
+    YM2612_CH_6 = 0x05U,
+    YM2612_NUM_CH
 } YM2612_ch_id_t;
+
+/** Synth voice operators */
+typedef enum
+{
+    YM2612_OP_1 = 0x00U,
+    YM2612_OP_2 = 0x01U,
+    YM2612_OP_3 = 0x02U,
+    YM2612_OP_4 = 0x03U,
+    YM2612_NUM_OP
+} YM2612_op_id_t;
+
+/** Operator parameter structure */
+typedef struct 
+{
+  uint8_t u8Detune;
+  uint8_t u8Multiple;
+  uint8_t u8TotalLevel;
+  uint8_t u8KeyScale;
+  uint8_t u8AttackRate;
+  uint8_t u8AmpMod;
+  uint8_t u8DecayRate;
+  uint8_t u8SustainRate;
+  uint8_t u8SustainLevel;
+  uint8_t u8ReleaseRate;
+  uint8_t u8SsgEg;
+} xFmOperator_t;
+
+/** Channel voice parameter structure */
+typedef struct 
+{
+  uint8_t u8Feedback;
+  uint8_t u8Algorithm;
+  uint8_t u8AudioOut;
+  uint8_t u8AmpModSens;
+  uint8_t u8PhaseModSens;
+  xFmOperator_t xOperator[YM2612_NUM_OP_CHANNEL];
+} xFmChannel_t;
+
+/** Overall paramater structure */
+typedef struct 
+{
+  uint8_t u8LfoOn;
+  uint8_t u8LfoFreq;
+  xFmChannel_t xChannel[YM2612_NUM_CHANNEL];
+} xFmDevice_t;
 
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/

@@ -18,11 +18,11 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "midi_lib.h"
-
 #include "FreeRTOS.h"
 #include "task.h"
-#include "message_buffer.h"
+#include "queue.h"
+
+#include "midi_lib.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private defines -----------------------------------------------------------*/
@@ -129,12 +129,6 @@ bool bMidiTaskInit(void);
   * @retval operation result, true for correct read, false for error
   */
 bool bMidiTaskNotify(uint32_t u32Event);
-
-/**
-  * @brief Get defined message buffer pointer.
-  * @retval Pointer to defined message buffer
-  */
-MessageBufferHandle_t xMidiGetMessageBuffer(void);
 
 #ifdef __cplusplus
 }

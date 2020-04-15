@@ -10,46 +10,102 @@
 #include "cli_task.h"
 #include "ui_task.h"
 #include "midi_task.h"
-
 #include "printf.h"
+#include "error.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
 /* Timeout for rx a cmd */
-#define SYNTH_CMD_TIMEOUT       (1000U)
+#define SYNTH_CMD_TIMEOUT                   (1000U)
 
-/* Size of cmd buff */
-#define SYNTH_TMP_CMD_SIZE      (3U)
+/* Event queue size */
+#define SYNTH_EVENT_QUEUE_SIZE              (5U)
+
+/* Event queue item size */
+#define SYNTH_EVENT_QUEUE_ELEMENT_SIZE      (sizeof(SynthEvent_t))
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 
-/* Task handler */
+/** Task handler */
 TaskHandle_t xSynthTaskHandle = NULL;
 
+/** Queue event handler */
+QueueHandle_t xSynthEventQueueHandle = NULL;
+
 /* Private function prototypes -----------------------------------------------*/
+
+/**
+  * @brief Handle Midi event.
+  * @param pxEventData pointer to event data.
+  * @retval None
+  */
+static void vHandleMidiEvent(SynthEventPayloadMidi_t * pxEventData);
+
+/**
+  * @brief Handle SysEx Midi event.
+  * @param pxEventData pointer to event data.
+  * @retval None
+  */
+static void vHandleMidiSysExEvent(SynthEventPayloadMidiSysEx_t * pxEventData);
+
+/**
+  * @brief Handle Note On Off event.
+  * @param pxEventData pointer to event data.
+  * @retval None
+  */
+static void vHandleNoteOnOffEvent(SynthEventPayloadNoteOnOff_t * pxEventData);
+
+/**
+  * @brief Handle Change Note event.
+  * @param pxEventData pointer to event data.
+  * @retval None
+  */
+static void vHandleChangeNoteEvent(SynthEventPayloadChangeNote_t * pxEventData);
+
+/**
+  * @brief Handle Change Parameter event.
+  * @param pxEventData pointer to event data.
+  * @retval None
+  */
+static void vHandleChangeParameterEvent(SynthEventPayloadChangeParameter_t * pxEventData);
+
+/**
+  * @brief Handle Update Preset parameter event.
+  * @param pxEventData pointer to event data.
+  * @retval None
+  */
+static void vHandleUpdatePresetEvent(SynthEventPayloadUpdatePreset_t * pxEventData);
 
 /**
   * @brief Activate voice.
   * @param pxCmdMsg pointer to synth cmd.
   * @retval None
   */
-static void vCmdVoiceOn(SynthMsg_t * pxCmdMsg);
+static void vCmdVoiceOn(SynthEventPayloadMidi_t * pxCmdMsg);
 
 /**
   * @brief Deactivate voice.
   * @param pxCmdMsg pointer to synth cmd.
   * @retval None
   */
-static void vCmdVoiceOff(SynthMsg_t * pxCmdMsg);
+static void vCmdVoiceOff(SynthEventPayloadMidi_t * pxCmdMsg);
 
 /**
   * @brief Deactivate all voices.
   * @retval None
   */
 static void vCmdVoiceOffAll(void);
+
+/**
+  * @brief Handler for SysEx commands.
+  * @param pu8SysExData pointer to sysex data.
+  * @param u32LenData sysex payload len.
+  * @retval None
+  */
+static void vCmdMidiSysEx(uint8_t * pu8SysExData, uint32_t u32LenData);
 
 /**
   * @brief  Init user preset.
@@ -95,8 +151,397 @@ static void vSynthTaskMain(void *pvParameters);
 
 /* Private fuctions ----------------------------------------------------------*/
 
-static void vCmdVoiceOn(SynthMsg_t * pxCmdMsg)
+static void vHandleMidiEvent(SynthEventPayloadMidi_t * pxEventData)
 {
+    if (pxEventData != NULL)
+    {
+        switch (pxEventData->xType)
+        {
+        case SYNTH_CMD_NOTE_ON:
+            vCmdVoiceOn(pxEventData);
+            break;
+
+        case SYNTH_CMD_NOTE_OFF:
+            vCmdVoiceOff(pxEventData);
+            break;
+
+        case SYNTH_CMD_NOTE_OFF_ALL:
+            vCmdVoiceOffAll();
+            break;
+
+        default:
+            break;
+        }
+    }
+}
+
+static void vHandleMidiSysExEvent(SynthEventPayloadMidiSysEx_t * pxEventData)
+{
+    if ((pxEventData != NULL) && (pxEventData->pu8Data != NULL))
+    {
+        vCmdMidiSysEx(pxEventData->pu8Data, pxEventData->u32Len);
+    }
+}
+
+static void vHandleNoteOnOffEvent(SynthEventPayloadNoteOnOff_t * pxEventData)
+{
+    ERR_ASSERT(pxEventData != NULL);
+
+    uint8_t u8VoiceChannel = pxEventData->u8VoiceId;
+
+    /* Check voice range */
+    if (u8VoiceChannel < SYNTH_MAX_NUM_VOICE)
+    {
+        if (pxEventData->bGateState)
+        {
+            vYM2612_key_on(u8VoiceChannel);
+        }
+        else
+        {
+            vYM2612_key_off(u8VoiceChannel);
+        }
+    }
+    else if (u8VoiceChannel == SYNTH_MAX_NUM_VOICE)
+    {
+        for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+        {
+            if (pxEventData->bGateState)
+            {
+                vYM2612_key_on(u8Index);
+            }
+            else
+            {
+                vYM2612_key_off(u8Index);
+            }
+        }
+    }
+}
+
+static void vHandleChangeNoteEvent(SynthEventPayloadChangeNote_t * pxEventData)
+{
+    ERR_ASSERT(pxEventData != NULL);
+
+    uint8_t u8VoiceChannel = pxEventData->u8VoiceId;
+    uint8_t u8Note = pxEventData->u8Note;
+
+    /* Check voice range */
+    if (u8VoiceChannel < SYNTH_MAX_NUM_VOICE)
+    {
+        if (!bYM2612_set_note(u8VoiceChannel, u8Note))
+        {
+            vCliPrintf(SYNTH_TASK_NAME, "VOICE: %d  SET NOTE %03d - ERROR", u8VoiceChannel, u8Note);
+        }
+    }
+    else if (u8VoiceChannel == SYNTH_MAX_NUM_VOICE)
+    {
+        for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+        {
+            if (!bYM2612_set_note(u8Index, u8Note))
+            {
+                vCliPrintf(SYNTH_TASK_NAME, "VOICE: %d  SET NOTE %03d - ERROR", u8Index, u8Note);
+            }
+        }
+    }
+}
+
+static void vHandleChangeParameterEvent(SynthEventPayloadChangeParameter_t * pxEventData)
+{
+    ERR_ASSERT(pxEventData != NULL);
+
+    xFmDevice_t * pxDevCfg = pxYM2612_get_reg_preset();
+    bool bRegUpdate = false;
+
+    switch (pxEventData->u8ParameterId)
+    {
+    case FM_VAR_LFO_ON:
+        pxDevCfg->u8LfoOn = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    case FM_VAR_LFO_FREQ:
+        pxDevCfg->u8LfoFreq = pxEventData->u8Value;
+        bRegUpdate = true;
+        break;
+
+    case FM_VAR_VOICE_FEEDBACK:
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].u8Feedback = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].u8Feedback = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
+        break;
+
+    case FM_VAR_VOICE_ALGORITHM:
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].u8Algorithm = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].u8Algorithm = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
+        break;
+
+    case FM_VAR_VOICE_AUDIO_OUT:
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].u8AudioOut = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].u8AudioOut = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
+        break;
+
+    case FM_VAR_VOICE_AMP_MOD_SENS:
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].u8AmpModSens = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].u8AmpModSens = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
+        break;
+
+    case FM_VAR_VOICE_PHA_MOD_SENS:
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].u8PhaseModSens = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].u8PhaseModSens = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_DETUNE:
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8Detune = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8Detune = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_MULTIPLE:
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8Multiple = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8Multiple = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_TOTAL_LEVEL:
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8TotalLevel = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8TotalLevel = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_KEY_SCALE:
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8KeyScale = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8KeyScale = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_ATTACK_RATE:
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8AttackRate = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8AttackRate = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_AMP_MOD:
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8AmpMod = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8AmpMod = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_DECAY_RATE:
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8DecayRate = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8DecayRate = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_SUSTAIN_RATE:
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8SustainRate = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8SustainRate = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_SUSTAIN_LEVEL:
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8SustainLevel = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8SustainLevel = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_RELEASE_RATE:
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8ReleaseRate = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8ReleaseRate = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
+        break;
+
+    case FM_VAR_OPERATOR_SSG_ENVELOPE:
+        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        {
+            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8SsgEg = pxEventData->u8Value;
+            bRegUpdate = true;
+        }
+        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        {
+            for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
+            {
+                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8SsgEg = pxEventData->u8Value;
+            }
+            bRegUpdate = true;
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    /* If value updated, apply new cfg */
+    if (bRegUpdate)
+    {
+        vYM2612_set_reg_preset(pxDevCfg);
+    }
+}
+
+static void vHandleUpdatePresetEvent(SynthEventPayloadUpdatePreset_t * pxEventData)
+{
+    ERR_ASSERT(pxEventData != NULL);
+
+    /* Update preset values */
+    vYM2612_set_reg_preset(pxEventData->pxPreset);
+}
+
+static void vCmdVoiceOn(SynthEventPayloadMidi_t * pxCmdMsg)
+{
+    ERR_ASSERT(pxCmdMsg != NULL);
+
     if (pxCmdMsg->xType == SYNTH_CMD_NOTE_ON)
     {
         uint8_t u8VoiceChannel = pxCmdMsg->u8Data[0U];
@@ -109,14 +554,15 @@ static void vCmdVoiceOn(SynthMsg_t * pxCmdMsg)
             {
                 vCliPrintf(SYNTH_TASK_NAME, "Key  ON: %02d - %03d", u8VoiceChannel, u8Note);
                 vYM2612_key_on(u8VoiceChannel);
-                bUiTaskNotify(UI_SIGNAL_SYNTH_ON);
             }
         }
     }
 }
 
-static void vCmdVoiceOff(SynthMsg_t * pxCmdMsg)
+static void vCmdVoiceOff(SynthEventPayloadMidi_t * pxCmdMsg)
 {
+    ERR_ASSERT(pxCmdMsg != NULL);
+
     if (pxCmdMsg->xType == SYNTH_CMD_NOTE_OFF)
     {
         uint8_t u8VoiceChannel = pxCmdMsg->u8Data[0U];
@@ -129,7 +575,6 @@ static void vCmdVoiceOff(SynthMsg_t * pxCmdMsg)
             {
                 vCliPrintf(SYNTH_TASK_NAME, "Key OFF: %02d - %03d", u8VoiceChannel, u8Note);
                 vYM2612_key_off(u8VoiceChannel);
-                bUiTaskNotify(UI_SIGNAL_SYNTH_OFF);
             }
         }
     }
@@ -225,9 +670,11 @@ static bool bLoadPreset(uint8_t u8Position)
 
     if (bSYNTH_APP_DATA_read(u8Position, &pxPresetData))
     {
-        vCliPrintf(SYNTH_TASK_NAME, "LOAD PRESET %d - %s: OK", u8Position, pxPresetData->pu8Name);
-        vYM2612_set_reg_preset(&pxPresetData->xPresetData);
-        bRetVal = true;
+        if (bSynthSetPreset(pxPresetData))
+        {
+            vCliPrintf(SYNTH_TASK_NAME, "LOAD PRESET %d - %s: OK", u8Position, pxPresetData->pu8Name);
+            bRetVal = true;
+        }
     }
     else
     {
@@ -244,9 +691,11 @@ static bool bLoadDefaultPreset(uint8_t u8Position)
 
     if (pxPresetData != NULL)
     {
-        vCliPrintf(SYNTH_TASK_NAME, "LOAD DEFAULT PRESET %d", u8Position);
-        vYM2612_set_reg_preset(pxPresetData);
-        bRetVal = true;
+        if (bSynthSetPreset(pxPresetData))
+        {
+            vCliPrintf(SYNTH_TASK_NAME, "LOAD DEFAULT PRESET %d", u8Position);
+            bRetVal = true;
+        }
     }
     else
     {
@@ -256,63 +705,57 @@ static bool bLoadDefaultPreset(uint8_t u8Position)
     return bRetVal;
 }
 
-static void vCmdMidiSysEx(void)
+static void vCmdMidiSysEx(uint8_t * pu8SysExData, uint32_t u32LenData)
 {
-    uint32_t u32SysExLenData = 0U;
-    uint8_t * pu8SysExData;
-
-    if (midi_get_sysex_data(&pu8SysExData, &u32SysExLenData) == midiOk)
+    if (u32LenData >= SYNTH_LEN_MIN_SYSEX_CMD)
     {
-        if (u32SysExLenData >= SYNTH_LEN_MIN_SYSEX_CMD)
+        SynthSysExCmd_t * pxSysExCmd = (SynthSysExCmd_t *)pu8SysExData;
+
+        vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD %02X LEN %d", pxSysExCmd->xSysExCmd, u32LenData);
+
+        if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_SET_PRESET) && (u32LenData == SYNTH_LEN_SET_REG_CMD))
         {
-            SynthSysExCmd_t * pxSysExCmd = (SynthSysExCmd_t *)pu8SysExData;
-
-            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD %02X LEN %d", pxSysExCmd->xSysExCmd, u32SysExLenData);
-
-            if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_SET_PRESET) && (u32SysExLenData == SYNTH_LEN_SET_REG_CMD))
-            {
-                xFmDevice_t * pxPresetData = &pxSysExCmd->pu8CmdData;
-                vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD SET PRESET");
-                vYM2612_set_reg_preset(pxPresetData);
-            }
-            else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_SAVE_PRESET) && (u32SysExLenData == SYNTH_LEN_SAVE_PRESET_CMD))
-            {
-                SynthSysExCmdSavePreset_t * pxSavePresetData = &pxSysExCmd->pu8CmdData;
-                uint8_t pu8PresetName[SYNTH_LEN_PRESET_NAME] = {0};
-
-                vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD SAVE PRESET");
-
-                /* Extract name from sysex frame */
-                for (uint32_t u32NameIndex = 0U; u32NameIndex < (SYNTH_LEN_PRESET_NAME - 1U); u32NameIndex++)
-                {
-                    pu8PresetName[u32NameIndex] = pxSavePresetData->u8CodedName[u32NameIndex * 2U];
-                    pu8PresetName[u32NameIndex] |= pxSavePresetData->u8CodedName[(u32NameIndex * 2U) + 1U] << 4U;
-                }
-                /* Process data */
-                bSavePreset(pxSavePresetData->u8Position, pu8PresetName, &pxSavePresetData->xRegData);
-            }
-            else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_LOAD_PRESET) && (u32SysExLenData == SYNTH_LEN_LOAD_PRESET_CMD))
-            {
-                SynthSysExCmdLoadPreset_t * pxLoadPresetData = &pxSysExCmd->pu8CmdData;
-
-                vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD LOAD PRESET");
-
-                /* Process data */
-                (void)bLoadPreset(pxLoadPresetData->u8Position);
-            }
-            else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_LOAD_DEFAULT_PRESET) && (u32SysExLenData == SYNTH_LEN_LOAD_DEFAULT_PRESET_CMD))
-            {
-                SynthSysExCmdLoadPreset_t * pxLoadPresetData = &pxSysExCmd->pu8CmdData;
-
-                vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD LOAD DEFAULT PRESET");
-
-                (void)bLoadDefaultPreset(pxLoadPresetData->u8Position);
-            }
+            xFmDevice_t * pxPresetData = &pxSysExCmd->pu8CmdData;
+            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD SET PRESET");
+            vYM2612_set_reg_preset(pxPresetData);
         }
-        else
+        else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_SAVE_PRESET) && (u32LenData == SYNTH_LEN_SAVE_PRESET_CMD))
         {
-            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD too short");
+            SynthSysExCmdSavePreset_t * pxSavePresetData = &pxSysExCmd->pu8CmdData;
+            uint8_t pu8PresetName[SYNTH_LEN_PRESET_NAME] = {0};
+
+            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD SAVE PRESET");
+
+            /* Extract name from sysex frame */
+            for (uint32_t u32NameIndex = 0U; u32NameIndex < (SYNTH_LEN_PRESET_NAME - 1U); u32NameIndex++)
+            {
+                pu8PresetName[u32NameIndex] = pxSavePresetData->u8CodedName[u32NameIndex * 2U];
+                pu8PresetName[u32NameIndex] |= pxSavePresetData->u8CodedName[(u32NameIndex * 2U) + 1U] << 4U;
+            }
+            /* Process data */
+            bSavePreset(pxSavePresetData->u8Position, pu8PresetName, &pxSavePresetData->xRegData);
         }
+        else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_LOAD_PRESET) && (u32LenData == SYNTH_LEN_LOAD_PRESET_CMD))
+        {
+            SynthSysExCmdLoadPreset_t * pxLoadPresetData = &pxSysExCmd->pu8CmdData;
+
+            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD LOAD PRESET");
+
+            /* Process data */
+            (void)bLoadPreset(pxLoadPresetData->u8Position);
+        }
+        else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_LOAD_DEFAULT_PRESET) && (u32LenData == SYNTH_LEN_LOAD_DEFAULT_PRESET_CMD))
+        {
+        SynthSysExCmdLoadPreset_t * pxLoadPresetData = &pxSysExCmd->pu8CmdData;
+
+            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD LOAD DEFAULT PRESET");
+
+            (void)bLoadDefaultPreset(pxLoadPresetData->u8Position);
+        }
+    }
+    else
+    {
+        vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD too short");
     }
 }
 
@@ -358,37 +801,41 @@ static void vSynthTaskMain( void *pvParameters )
 
     for(;;)
     {
-      MessageBufferHandle_t MsgBuff = xMidiGetMessageBuffer();
+        SynthEvent_t xEvent;
 
-      if (MsgBuff != NULL)
-      {
-        size_t xReceivedBytes;
-        SynthMsg_t xSynthCmd = {0};
-
-        /* Get cmd from buffer */
-        xReceivedBytes = xMessageBufferReceive(MsgBuff, (void *) &xSynthCmd, sizeof(SynthMsg_t), pdMS_TO_TICKS(SYNTH_CMD_TIMEOUT));
-
-        /* Handle cmd if not empty */
-        if (xReceivedBytes == sizeof(SynthMsg_t))
+        if (xQueueReceive(xSynthEventQueueHandle, &xEvent, portMAX_DELAY) == pdPASS)
         {
-            if (xSynthCmd.xType == SYNTH_CMD_NOTE_ON)
+            switch (xEvent.eType)
             {
-                vCmdVoiceOn(&xSynthCmd);
-            }
-            else if (xSynthCmd.xType == SYNTH_CMD_NOTE_OFF)
-            {
-                vCmdVoiceOff(&xSynthCmd);
-            }
-            else if (xSynthCmd.xType == SYNTH_CMD_NOTE_OFF_ALL)
-            {
-                vCmdVoiceOffAll();
-            }
-            else if (xSynthCmd.xType == SYNTH_CMD_SYSEX)
-            {
-                vCmdMidiSysEx();
+                case SYNTH_EVENT_MIDI_MSG:
+                    vHandleMidiEvent(&xEvent.uPayload.xMidi);
+                    break;
+
+                case SYNTH_EVENT_MIDI_SYSEX_MSG:
+                    vHandleMidiSysExEvent(&xEvent.uPayload.xMidiSysEx);
+                    break;
+
+                case SYNTH_EVENT_NOTE_ON_OFF:
+                    vHandleNoteOnOffEvent(&xEvent.uPayload.xNoteOnOff);
+                    break;
+
+                case SYNTH_EVENT_CHANGE_NOTE:
+                    vHandleChangeNoteEvent(&xEvent.uPayload.xChangeNote);
+                    break;
+
+                case SYNTH_EVENT_MOD_PARAM:
+                    vHandleChangeParameterEvent(&xEvent.uPayload.xChangeParameter);
+                    break;
+
+                case SYNTH_EVENT_UPDATE_PRESET:
+                    vHandleUpdatePresetEvent(&xEvent.uPayload.xUpdatePreset);
+                    break;
+
+                default:
+                    vCliPrintf(SYNTH_TASK_NAME, "Not defined event; %02X", xEvent.eType);
+                    break;
             }
         }
-      }
     }
 }
 
@@ -423,19 +870,40 @@ bool bSynthSaveUserPreset(xFmDevice_t * pxPreset, uint8_t u8PresetId)
     return bSavePreset(u8PresetId, "UI User Preset", pxPreset);
 }
 
+bool bSynthSetPreset(xFmDevice_t * pxPreset)
+{
+    ERR_ASSERT(pxPreset != NULL);
+    ERR_ASSERT(xSynthEventQueueHandle != NULL);
+
+    bool bRetval = true;
+    SynthEvent_t xSynthEvent = {.eType = SYNTH_EVENT_UPDATE_PRESET, .uPayload.xUpdatePreset.pxPreset = pxPreset};
+
+    if (xQueueSend(xSynthEventQueueHandle, &xSynthEvent, pdMS_TO_TICKS(SYNTH_QUEUE_TIMEOUT)) != pdPASS)
+    {
+        vCliPrintf(SYNTH_TASK_NAME, "CMD: Queue Error");
+        bRetval = false;
+    }
+
+    return bRetval;
+}
+
 bool bSynthTaskInit(void)
 {
-    bool retval = false;
+    bool bRetval = false;
 
     /* Create task */
     xTaskCreate(vSynthTaskMain, SYNTH_TASK_NAME, SYNTH_TASK_STACK, NULL, SYNTH_TASK_PRIO, &xSynthTaskHandle);
 
+    /* Create task queue */
+    xSynthEventQueueHandle = xQueueCreate(SYNTH_EVENT_QUEUE_SIZE, SYNTH_EVENT_QUEUE_ELEMENT_SIZE);
+
     /* Check resources */
-    if (xSynthTaskHandle != NULL)
+    if ((xSynthTaskHandle != NULL) && (xSynthEventQueueHandle != NULL))
     {
-        retval = true;
+        bRetval = true;
     }
-    return(retval);
+
+    return bRetval;
 }
 
 bool bSynthTaskNotify(uint32_t u32Event)
@@ -448,6 +916,11 @@ bool bSynthTaskNotify(uint32_t u32Event)
       bRetval = true;
     }
     return bRetval;
+}
+
+QueueHandle_t pxSynthTaskGetQueue(void)
+{
+    return xSynthEventQueueHandle;
 }
 
 /*****END OF FILE****/

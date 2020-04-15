@@ -243,8 +243,8 @@ __weak HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
 
   if (uwTickFreq != 0U)
   {
-    /*Configure the SysTick to have interrupt in 1ms time basis*/
-    if (HAL_SYSTICK_Config(SystemCoreClock / (1000U /uwTickFreq)) == 0U)
+    /*Configure the SysTick to have interrupt in 100us time basis*/
+    if (HAL_SYSTICK_Config(SystemCoreClock / (10000U /uwTickFreq)) == 0U)
     {
       /* Configure the SysTick IRQ priority */
       if (TickPriority < (1UL << __NVIC_PRIO_BITS))
