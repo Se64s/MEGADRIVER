@@ -24,6 +24,9 @@ extern "C"
 /* Indicate use of retos */
 #define DISPLAY_USE_RTOS
 
+/* Define initial message */
+#define DISPLAY_INIT_MSG  "Synth FM v1.0.0"
+
 /* Exported types ------------------------------------------------------------*/
 
 /* List of devices*/

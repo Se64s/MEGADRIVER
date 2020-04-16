@@ -144,7 +144,7 @@ static void __enc_0_low_level_deinit(void)
     __HAL_RCC_TIM3_CLK_DISABLE();
     /* Deinit gpio */
     HAL_GPIO_DeInit(ENCODER_0_SW_GPIO_PORT, ENCODER_0_SW_GPIO_PIN);
-    HAL_GPIO_DeInit(ENCODER_0_ENC_GPIO_PIN, ENCODER_0_ENC_GPIO_PORT);
+    HAL_GPIO_DeInit(ENCODER_0_ENC_GPIO_PORT, ENCODER_0_ENC_GPIO_PIN);
     /* Deinit irq */
     HAL_NVIC_DisableIRQ(TIM3_IRQn);
     HAL_NVIC_DisableIRQ(EXTI4_15_IRQn);
