@@ -137,7 +137,7 @@ display_status_t DISPLAY_update(display_port_t dev, u8g2_t * pxDisplayHandler)
         u8g2_FirstPage(pxDisplayHandler);
         do {
             u8g2_SetFont(pxDisplayHandler, u8g2_font_amstrad_cpc_extended_8r);
-            u8g2_DrawStr(pxDisplayHandler, 0, 10, "Synth FM v0.1");
+            u8g2_DrawStr(pxDisplayHandler, 0, 10, DISPLAY_INIT_MSG);
         } while (u8g2_NextPage(pxDisplayHandler));
 
         xRetval = DISPLAY_STATUS_OK;
