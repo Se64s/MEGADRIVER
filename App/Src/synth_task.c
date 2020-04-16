@@ -607,7 +607,7 @@ static bool bInitUserPreset(void)
             bRetVal = true;
             synth_app_data_t xInitPresetData = {0};
 
-            sprintf(xInitPresetData.pu8Name, "%s", "NOT INIT");
+            sprintf((char*)xInitPresetData.pu8Name, "%s", "NOT INIT");
             xInitPresetData.xPresetData = *pxInitPreset;
 
             /* Write init preset in all user data */

@@ -449,7 +449,6 @@ static void vMidiCmdOffMono(uint8_t * pu8MidiCmd)
     {
         uint8_t u8Status = *pu8MidiCmd++;
         uint8_t u8Note = *pu8MidiCmd++;
-        uint8_t u8Velocity = *pu8MidiCmd++;
 
         /* Check CMD */
         if ((u8Status & MIDI_STATUS_CMD_MASK) == MIDI_STATUS_NOTE_OFF)
@@ -513,7 +512,6 @@ static void vMidiCmdOffPoly(uint8_t * pu8MidiCmd)
     {
         uint8_t u8Status = *pu8MidiCmd++;
         uint8_t u8Note = *pu8MidiCmd++;
-        uint8_t u8Velocity = *pu8MidiCmd;
 
         /* Check CMD */
         if ((u8Status & MIDI_STATUS_CMD_MASK) == MIDI_STATUS_NOTE_OFF)
