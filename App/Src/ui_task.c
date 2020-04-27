@@ -50,7 +50,7 @@ static u8g2_t xDisplayHandler = {0};
 static ui_menu_t xUiMenuHandler = {0};
 
 /* Return screen from idle */
-static uint32_t u32ReturnScreen = MENU_MAIN_SCREEN_POSITION;
+static uint32_t u32ReturnScreen = MENU_LAST_SCREEN_POSITION;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -158,6 +158,7 @@ static void __ui_main( void *pvParameters )
 
     /* Update display for first time */
     DISPLAY_update(DISPLAY_0, &xDisplayHandler);
+    vTaskDelay(pdMS_TO_TICKS(1000U));
 
     /* Init timers */
     xTimerStart(xUpdateTimer, 0U);

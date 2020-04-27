@@ -60,7 +60,7 @@ typedef enum
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 
-const char pcScreenNameIdle[MAX_LEN_NAME] = "LIVE TRACK";
+const char pcScreenNameIdle[MAX_LEN_NAME] = "MIDI TRACK";
 
 const char * pcOctaveSimbol[MAX_NOTES_OCTAVE] = {
     " C",
@@ -77,7 +77,7 @@ const char * pcOctaveSimbol[MAX_NOTES_OCTAVE] = {
     " B"
 };
 
-ui_element_t xElementMapScreenElementList[UI_NUM_ELEMENT];
+ui_element_t xElementIdleScreenElementList[UI_NUM_ELEMENT];
 
 char pcNameDataCh0[MAX_LEN_NAME] = {0};
 char pcNameDataCh1[MAX_LEN_NAME] = {0};
@@ -209,42 +209,42 @@ ui_status_t UI_screen_idle_init(ui_screen_t * pxScreenHandler)
         pxScreenHandler->pcName = pcScreenNameIdle;
         pxScreenHandler->u32ElementRenderIndex = 0;
         pxScreenHandler->u32ElementSelectionIndex = 0;
-        pxScreenHandler->pxElementList = xElementMapScreenElementList;
+        pxScreenHandler->pxElementList = xElementIdleScreenElementList;
         pxScreenHandler->u32ElementNumber = IDLE_SCREEN_ELEMENT_LAST;
         pxScreenHandler->render_cb = vScreenRenderIdle;
         pxScreenHandler->action_cb = vScreenActionIdle;
         pxScreenHandler->bElementSelection = false;
 
         /* Init elements */
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_00].pcName = pcNameDataCh0;
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_00].u32Index = IDLE_SCREEN_ELEMENT_DATA_CH_00;
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_00].render_cb = vElementRenderDataCh;
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_00].action_cb = NULL;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_00].pcName = pcNameDataCh0;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_00].u32Index = IDLE_SCREEN_ELEMENT_DATA_CH_00;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_00].render_cb = vElementRenderDataCh;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_00].action_cb = NULL;
 
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_01].pcName = pcNameDataCh1;
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_01].u32Index = IDLE_SCREEN_ELEMENT_DATA_CH_01;
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_01].render_cb = vElementRenderDataCh;
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_01].action_cb = NULL;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_01].pcName = pcNameDataCh1;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_01].u32Index = IDLE_SCREEN_ELEMENT_DATA_CH_01;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_01].render_cb = vElementRenderDataCh;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_01].action_cb = NULL;
 
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_02].pcName = pcNameDataCh2;
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_02].u32Index = IDLE_SCREEN_ELEMENT_DATA_CH_02;
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_02].render_cb = vElementRenderDataCh;
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_02].action_cb = NULL;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_02].pcName = pcNameDataCh2;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_02].u32Index = IDLE_SCREEN_ELEMENT_DATA_CH_02;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_02].render_cb = vElementRenderDataCh;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_02].action_cb = NULL;
 
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_03].pcName = pcNameDataCh3;
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_03].u32Index = IDLE_SCREEN_ELEMENT_DATA_CH_03;
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_03].render_cb = vElementRenderDataCh;
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_03].action_cb = NULL;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_03].pcName = pcNameDataCh3;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_03].u32Index = IDLE_SCREEN_ELEMENT_DATA_CH_03;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_03].render_cb = vElementRenderDataCh;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_03].action_cb = NULL;
 
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_04].pcName = pcNameDataCh4;
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_04].u32Index = IDLE_SCREEN_ELEMENT_DATA_CH_04;
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_04].render_cb = vElementRenderDataCh;
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_04].action_cb = NULL;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_04].pcName = pcNameDataCh4;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_04].u32Index = IDLE_SCREEN_ELEMENT_DATA_CH_04;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_04].render_cb = vElementRenderDataCh;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_04].action_cb = NULL;
 
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_05].pcName = pcNameDataCh5;
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_05].u32Index = IDLE_SCREEN_ELEMENT_DATA_CH_05;
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_05].render_cb = vElementRenderDataCh;
-        xElementMapScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_05].action_cb = NULL;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_05].pcName = pcNameDataCh5;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_05].u32Index = IDLE_SCREEN_ELEMENT_DATA_CH_05;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_05].render_cb = vElementRenderDataCh;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_05].action_cb = NULL;
 
         retval = UI_STATUS_OK;
     }
