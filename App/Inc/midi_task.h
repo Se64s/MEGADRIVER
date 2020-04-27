@@ -60,6 +60,13 @@ typedef enum
 /* Exported functions prototypes ---------------------------------------------*/
 
 /**
+  * @brief Get current midi note set on output channel.
+  * @param u8Channel channel number to read.
+  * @retval midi note in channel or 0xff if input channel not valid.
+  */
+uint8_t xMidiTaskGetNote(uint8_t u8Channel);
+
+/**
   * @brief Get parameter from midi conf
   * @retval requested parameter
   */

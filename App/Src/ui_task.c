@@ -17,6 +17,7 @@
 #include "display_driver.h"
 
 #include "ui_sys.h"
+#include "ui_menu_main.h"
 
 #include "error.h"
 
@@ -24,8 +25,11 @@
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
-/* Update rate in ms */
-#define UI_DISPLAY_UPDATE_RATE_MS   (100U)
+/** Update rate in ms */
+#define UI_DISPLAY_UPDATE_RATE_MS   (80U)
+
+/** Idle period definition in ms */
+#define UI_DISPLAY_IDLE_MS          (10000U)
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
@@ -33,14 +37,20 @@
 /* Task handler */
 TaskHandle_t ui_task_handle = NULL;
 
-/* Timer to handle refresh */
+/* Timer to handle screen refresh */
 TimerHandle_t xUpdateTimer = NULL;
+
+/* Timer to handle idle event */
+TimerHandle_t xIdleTimer = NULL;
 
 /* Pointer to display lib handler */
 static u8g2_t xDisplayHandler = {0};
 
 /* UI menu structure */
 static ui_menu_t xUiMenuHandler = {0};
+
+/* Return screen from idle */
+static uint32_t u32ReturnScreen = MENU_MAIN_SCREEN_POSITION;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -58,6 +68,13 @@ static void encoder_cb(encoder_event_t event, uint32_t eventData);
   * @retval None.
   */
 static void vScreenUpdateCallback(TimerHandle_t xTimer);
+
+/**
+  * @brief Timer callback to generate idle event.
+  * @param xTimer handler that generates the event.
+  * @retval None.
+  */
+static void vScreenIdleCallback(TimerHandle_t xTimer);
 
 /**
   * @brief Main task loop
@@ -109,6 +126,11 @@ static void vScreenUpdateCallback(TimerHandle_t xTimer)
     xTaskNotify(ui_task_handle, UI_SIGNAL_SCREEN_UPDATE, eSetBits);
 }
 
+static void vScreenIdleCallback(TimerHandle_t xTimer)
+{
+    xTaskNotify(ui_task_handle, UI_SIGNAL_IDLE, eSetBits);
+}
+
 static void __ui_main( void *pvParameters )
 {
     /* Init delay to for pow stabilization */
@@ -137,8 +159,9 @@ static void __ui_main( void *pvParameters )
     /* Update display for first time */
     DISPLAY_update(DISPLAY_0, &xDisplayHandler);
 
-    /* Init update timer */
+    /* Init timers */
     xTimerStart(xUpdateTimer, 0U);
+    xTimerStart(xIdleTimer, 0U);
 
     for(;;)
     {
@@ -150,7 +173,8 @@ static void __ui_main( void *pvParameters )
                                     UI_SIGNAL_ENC_UPDATE_CCW | 
                                     UI_SIGNAL_ENC_UPDATE_SW_RESET | 
                                     UI_SIGNAL_ENC_UPDATE_SW_SET | 
-                                    UI_SIGNAL_MIDI_DATA |
+                                    UI_SIGNAL_IDLE |
+                                    UI_SIGNAL_RESTORE_IDLE |
                                     UI_SIGNAL_SCREEN_UPDATE
                                 ), 
                                 &u32TmpEvent, 
@@ -163,12 +187,32 @@ static void __ui_main( void *pvParameters )
                 UI_render(&xDisplayHandler, &xUiMenuHandler);
             }
 
+            if (CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_RESTORE_IDLE))
+            {
+                if (u32ReturnScreen < MENU_LAST_SCREEN_POSITION)
+                {
+                    vCliPrintf(UI_TASK_NAME, "Restore from IDLE");
+                    xUiMenuHandler.u32ScreenSelectionIndex = u32ReturnScreen;
+                }
+            }
+
             if (u32TmpEvent & ( UI_SIGNAL_ENC_UPDATE_CW | 
                                 UI_SIGNAL_ENC_UPDATE_CCW | 
                                 UI_SIGNAL_ENC_UPDATE_SW_RESET | 
                                 UI_SIGNAL_ENC_UPDATE_SW_SET | 
-                                UI_SIGNAL_MIDI_DATA))
+                                UI_SIGNAL_IDLE))
             {
+                if (!CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_IDLE))
+                {
+                    xTimerStart(xIdleTimer, 0U);
+                }
+                else
+                {
+                    vCliPrintf(UI_TASK_NAME, "IDLE event");
+                    u32ReturnScreen = xUiMenuHandler.u32ScreenSelectionIndex;
+                    xUiMenuHandler.u32ScreenSelectionIndex = MENU_IDLE_SCREEN_POSITION;
+                }
+
                 UI_action(&xUiMenuHandler, &u32TmpEvent);
             }
         }
@@ -191,11 +235,18 @@ bool bUiTaskInit(void)
                                 (void *)0U, 
                                 vScreenUpdateCallback);
 
+    xIdleTimer = xTimerCreate("ScreenIdleTimer", 
+                                pdMS_TO_TICKS(UI_DISPLAY_IDLE_MS), 
+                                pdFALSE, 
+                                (void *)0U, 
+                                vScreenIdleCallback);
+
     /* Check resources */
-    if ((ui_task_handle != NULL) && (xUpdateTimer != NULL))
+    if ((ui_task_handle != NULL) && (xUpdateTimer != NULL) && (xIdleTimer != NULL))
     {
         retval = true;
     }
+
     return(retval);
 }
 
