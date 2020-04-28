@@ -700,6 +700,18 @@ static void vMidiMain(void *pvParameters)
 
 /* Public fuctions -----------------------------------------------------------*/
 
+uint8_t xMidiTaskGetNote(uint8_t u8Channel)
+{
+    uint8_t u8Retval = MIDI_DATA_NOT_VALID;
+
+    if (u8Channel < MIDI_NUM_CHANNEL)
+    {
+        u8Retval = xMidiCfg.pxChannelList[u8Channel].u8Note;
+    }
+
+    return u8Retval;
+}
+
 midiMode_t xMidiTaskGetMode(void)
 {
     return xMidiCfg.xMode;

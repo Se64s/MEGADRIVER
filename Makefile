@@ -82,6 +82,7 @@ Lib/ui/ui_screen_main.c \
 Lib/ui/ui_screen_midi.c \
 Lib/ui/ui_screen_fm.c \
 Lib/ui/ui_screen_mapping.c \
+Lib/ui/ui_screen_idle.c \
 Lib/app_data/app_data_handler.c \
 Lib/u8g2/u8g2_bitmap.c \
 Lib/u8g2/u8g2_box.c \
