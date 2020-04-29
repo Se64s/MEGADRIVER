@@ -44,7 +44,7 @@ typedef enum
 } app_data_status_t;
 
 /** Layout control structure */
-typedef struct
+typedef struct app_data_layout
 {
     uint32_t u32InitPage;
     uint32_t u32NumPages;

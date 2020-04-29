@@ -1343,7 +1343,7 @@ static const xFmDevice_t * pxDevicePresets[SYNTH_APP_DATA_CONST_MAX_NUM_ELEMENTS
 /* HAL callbacks ------------------------------------------------------------*/
 /* Exported functions -------------------------------------------------------*/
 
-xFmDevice_t * pxSYNTH_APP_DATA_CONST_get(uint8_t u8PresetId)
+const xFmDevice_t * pxSYNTH_APP_DATA_CONST_get(uint8_t u8PresetId)
 {
     if (u8PresetId < SYNTH_APP_DATA_CONST_MAX_NUM_ELEMENTS)
     {

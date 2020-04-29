@@ -32,7 +32,7 @@ extern "C"
   * @param u8PresetId preset id to get.
   * @retval pointer to constant data, NULL if data not available.
   */
-xFmDevice_t * pxSYNTH_APP_DATA_CONST_get(uint8_t u8PresetId);
+const xFmDevice_t * pxSYNTH_APP_DATA_CONST_get(uint8_t u8PresetId);
 
 #ifdef  __cplusplus
 }

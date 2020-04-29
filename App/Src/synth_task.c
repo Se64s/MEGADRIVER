@@ -600,7 +600,7 @@ static bool bInitUserPreset(void)
     if (!bRetVal)
     {
         uint8_t u8PresetId = 0U;
-        xFmDevice_t * pxInitPreset = pxSYNTH_APP_DATA_CONST_get(u8PresetId);
+        const xFmDevice_t * pxInitPreset = pxSYNTH_APP_DATA_CONST_get(u8PresetId);
 
         if (pxInitPreset != NULL)
         {
@@ -666,11 +666,11 @@ static bool bSavePreset(uint8_t u8Position, uint8_t * pu8Name, xFmDevice_t * pxR
 static bool bLoadPreset(uint8_t u8Position)
 {
     bool bRetVal = false;
-    const synth_app_data_t * pxPresetData = NULL;
+    const synth_app_data_t * pxPresetData = pxSYNTH_APP_DATA_read(u8Position);
 
-    if (bSYNTH_APP_DATA_read(u8Position, &pxPresetData))
+    if (pxPresetData != NULL)
     {
-        if (bSynthSetPreset(pxPresetData))
+        if (bSynthSetPreset(&pxPresetData->xPresetData))
         {
             vCliPrintf(SYNTH_TASK_NAME, "LOAD PRESET %d - %s: OK", u8Position, pxPresetData->pu8Name);
             bRetVal = true;
@@ -715,13 +715,15 @@ static void vCmdMidiSysEx(uint8_t * pu8SysExData, uint32_t u32LenData)
 
         if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_SET_PRESET) && (u32LenData == SYNTH_LEN_SET_REG_CMD))
         {
-            xFmDevice_t * pxPresetData = &pxSysExCmd->pu8CmdData;
+            void * pvSysExData = &pxSysExCmd->pu8CmdData;
+            xFmDevice_t * pxPresetData = pvSysExData;
             vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD SET PRESET");
             vYM2612_set_reg_preset(pxPresetData);
         }
         else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_SAVE_PRESET) && (u32LenData == SYNTH_LEN_SAVE_PRESET_CMD))
         {
-            SynthSysExCmdSavePreset_t * pxSavePresetData = &pxSysExCmd->pu8CmdData;
+            void * pvSysExData = &pxSysExCmd->pu8CmdData;
+            SynthSysExCmdSavePreset_t * pxSavePresetData = pvSysExData;
             uint8_t pu8PresetName[SYNTH_LEN_PRESET_NAME] = {0};
 
             vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD SAVE PRESET");
@@ -737,7 +739,8 @@ static void vCmdMidiSysEx(uint8_t * pu8SysExData, uint32_t u32LenData)
         }
         else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_LOAD_PRESET) && (u32LenData == SYNTH_LEN_LOAD_PRESET_CMD))
         {
-            SynthSysExCmdLoadPreset_t * pxLoadPresetData = &pxSysExCmd->pu8CmdData;
+            void * pvSysExData = &pxSysExCmd->pu8CmdData;
+            SynthSysExCmdLoadPreset_t * pxLoadPresetData = pvSysExData;
 
             vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD LOAD PRESET");
 
@@ -746,7 +749,8 @@ static void vCmdMidiSysEx(uint8_t * pu8SysExData, uint32_t u32LenData)
         }
         else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_LOAD_DEFAULT_PRESET) && (u32LenData == SYNTH_LEN_LOAD_DEFAULT_PRESET_CMD))
         {
-        SynthSysExCmdLoadPreset_t * pxLoadPresetData = &pxSysExCmd->pu8CmdData;
+            void * pvSysExData = &pxSysExCmd->pu8CmdData;
+            SynthSysExCmdLoadPreset_t * pxLoadPresetData = pvSysExData;
 
             vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD LOAD DEFAULT PRESET");
 
@@ -763,7 +767,7 @@ static bool bInitPreset(void)
 {
     bool bRetval = false;
     uint8_t u8PresetId = 0U;
-    xFmDevice_t * pxInitPreset = pxSYNTH_APP_DATA_CONST_get(u8PresetId);
+    const xFmDevice_t * pxInitPreset = pxSYNTH_APP_DATA_CONST_get(u8PresetId);
 
     if (pxInitPreset != NULL)
     {
@@ -867,7 +871,8 @@ bool bSynthLoadPreset(SynthPresetSource_t u8PresetSource, uint8_t u8PresetId)
 
 bool bSynthSaveUserPreset(xFmDevice_t * pxPreset, uint8_t u8PresetId)
 {
-    return bSavePreset(u8PresetId, "UI User Preset", pxPreset);
+    uint8_t u8UiPresetName[SYNTH_LEN_PRESET_NAME] = "UI User Preset";
+    return bSavePreset(u8PresetId, u8UiPresetName, pxPreset);
 }
 
 bool bSynthSetPreset(xFmDevice_t * pxPreset)

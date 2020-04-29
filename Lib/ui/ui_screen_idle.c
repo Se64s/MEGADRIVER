@@ -130,8 +130,9 @@ static void vElementRenderDataCh(void * pvDisplay, void * pvScreen, void * pvEle
     ERR_ASSERT(pvScreen != NULL);
     ERR_ASSERT(pvElement != NULL);
 
+    (void)pvScreen;
+
     u8g2_t * pxDisplayHandler = pvDisplay;
-    ui_screen_t * pxScreen = pvScreen;
     ui_element_t * pxElement = pvElement;
 
     if (pxElement->u32Index < MAX_VOICE_CH)

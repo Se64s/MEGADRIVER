@@ -56,18 +56,13 @@ bool bMIDI_APP_DATA_write(midi_app_data_t * pxMidiData)
     return bRetVal;
 }
 
-bool bMIDI_APP_DATA_read(const midi_app_data_t ** pxMidiData)
+const midi_app_data_t * pxMIDI_APP_DATA_read(void)
 {
-    bool bRetVal = false;
+    const midi_app_data_t * pxRetVal = NULL;
 
-    *pxMidiData = pvAPP_DATA_get_element(&xMidiAppData);
+    pxRetVal = pvAPP_DATA_get_element(&xMidiAppData);
 
-    if (*pxMidiData != NULL)
-    {
-        bRetVal = true;
-    }
-
-    return bRetVal;
+    return pxRetVal;
 }
 
 /* EOF */

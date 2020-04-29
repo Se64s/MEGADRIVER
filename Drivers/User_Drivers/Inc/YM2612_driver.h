@@ -233,7 +233,7 @@ typedef struct
 } xFmChannel_t;
 
 /** Overall paramater structure */
-typedef struct 
+typedef struct xFmDevice
 {
   uint8_t u8LfoOn;
   uint8_t u8LfoFreq;

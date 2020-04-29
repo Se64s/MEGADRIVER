@@ -38,11 +38,11 @@ static serial_event_cb uart2_event_cb = NULL;
 
 static void _error_handler(void);
 
-static void MX_USART2_UART_Init(void);
-static void MX_USART2_UART_Deinit(void);
+static void BSP_USART2_UART_Init(void);
+static void BSP_USART2_UART_Deinit(void);
 
-static void MX_USART3_UART_Init(void);
-static void MX_USART3_UART_Deinit(void);
+static void BSP_USART3_UART_Init(void);
+static void BSP_USART3_UART_Deinit(void);
 
 /* Private user code ---------------------------------------------------------*/
 
@@ -61,7 +61,7 @@ static void _error_handler(void)
   * @param None
   * @retval None
   */
-static void MX_USART2_UART_Init(void)
+static void BSP_USART2_UART_Init(void)
 {
     /* DMA1_Channel2_3_IRQn interrupt configuration */
     HAL_NVIC_SetPriority(DMA1_Ch4_7_DMAMUX1_OVR_IRQn, 3, 0);
@@ -112,7 +112,7 @@ static void MX_USART2_UART_Init(void)
   * @param None
   * @retval None
   */
-static void MX_USART2_UART_DeInit(void)
+static void BSP_USART2_UART_Deinit(void)
 {
     /* Disable associated IRQ */
     HAL_NVIC_DisableIRQ(USART2_IRQn);
@@ -130,7 +130,7 @@ static void MX_USART2_UART_DeInit(void)
     __HAL_UART_DISABLE_IT(&huart2, UART_IT_IDLE);
 }
 
-static void MX_USART3_UART_Init(void)
+static void BSP_USART3_UART_Init(void)
 {
     /* DMA1_Channel2_3_IRQn interrupt configuration */
     HAL_NVIC_SetPriority(DMA1_Channel2_3_IRQn, 3, 0);
@@ -164,7 +164,7 @@ static void MX_USART3_UART_Init(void)
     __HAL_UART_ENABLE_IT(&huart3, UART_IT_IDLE);
 }
 
-static void MX_USART3_UART_Deinit(void)
+static void BSP_USART3_UART_Deinit(void)
 {
     /* Disable associated IRQ */
     HAL_NVIC_DisableIRQ(USART3_4_IRQn);
@@ -312,7 +312,7 @@ serial_status_t SERIAL_init(serial_port_t dev, serial_event_cb event_cb)
     if (dev == SERIAL_0)
     {
         /* Init hardware */
-        MX_USART3_UART_Init();
+        BSP_USART3_UART_Init();
 
         if (event_cb != NULL)
         {
@@ -328,7 +328,7 @@ serial_status_t SERIAL_init(serial_port_t dev, serial_event_cb event_cb)
     else if (dev == SERIAL_1)
     {
         /* Init hardware */
-        MX_USART2_UART_Init();
+        BSP_USART2_UART_Init();
 
         if (event_cb != NULL)
         {
@@ -355,12 +355,12 @@ serial_status_t SERIAL_deinit(serial_port_t dev)
 
     if (dev == SERIAL_0)
     {
-        MX_USART3_UART_DeInit();
+        BSP_USART3_UART_Deinit();
         retval = SERIAL_STATUS_OK;
     }
     else if (dev == SERIAL_1)
     {
-        MX_USART2_UART_DeInit();
+        BSP_USART2_UART_Deinit();
         retval = SERIAL_STATUS_OK;
     }
     else
