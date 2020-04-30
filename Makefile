@@ -141,7 +141,9 @@ startup_stm32g070xx.s
 #######################################
 # binaries
 #######################################
-GCC_PATH = C:\Firmware\arm_toochain\bin
+
+# GCC_PATH var should be provided by command line argument or defined below.
+# GCC_PATH = <path to toolchain_bin folder>
 PREFIX = arm-none-eabi-
 # The gcc compiler bin path can be either defined in make command via GCC_PATH variable (> make GCC_PATH=xxx)
 # either it can be added to the PATH environment variable.
@@ -267,9 +269,8 @@ $(BUILD_DIR):
 # clean up
 #######################################
 clean:
-#	-rm -fR $(BUILD_DIR)
 	$(RM) $(BUILD_DIR)
-  
+
 #######################################
 # dependencies
 #######################################
