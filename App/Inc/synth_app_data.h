@@ -36,7 +36,7 @@ extern "C"
 /* Exported types  -----------------------------------------------------------*/
 
 /** Defined program data */
-typedef struct __packed
+typedef struct __packed synth_app_data
 {
     uint8_t pu8Name[SYNTH_APP_DATA_LEN_PRESET_NAME];
     xFmDevice_t xPresetData;
@@ -60,12 +60,11 @@ bool bSYNTH_APP_DATA_init(void);
 bool bSYNTH_APP_DATA_write(uint8_t u8PresetId, synth_app_data_t * pxPresetData);
 
 /**
-  * @brief Get preset data from flash.
-  * @param u8PresetId Preset position.
-  * @param pxPresetData pointer to data.
-  * @retval true data read, false ioc.
+  * @brief  Get preset data from flash.
+  * @param  u8PresetId Preset position.
+  * @retval Pointer to const data with app data, NULL if data not found.
   */
-bool bSYNTH_APP_DATA_read(uint8_t u8PresetId, const synth_app_data_t ** pxPresetData);
+const synth_app_data_t * pxSYNTH_APP_DATA_read(uint8_t u8PresetId);
 
 #ifdef  __cplusplus
 }

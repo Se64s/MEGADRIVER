@@ -62,22 +62,24 @@ bool bSYNTH_APP_DATA_write(uint8_t u8PresetId, synth_app_data_t * pxPresetData)
     return bRetVal;
 }
 
-bool bSYNTH_APP_DATA_read(uint8_t u8PresetId, const synth_app_data_t ** pxPresetData)
+const synth_app_data_t * pxSYNTH_APP_DATA_read(uint8_t u8PresetId)
 {
-    bool bRetVal = false;
+    const synth_app_data_t * pxRetData = NULL;
 
-    if ((u8PresetId < SYNTH_APP_DATA_NUM_PRESETS) && (pxPresetData != NULL))
+    if (u8PresetId < SYNTH_APP_DATA_NUM_PRESETS)
     {
-        *pxPresetData = pvAPP_DATA_get_element(&pxSynthAppData[u8PresetId]);
+        pxRetData = pvAPP_DATA_get_element(&pxSynthAppData[u8PresetId]);
 
-        if (*pxPresetData != NULL)
+        if (pxRetData != NULL)
         {
             /* Check if valid data */
             uint32_t u32NotValidDataCount = 0U;
-            uint8_t * pu8Data = (uint8_t *)*pxPresetData;
+            uint8_t * pu8Data = (uint8_t *)&pxRetData;
+
             for (uint32_t u32DataIndex = 0; u32DataIndex < pxSynthAppData[u8PresetId].u32ElementSize; u32DataIndex++)
             {
                 uint8_t u8Data = pu8Data[u32DataIndex];
+
                 if (u8Data == APP_DATA_8_NO_INIT || u8Data == 0xAB)
                 {
                     u32NotValidDataCount++;
@@ -88,14 +90,14 @@ bool bSYNTH_APP_DATA_read(uint8_t u8PresetId, const synth_app_data_t ** pxPreset
                 }
             }
 
-            if (u32NotValidDataCount != pxSynthAppData[u8PresetId].u32ElementSize)
+            if (u32NotValidDataCount == pxSynthAppData[u8PresetId].u32ElementSize)
             {
-                bRetVal = true;
+                pxRetData = NULL;
             }
         }
     }
 
-    return bRetVal;
+    return pxRetData;
 }
 
 /* EOF */

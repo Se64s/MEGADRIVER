@@ -39,7 +39,7 @@ extern "C"
 /* Exported types  -----------------------------------------------------------*/
 
 /** Defined program data */
-typedef struct __packed
+typedef struct __packed midi_app_data
 {
     uint8_t u8Mode;
     uint8_t u8BaseChannel;
@@ -66,10 +66,9 @@ bool bMIDI_APP_DATA_write(midi_app_data_t * pxMidiData);
 
 /**
   * @brief Get element from memory layout.
-  * @param pxMidiData pointer to data address.
-  * @retval true data read, false ioc.
+  * @retval Pointer to midi persistent data, null if peristent data not init.
   */
-bool bMIDI_APP_DATA_read(const midi_app_data_t ** pxMidiData);
+const midi_app_data_t * pxMIDI_APP_DATA_read(void);
 
 /* Exported functions --------------------------------------------------------*/
 

@@ -208,9 +208,9 @@ static bool bRestoreMidiCtrl(void)
     /* Init flash data */
     if (bRetVal)
     {
-        const midi_app_data_t * pxFlasData = NULL;
+        const midi_app_data_t * pxFlasData = pxMIDI_APP_DATA_read();
 
-        if (bMIDI_APP_DATA_read(&pxFlasData))
+        if (pxFlasData != NULL)
         {
             xMidiCfg.xMode = pxFlasData->u8Mode;
             xMidiCfg.u8BaseChannel = pxFlasData->u8BaseChannel;

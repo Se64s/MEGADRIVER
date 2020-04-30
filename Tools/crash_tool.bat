@@ -2,13 +2,17 @@
 @ECHO OFF
 SETLOCAL
 
+:: Call parameter example
+:: "C:/Firmware/arm_toochain/bin"
+:: "C:/Firmware/git/MEGADRIVER/build/FM_SYNTH.elf"
+:: 0x80023EE
+:: 0x80082B5
+
 :: Defined tool paths
-SET ARM_TOOL_PATH="C:/Firmware/arm_toochain/bin"
-SET APP_EXE="C:/Firmware/git/MEGADRIVER/build/FM_SYNTH.elf"
-SET ERROR_PC=%~1
-SET ERROR_LK=%~2
-REM SET ERROR_PC=0x80023EE
-REM SET ERROR_LK=0x80082B5
+SET ARM_TOOL_PATH=%~1
+SET APP_EXE=%~2
+SET ERROR_PC=%~3
+SET ERROR_LK=%~4
 
 :: Show parameters to use
 ECHO.
