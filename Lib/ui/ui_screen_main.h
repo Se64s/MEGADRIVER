@@ -1,13 +1,13 @@
 /**
   ******************************************************************************
-  * @file           : ui_menu_test.h
-  * @brief          : UI definition for test screen.
+  * @file           : ui_screen_main.h
+  * @brief          : UI definition for main screen.
   ******************************************************************************
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __UI_MENU_TEST_H
-#define __UI_MENU_TEST_H
+#ifndef __UI_SCREEN_MAIN_H
+#define __UI_SCREEN_MAIN_H
 
 #ifdef __cplusplus
 extern "C"
@@ -17,6 +17,7 @@ extern "C"
 /* Includes ------------------------------------------------------------------*/
 
 #include "ui_sys.h"
+#include "ui_sys_misc.h"
 
 /* Private defines -----------------------------------------------------------*/
 /* Exported types ------------------------------------------------------------*/
@@ -26,15 +27,15 @@ extern "C"
 
 /**
   * @brief  Init resources for ui menu.
-  * @param  pxMenuHandler handler to use on render.
+  * @param  pxScreenHandler handler to init screen.
   * @retval Operation status.
 */
-ui_status_t UI_menu_test_init(ui_menu_t * pxMenuHandler);
+ui_status_t UI_screen_main_init(ui_screen_t * pxScreenHandler);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __UI_MENU_TEST_H */
+#endif /* __UI_SCREEN_MAIN_H */
 
 /*****END OF FILE****/

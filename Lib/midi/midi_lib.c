@@ -178,7 +178,7 @@ static midiStatus_t state_handler_wait_byte_sys_ex(uint8_t rx_byte)
                 if (midi_cb_sys_ex != NULL)
                 {
                     midi_cb_sys_ex(sys_ex_buff_data, i_data_sys_ex);
-                    i_data_sys_ex = 0;
+                    //i_data_sys_ex = 0;
                 }
             }
             fsm_rx_state = dispatch_status;

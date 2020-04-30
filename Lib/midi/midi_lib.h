@@ -21,6 +21,21 @@ extern "C"
 
   /* Exported types ------------------------------------------------------------*/
 
+/** Midi modes */
+typedef enum
+{
+    /** Omni-on Poly */
+    MidiMode1 = 0x00,
+    /** Omni-on Mono */
+    MidiMode2,
+    /** Omni-off Poly */
+    MidiMode3,
+    /** Omni-off Mono */
+    MidiMode4,
+    /** Number of defined modes */
+    MidiModeNum,
+} midiMode_t;
+
   /** Defined midi lib status */
   typedef enum
   {
@@ -45,6 +60,18 @@ extern "C"
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported defines ----------------------------------------------------------*/
+
+/* Midi data value not valid */
+#define MIDI_DATA_NOT_VALID     0xFF
+
+/* MIDI maximun channel value */
+#define MIDI_CHANNEL_MAX_VALUE  0x0F
+
+/* MIDI maximun program value */
+#define MIDI_PROGRAM_MAX_VALUE  0x0F
+
+/* MIDI maximun BANK value */
+#define MIDI_BANK_MAX_VALUE  0x0F
 
 /* MIDI status cmd with 1 bytes */
 #define MIDI_STATUS_PROG_CHANGE 0xC0
@@ -89,7 +116,7 @@ extern "C"
 #define MIDI_STATUS_SYS_EX_END 0xF7
 
 /* Sys ex max buffer size */
-#define SYS_EX_BUFF_SIZE 32
+#define SYS_EX_BUFF_SIZE            (400U)
 
   /* Exported functions prototypes ---------------------------------------------*/
 

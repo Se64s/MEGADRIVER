@@ -9,6 +9,7 @@
 
 #include "display_driver.h"
 #include "i2c_driver.h"
+#include "error.h"
 
 #ifdef DISPLAY_USE_RTOS
 #include "FreeRTOS.h"
@@ -60,7 +61,7 @@ static void __HardwareInit(void)
 {
     if (I2C_init(I2C_0, NULL) != I2C_STATUS_OK)
     {
-        while (1);
+        ERR_ASSERT(0U);
     }
 }
 
@@ -68,7 +69,7 @@ static void __HardwareDeInit(void)
 {
     if (I2C_deinit(I2C_0) != I2C_STATUS_OK)
     {
-        while (1);
+        ERR_ASSERT(0U);
     }
 }
 
@@ -76,7 +77,7 @@ static void __UsDelay(uint32_t u32UsCount)
 {
 #ifdef DISPLAY_USE_RTOS
     // Use RTOS interface for implement delays
-    vTaskDelay(1);
+    vTaskDelay(pdMS_TO_TICKS(1U));
 #else
     uint32_t tick_count = DISPLAY_TICKS_USEC * u32UsCount;
     while (tick_count-- != 0)
@@ -136,7 +137,7 @@ display_status_t DISPLAY_update(display_port_t dev, u8g2_t * pxDisplayHandler)
         u8g2_FirstPage(pxDisplayHandler);
         do {
             u8g2_SetFont(pxDisplayHandler, u8g2_font_amstrad_cpc_extended_8r);
-            u8g2_DrawStr(pxDisplayHandler, 0, 10, "Synth FM v0.1");
+            u8g2_DrawStr(pxDisplayHandler, 0, 10, DISPLAY_INIT_MSG);
         } while (u8g2_NextPage(pxDisplayHandler));
 
         xRetval = DISPLAY_STATUS_OK;

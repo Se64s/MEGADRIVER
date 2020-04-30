@@ -32,10 +32,14 @@ BUILD_DIR = build
 C_SOURCES =  \
 App/Src/main.c \
 App/Src/midi_task.c \
+App/Src/midi_app_data.c \
 App/Src/ui_task.c \
 App/Src/synth_task.c \
+App/Src/synth_app_data.c \
+App/Src/synth_app_data_const.c \
 App/Src/cli_task.c \
 App/Src/cli_cmd.c \
+App/Src/mapping_task.c \
 App/Src/stm32g0xx_it.c \
 App/Src/stm32g0xx_hal_msp.c \
 App/Src/system_stm32g0xx.c \
@@ -62,6 +66,7 @@ Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_cortex.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_exti.c \
 Drivers/User_Drivers/Src/serial_driver.c \
+Drivers/User_Drivers/Src/flash_driver.c \
 Drivers/User_Drivers/Src/i2c_driver.c \
 Drivers/User_Drivers/Src/adc_driver.c \
 Drivers/User_Drivers/Src/YM2612_driver.c \
@@ -71,8 +76,14 @@ Lib/printf/printf.c \
 Lib/cbuf/circular_buffer.c \
 Lib/midi/midi_lib.c \
 Lib/ui/ui_sys.c \
-Lib/ui/ui_menu_test.c \
-Lib/ui/ui_screen_test.c \
+Lib/ui/ui_sys_misc.c \
+Lib/ui/ui_menu_main.c \
+Lib/ui/ui_screen_main.c \
+Lib/ui/ui_screen_midi.c \
+Lib/ui/ui_screen_fm.c \
+Lib/ui/ui_screen_mapping.c \
+Lib/ui/ui_screen_idle.c \
+Lib/app_data/app_data_handler.c \
 Lib/u8g2/u8g2_bitmap.c \
 Lib/u8g2/u8g2_box.c \
 Lib/u8g2/u8g2_buffer.c \
@@ -111,6 +122,7 @@ Lib/u8g2/u8x8_setup.c \
 Lib/u8g2/u8x8_string.c \
 Lib/u8g2/u8x8_u8toa.c \
 Lib/u8g2/u8x8_u16toa.c \
+Lib/error_handler/error.c \
 RTOS/FreeRTOS/Source/croutine.c \
 RTOS/FreeRTOS/Source/event_groups.c \
 RTOS/FreeRTOS/Source/list.c \
@@ -129,7 +141,9 @@ startup_stm32g070xx.s
 #######################################
 # binaries
 #######################################
-GCC_PATH = C:\Program Files (x86)\GNU Tools Arm Embedded\9 2019-q4-major\bin
+
+# GCC_PATH var should be provided by command line argument or defined below.
+# GCC_PATH = <path to toolchain_bin folder>
 PREFIX = arm-none-eabi-
 # The gcc compiler bin path can be either defined in make command via GCC_PATH variable (> make GCC_PATH=xxx)
 # either it can be added to the PATH environment variable.
@@ -184,6 +198,8 @@ C_INCLUDES =  \
 -ILib/cbuf \
 -ILib/printf \
 -ILib/midi \
+-ILib/app_data \
+-ILib/error_handler \
 -IDrivers/User_Drivers/Inc \
 -IDrivers/STM32G0xx_HAL_Driver/Inc \
 -IDrivers/STM32G0xx_HAL_Driver/Inc/Legacy \
@@ -253,9 +269,8 @@ $(BUILD_DIR):
 # clean up
 #######################################
 clean:
-#	-rm -fR $(BUILD_DIR)
 	$(RM) $(BUILD_DIR)
-  
+
 #######################################
 # dependencies
 #######################################

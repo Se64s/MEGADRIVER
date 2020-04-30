@@ -18,16 +18,13 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "FreeRTOS.h"
-#include "task.h"
-
 /* Private includes ----------------------------------------------------------*/
 /* Private defines -----------------------------------------------------------*/
 
 /* Task parameters */
-#define UI_TASK_NAME   "UI"
-#define UI_TASK_STACK  256U
-#define UI_TASK_PRIO   1
+#define UI_TASK_NAME                    "UI"
+#define UI_TASK_STACK                   (256U)
+#define UI_TASK_PRIO                    (1U)
 
 /* Check signals */
 #define CHECK_SIGNAL(VAR, SIG)          (((VAR) & (SIG)) == (SIG))
@@ -39,9 +36,12 @@ extern "C" {
 #define UI_SIGNAL_ENC_UPDATE_SW_RESET   (1UL << 3U)
 #define UI_SIGNAL_SYNTH_ON              (1UL << 4U)
 #define UI_SIGNAL_SYNTH_OFF             (1UL << 5U)
-#define UI_SIGNAL_ADC_UPDATE            (1UL << 6U)
-#define UI_SIGNAL_MIDI_DATA             (1UL << 7U)
-#define UI_SIGNAL_ERROR                 (1UL << 8U)
+#define UI_SIGNAL_MIDI_DATA             (1UL << 6U)
+#define UI_SIGNAL_SCREEN_UPDATE         (1UL << 7U)
+#define UI_SIGNAL_IDLE                  (1UL << 8U)
+#define UI_SIGNAL_RESTORE_IDLE          (1UL << 9U)
+#define UI_SIGNAL_ERROR                 (1UL << 10U)
+#define UI_SIGNAL_NOT_DEF               (1UL << 31U)
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
@@ -52,14 +52,14 @@ extern "C" {
   * @brief Init resources for UI tasks
   * @retval operation result, true for correct creation, false for error
   */
-bool UI_task_init(void);
+bool bUiTaskInit(void);
 
 /**
   * @brief Notify event to a task.
   * @param u32Event event to notify.
   * @retval operation result, true for correct read, false for error
   */
-bool UI_task_notify(uint32_t u32Event);
+bool bUiTaskNotify(uint32_t u32Event);
 
 #ifdef __cplusplus
 }

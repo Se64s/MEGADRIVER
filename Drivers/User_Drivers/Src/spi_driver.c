@@ -8,6 +8,7 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "spi_driver.h"
+#include "error.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -63,7 +64,7 @@ static void MX_SPI1_Init(void)
     hspi1.Init.NSSPMode = SPI_NSS_PULSE_ENABLE;
     if (HAL_SPI_Init(&hspi1) != HAL_OK)
     {
-        while(1);
+        ERR_ASSERT(0U);
     }
 
     /* DMA1_Channel2_3_IRQn interrupt configuration */
@@ -82,7 +83,7 @@ static void MX_SPI1_Deinit(void)
 
     if (HAL_SPI_DeInit(&hspi1) != HAL_OK)
     {
-        while(1);
+        ERR_ASSERT(0U);;
     }
 }
 

@@ -6,17 +6,22 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
-#include <stdbool.h>
+
 #include "main.h"
 
 /* FreeRTOS kernel */
 #include "FreeRTOS.h"
 #include "task.h"
 
+/* Tasks */
 #include "cli_task.h"
 #include "synth_task.h"
 #include "ui_task.h"
 #include "midi_task.h"
+#include "mapping_task.h"
+
+/* Error managing */
+#include "error.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -36,6 +41,7 @@ void vApplicationTickHook(void)
 
 void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 {
+  ERR_ASSERT(0U);
 }
 
 /**
@@ -47,16 +53,20 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
   
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+  (void)HAL_Init();
 
   /* Configure the system clock */
   SystemClock_Config();
 
+  /* Register error output function */
+  vErrorInit(vCliRawPrintf);
+
   /* Task creation */
-  MIDI_task_init();
-  CLI_task_init();
-  SYNTH_task_init();
-  UI_task_init();
+  (void)bMidiTaskInit();
+  (void)bCliTaskInit();
+  (void)bSynthTaskInit();
+  (void)bUiTaskInit();
+  (void)bMapTaskInit();
 
   /* Start the scheduler so the tasks start executing. */
   vTaskStartScheduler();
@@ -92,7 +102,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
-    Error_Handler();
+    ERR_ASSERT(0U);
   }
   /** Initializes the CPU, AHB and APB busses clocks 
   */
@@ -104,7 +114,7 @@ void SystemClock_Config(void)
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
-    Error_Handler();
+    ERR_ASSERT(0U);
   }
   /** Initializes the peripherals clocks 
   */
@@ -112,18 +122,8 @@ void SystemClock_Config(void)
   PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
-    Error_Handler();
+    ERR_ASSERT(0U);
   }
-}
-
-/**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
-void Error_Handler(void)
-{
-  /* User can add his own implementation to report the HAL error return state */
-  for(;;);
 }
 
 #ifdef  USE_FULL_ASSERT
@@ -136,8 +136,7 @@ void Error_Handler(void)
   */
 void assert_failed(uint8_t *file, uint32_t line)
 { 
-  /* User can add his own implementation to report the file name and line number,
-     tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  ERR_ASSERT(0U);
 }
 #endif /* USE_FULL_ASSERT */
 

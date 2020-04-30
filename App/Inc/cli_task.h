@@ -16,6 +16,7 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 /* Private includes ----------------------------------------------------------*/
 
+#include <stdbool.h>
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
@@ -25,7 +26,7 @@ extern "C" {
 /* Task parameters */
 #define CLI_TASK_NAME   "CLI"
 #define CLI_TASK_STACK  256U
-#define CLI_TASK_PRIO   0U
+#define CLI_TASK_PRIO   1U
 
 /* Buffer sizes */
 #define CLI_OUTPUT_BUFFER_SIZE  configCOMMAND_INT_MAX_OUTPUT_SIZE
@@ -39,7 +40,7 @@ extern "C" {
   * @brief Init resources for CLI tasks
   * @retval operation result, true for correct creation, false for error
   */
-bool CLI_task_init(void);
+bool bCliTaskInit(void);
 
 /**
   * @brief Printf implementation using the cli task
@@ -47,21 +48,21 @@ bool CLI_task_init(void);
   * @param Format output format to use
   * @retval None.
   */
-void cli_printf(const char *module_name, const char *Format, ...);
+void vCliPrintf(const char *module_name, const char *Format, ...);
 
 /**
   * @brief Printf implementation using the cli task
   * @param Format output format to use
   * @retval None.
   */
-void cli_raw_printf(const char *Format, ...);
+void vCliRawPrintf(const char *Format, ...);
 
 /**
   * @brief Notify event to a task.
   * @param u32Event event to notify.
   * @retval operation result, true for correct read, false for error
   */
-bool cli_task_notify(uint32_t u32Event);
+bool bCliTaskNotify(uint32_t u32Event);
 
 #ifdef __cplusplus
 }

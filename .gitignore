@@ -1,6 +1,10 @@
 # Ignored folders
 .vscode/
 build/
+# Tools test vgi instruments
+Tools/py_tools/vgi
+# Tools python cache
+Tools/py_tools/__pycache__
 
 # Prerequisites
 *.d
