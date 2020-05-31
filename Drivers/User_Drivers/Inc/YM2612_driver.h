@@ -23,6 +23,7 @@ extern "C"
 
 /* Option defines */
 #define YM2612_USE_RTOS
+// #define YM2612_GEN_CLOCK
 // #define YM2612_DEBUG
 // #define YM2612_TEST_GPIO
 

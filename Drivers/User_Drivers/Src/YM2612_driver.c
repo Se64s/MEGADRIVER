@@ -52,8 +52,10 @@ const static uint16_t u16OctaveBaseValues[] = {
     980, 1038, 1100, 1165
 };
 
+#ifdef YM2612_GEN_CLOCK
 /* Timer hanlder */
 TIM_HandleTypeDef htim14;
+#endif
 
 /* Chip control structure */
 static xFmDevice_t xYmDevice = {0};
@@ -125,6 +127,7 @@ static void _low_level_deinit(void);
 */
 static void _low_level_writeRegister(uint8_t u8RegAddr, uint8_t u8RegData, YM2612_bank_t xBank);
 
+#ifdef YM2612_GEN_CLOCK
 /**
   * @brief  Low level function to start clock line.
   * @retval Operation result, true ok, false, error.
@@ -136,6 +139,7 @@ static bool _low_level_startClock(void);
   * @retval Operation result, true ok, false, error.
 */
 static bool _low_level_stopClock(void);
+#endif
 
 /* Private user code ---------------------------------------------------------*/
 
@@ -310,6 +314,7 @@ static void _low_level_init(void)
     _low_level_test();
 #endif
 
+#ifdef YM2612_GEN_CLOCK
     /* CLK_LINE -------------------------------------------------------------*/
 
     /* Initialize TIMx peripheral as follows:
@@ -360,6 +365,7 @@ static void _low_level_init(void)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = YM2612_CLK_GPIO_AF;
     HAL_GPIO_Init(YM2612_CLK_GPIO_PORT, &GPIO_InitStruct);
+#endif
 }
 
 static void _low_level_deinit(void)
@@ -373,6 +379,7 @@ static void _low_level_deinit(void)
     HAL_GPIO_DeInit(YM2612_WR_GPIO_PORT, YM2612_WR_GPIO_PIN);
     HAL_GPIO_DeInit(YM2612_CS_GPIO_PORT, YM2612_CS_GPIO_PIN);
 
+#ifdef YM2612_GEN_CLOCK
     /* Timer clock deinit */
     /* Stop clock line */
     (void)_low_level_stopClock();
@@ -381,6 +388,7 @@ static void _low_level_deinit(void)
     __HAL_RCC_TIM14_CLK_DISABLE();
     /* Deinit gpios */
     HAL_GPIO_DeInit(YM2612_CLK_GPIO_PORT, YM2612_CLK_GPIO_PIN);
+#endif
 }
 
 static void _low_level_writeRegister(uint8_t u8RegAddr, uint8_t u8RegData, YM2612_bank_t xBank)
@@ -436,6 +444,7 @@ static void _low_level_writeRegister(uint8_t u8RegAddr, uint8_t u8RegData, YM261
 #endif
 }
 
+#ifdef YM2612_GEN_CLOCK
 static bool _low_level_startClock(void)
 {
     bool bRetval = false;
@@ -455,21 +464,28 @@ static bool _low_level_stopClock(void)
     }
     return bRetval;
 }
+#endif
 
 /* Callback ------------------------------------------------------------------*/
 /* Public user code ----------------------------------------------------------*/
 
 YM2612_status_t xYM2612_init(void)
 {
-    YM2612_status_t retval = YM2612_STATUS_ERROR;
+    YM2612_status_t retval = YM2612_STATUS_OK;
 
     _low_level_init();
 
+#ifdef YM2612_GEN_CLOCK
     /* Init clock */
     if (_low_level_startClock())
     {
         retval = YM2612_STATUS_OK;
     }
+    else
+    {
+        retval = YM2612_STATUS_ERROR;
+    }
+#endif
 
 #ifdef YM2612_USE_RTOS
     taskENTER_CRITICAL();

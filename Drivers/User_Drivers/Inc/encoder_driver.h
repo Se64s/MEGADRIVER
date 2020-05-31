@@ -21,22 +21,31 @@ extern "C"
 /* Private defines -----------------------------------------------------------*/
 
 /* GPIO definitions */
-#define ENCODER_0_ENC_GPIO_PIN      (GPIO_PIN_6 | GPIO_PIN_7)
-#define ENCODER_0_ENC_GPIO_PORT     GPIOC
-#define ENCODER_0_ENC_GPIO_CLK      __HAL_RCC_GPIOC_CLK_ENABLE
+#define ENCODER_0_ENC_GPIO_PIN        (GPIO_PIN_6 | GPIO_PIN_7)
+#define ENCODER_0_ENC_GPIO_PORT       GPIOC
+#define ENCODER_0_ENC_GPIO_CLK        __HAL_RCC_GPIOC_CLK_ENABLE
 
-#define ENCODER_0_SW_GPIO_PIN       GPIO_PIN_11
-#define ENCODER_0_SW_GPIO_PORT      GPIOA
-#define ENCODER_0_SW_GPIO_CLK       __HAL_RCC_GPIOA_CLK_ENABLE
+#define ENCODER_0_SW_GPIO_PIN         GPIO_PIN_11
+#define ENCODER_0_SW_GPIO_PORT        GPIOA
+#define ENCODER_0_SW_GPIO_CLK         __HAL_RCC_GPIOA_CLK_ENABLE
 
 /* Range defines */
-#define ENCODER_0_RANGE             (255U)
-#define ENCODER_0_TH                (2U)
-#define ENCODER_0_MAX_TH            (ENCODER_0_REF_VALUE + ENCODER_0_TH)
-#define ENCODER_0_MIN_TH            (ENCODER_0_REF_VALUE - ENCODER_0_TH)
-#define ENCODER_0_REF_VALUE         (127U)
-#define ENCODER_0_VALUE_CW          (1U)
-#define ENCODER_0_VALUE_CCW         (0U)
+#define ENCODER_0_RANGE               (65535U)
+#define ENCODER_0_CNT_MIN             (10U)
+#define ENCODER_0_CNT_MAX             (65525U)
+#define ENCODER_0_REF_VALUE           (32767U)
+
+/* Encoder events defines */
+#define ENCODER_0_VALUE_CW            (1U)
+#define ENCODER_0_VALUE_CCW           (0U)
+#define ENCODER_0_VALUE_NONE          (255U)
+
+/* Envoder tick guard */
+#define ENCODER_0_TICK_CNT_GUARD_EC   (400U)
+#define ENCODER_0_TICK_CNT_GUARD_SW   (750U)
+
+/* Setup pull-up */
+#define ENCODER_USE_PULLUP
 
 /* Exported types ------------------------------------------------------------*/
 
@@ -95,10 +104,10 @@ encoder_status_t ENCODER_deinit(encoder_id_t xDevId);
 /**
   * @brief  Get encoder count
   * @param  xDevId id of encoder.
-  * @param  pu32Event Pointer where store encoder last event.
+  * @param  pu32Count Pointer where store encoder count value.
   * @retval Operation status
 */
-encoder_status_t ENCODER_getEvent(encoder_id_t xDevId, uint32_t * pu32Event);
+encoder_status_t ENCODER_getCount(encoder_id_t xDevId, uint32_t * pu32Count);
 
 /**
   * @brief  Get switch state
@@ -110,10 +119,10 @@ encoder_sw_state_t ENCODER_getSwState(encoder_id_t xDevId);
 /**
   * @brief  Handle encoder count event.
   * @param  xDevId id of encoder.
-  * @param  u32EncEvent Encoder event generated.
+  * @param  u32IrqCount Current count of encoder.
   * @retval None
 */
-void ENCODER_irqEncHandler(encoder_id_t xDevId, uint32_t u32EncEvent);
+void ENCODER_irqEncHandler(encoder_id_t xDevId, uint32_t u32IrqCount);
 
 /**
   * @brief  Handle switch event.

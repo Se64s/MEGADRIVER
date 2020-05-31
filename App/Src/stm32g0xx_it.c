@@ -146,18 +146,21 @@ void USART3_4_IRQHandler(void)
 void TIM3_IRQHandler(void)
 {
   uint32_t u32tmpCout = (&htim3)->Instance->CNT;
-  
-  /* Check encoder direction and generate event */
-  if (u32tmpCout < ENCODER_0_MIN_TH)
+
+  /* Handle overflow conditions */
+  if (u32tmpCout > ENCODER_0_CNT_MAX)
   {
-    (&htim3)->Instance->CNT = ENCODER_0_REF_VALUE;
-    ENCODER_irqEncHandler(ENCODER_ID_0, ENCODER_0_VALUE_CW);
+    u32tmpCout = ENCODER_0_CNT_MAX;
+    (&htim3)->Instance->CNT = ENCODER_0_CNT_MAX;
   }
-  else if (u32tmpCout > ENCODER_0_MAX_TH)
+  else if (u32tmpCout < ENCODER_0_CNT_MIN)
   {
-    (&htim3)->Instance->CNT = ENCODER_0_REF_VALUE;
-    ENCODER_irqEncHandler(ENCODER_ID_0, ENCODER_0_VALUE_CCW);
+    u32tmpCout = ENCODER_0_CNT_MIN;
+    (&htim3)->Instance->CNT = ENCODER_0_CNT_MIN;
   }
+
+/* Handle encoder count update event */
+  ENCODER_irqEncHandler(ENCODER_ID_0, u32tmpCout);
 
   /* Clear flags */
   HAL_TIM_IRQHandler(&htim3);

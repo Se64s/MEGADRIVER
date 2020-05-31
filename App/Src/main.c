@@ -26,11 +26,18 @@
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
+
+/** Setup Boot0 options for vendor bootloader */
+//#define SETUP_BOOT0
+
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
 
 void SystemClock_Config(void);
+#ifdef SETUP_BOOT0
+void SystemOptionFlash_Config(void);
+#endif
 
 /* Private user code ---------------------------------------------------------*/
 
@@ -57,6 +64,11 @@ int main(void)
 
   /* Configure the system clock */
   SystemClock_Config();
+
+#ifdef SETUP_BOOT0
+  /* Setup flash options */
+  SystemOptionFlash_Config();
+#endif
 
   /* Register error output function */
   vErrorInit(vCliRawPrintf);
@@ -125,6 +137,33 @@ void SystemClock_Config(void)
     ERR_ASSERT(0U);
   }
 }
+
+#ifdef SETUP_BOOT0
+/**
+  * @brief Enable serial bootloader.
+  * @retval None
+  */
+void SystemOptionFlash_Config(void)
+{
+    FLASH_OBProgramInitTypeDef OBConsfig;
+
+    /* read option bytes */
+    HAL_FLASHEx_OBGetConfig(&OBConsfig);
+
+    if ((OBConsfig.OptionType & OPTIONBYTE_USER) != 0x00u)
+    {
+        /* Check if serial bootloader is config, if not, enable it */
+        if ((OBConsfig.USERConfig & OB_USER_nBOOT_SEL) != 0x00u)
+        {
+            HAL_FLASH_OB_Unlock();
+            OBConsfig.OptionType = OPTIONBYTE_USER;
+            OBConsfig.USERType = OB_USER_nBOOT_SEL | OB_USER_nBOOT1;
+            OBConsfig.USERConfig = OB_BOOT0_FROM_PIN | OB_BOOT1_SYSTEM;
+            HAL_FLASHEx_OBProgram(&OBConsfig);
+        }
+    }
+}
+#endif
 
 #ifdef  USE_FULL_ASSERT
 /**

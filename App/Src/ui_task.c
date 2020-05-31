@@ -26,7 +26,7 @@
 /* Private define ------------------------------------------------------------*/
 
 /** Update rate in ms */
-#define UI_DISPLAY_UPDATE_RATE_MS   (80U)
+#define UI_DISPLAY_UPDATE_RATE_MS   (50U)
 
 /** Idle period definition in ms */
 #define UI_DISPLAY_IDLE_MS          (10000U)
