@@ -365,6 +365,15 @@ static void _low_level_init(void)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = YM2612_CLK_GPIO_AF;
     HAL_GPIO_Init(YM2612_CLK_GPIO_PORT, &GPIO_InitStruct);
+#else
+    /** TIM14 GPIO Configuration as floating
+    PF0     ------> input floating
+    */
+    GPIO_InitStruct.Pin = YM2612_CLK_GPIO_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(YM2612_CLK_GPIO_PORT, &GPIO_InitStruct);
 #endif
 }
 
