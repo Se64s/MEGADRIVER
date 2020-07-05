@@ -223,6 +223,15 @@ endif
 CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 
 #######################################
+# CONDITIONAL DEFINES
+#######################################
+
+# Enable GPIO test loop
+ifdef YM2612_TEST_GPIO
+C_DEFS += -DYM2612_TEST_GPIO
+endif
+
+#######################################
 # LDFLAGS
 #######################################
 # link script

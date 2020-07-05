@@ -44,7 +44,10 @@ Is up to you.
 
 # HARDWARE
 
-Coming soon...
+Module compsumtion:
+- HW: v1.2
+- +12V: 134 mA
+- -12V: 5 mA
 
 # LICENSE
 
