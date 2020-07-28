@@ -42,6 +42,10 @@ make all GCC_PATH=<path_toolchain_bin>
 
 Is up to you.
 
+# TOOLS
+
+You can find a desktop tool to manage the register config here [Desktop MEGADRIVER](https://github.com/Se64s/MEGADRIVER_DESKTOP)
+
 # HARDWARE
 
 Module compsumtion:
