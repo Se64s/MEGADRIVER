@@ -22,6 +22,11 @@ extern "C" {
 /* Exported functions prototypes ---------------------------------------------*/
 /* Private defines -----------------------------------------------------------*/
 
+/* App version numver provide by makefile */
+#ifndef MAIN_APP_VERSION
+#define MAIN_APP_VERSION "X.Y.Z"
+#endif
+
 #ifdef __cplusplus
 }
 #endif

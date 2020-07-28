@@ -158,7 +158,7 @@ static void __ui_main( void *pvParameters )
 
     /* Update display for first time */
     DISPLAY_update(DISPLAY_0, &xDisplayHandler);
-    vTaskDelay(pdMS_TO_TICKS(1000U));
+    vTaskDelay(pdMS_TO_TICKS(2000U));
 
     /* Init timers */
     xTimerStart(xUpdateTimer, 0U);

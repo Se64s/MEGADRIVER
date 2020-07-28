@@ -20,6 +20,13 @@ DEBUG = 1
 OPT = -Og
 
 #######################################
+# User definitions
+#######################################
+
+# Application tag number
+APP_TAG = "1.0.0"
+
+#######################################
 # paths
 #######################################
 # Build path
@@ -230,6 +237,9 @@ CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 ifdef YM2612_TEST_GPIO
 C_DEFS += -DYM2612_TEST_GPIO
 endif
+
+# Add version number
+C_DEFS += -DMAIN_APP_VERSION=\"$(APP_TAG)\"
 
 #######################################
 # LDFLAGS

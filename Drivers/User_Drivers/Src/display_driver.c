@@ -10,6 +10,8 @@
 #include "display_driver.h"
 #include "i2c_driver.h"
 #include "error.h"
+#include "printf.h"
+#include "main.h"
 
 #ifdef DISPLAY_USE_RTOS
 #include "FreeRTOS.h"
@@ -25,6 +27,13 @@
 
 /* Number of ticks per microsec */
 #define DISPLAY_TICKS_USEC  15U
+
+/* Maximun len display string */
+#define DISPLAY_MAX_LEN     16U
+
+/* Display initial msg  */
+#define DISPLAY_INIT_0      "MEGADRIVER"
+#define DISPLAY_INIT_1      "Build v"
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
@@ -133,11 +142,18 @@ display_status_t DISPLAY_update(display_port_t dev, u8g2_t * pxDisplayHandler)
 
     if (dev == DISPLAY_0)
     {
+        char pcInitMsg0[DISPLAY_MAX_LEN] = {0};
+        char pcInitMsg1[DISPLAY_MAX_LEN] = {0};
+
+        (void)snprintf(pcInitMsg0, DISPLAY_MAX_LEN, "%s", DISPLAY_INIT_0);
+        (void)snprintf(pcInitMsg1, DISPLAY_MAX_LEN, "Build v%s", MAIN_APP_VERSION);
+
         // Update display data
         u8g2_FirstPage(pxDisplayHandler);
         do {
             u8g2_SetFont(pxDisplayHandler, u8g2_font_amstrad_cpc_extended_8r);
-            u8g2_DrawStr(pxDisplayHandler, 0, 10, DISPLAY_INIT_MSG);
+            u8g2_DrawStr(pxDisplayHandler, 0, 10, pcInitMsg0);
+            u8g2_DrawStr(pxDisplayHandler, 0, 25, pcInitMsg1);
         } while (u8g2_NextPage(pxDisplayHandler));
 
         xRetval = DISPLAY_STATUS_OK;
