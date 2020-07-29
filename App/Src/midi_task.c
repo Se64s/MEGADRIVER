@@ -848,8 +848,8 @@ bool bMidiTaskSaveCfg(void)
 
     xMidiSaveCfg.u8Mode = xMidiCfg.xMode;
     xMidiSaveCfg.u8BaseChannel = xMidiCfg.u8BaseChannel;
-    xMidiSaveCfg.u8Bank = xMidiCfg.u8Bank;
-    xMidiSaveCfg.u8Program = xMidiCfg.u8Program;
+    xMidiSaveCfg.u8Bank = 0U;
+    xMidiSaveCfg.u8Program = 0U;
 
     bRetval = bMIDI_APP_DATA_write(&xMidiSaveCfg);
 
