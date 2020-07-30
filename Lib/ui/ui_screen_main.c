@@ -23,6 +23,7 @@
 typedef enum
 {
     MAIN_SCREEN_ELEMENT_MIDI = 0,
+    MAIN_SCREEN_ELEMENT_PRESET,
     MAIN_SCREEN_ELEMENT_FM,
     MAIN_SCREEN_ELEMENT_MAPPING,
     MAIN_SCREEN_LAST_ELEMENT,
@@ -37,6 +38,7 @@ typedef enum
 #define MAX_LEN_NAME                    (16U)
 
 #define NAME_FORMAT_MIDI                "MIDI"
+#define NAME_FORMAT_PRESET              "PRESET"
 #define NAME_FORMAT_FM                  "FM"
 #define NAME_FORMAT_MAPPING             "MAPPING"
 
@@ -48,6 +50,7 @@ const char pcScreenMainName[] = "MEGA DRIVER";
 ui_element_t xMainScreenElementList[MAIN_SCREEN_LAST_ELEMENT];
 
 char pcMainMidiName[MAX_LEN_NAME] = {0U};
+char pcMainPresetName[MAX_LEN_NAME] = {0U};
 char pcMainFmName[MAX_LEN_NAME] = {0U};
 char pcMainMappingName[MAX_LEN_NAME] = {0U};
 
@@ -56,12 +59,14 @@ char pcMainMappingName[MAX_LEN_NAME] = {0U};
 /* Render function */
 static void vScreenMainRender(void * pvDisplay, void * pvScreen);
 static void vElementMidiRender(void * pvDisplay, void * pvScreen, void * pvElement);
+static void vElementPresetRender(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementFmRender(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementMappingRender(void * pvDisplayHandler, void * pvScreen, void * pvElement);
 
 /* Action function */
 static void vScreenMainAction(void * pvMenu, void * pvEventData);
 static void vElementMidiAction(void * pvMenu, void * pvEventData);
+static void vElementPresetAction(void * pvMenu, void * pvEventData);
 static void vElementFmAction(void * pvMenu, void * pvEventData);
 static void vElementMappingAction(void * pvMenu, void * pvEventData);
 
@@ -109,6 +114,33 @@ static void vElementMidiRender(void * pvDisplay, void * pvScreen, void * pvEleme
         {
             /* Prepare data on buffer */
             sprintf(pxElement->pcName, NAME_FORMAT_MIDI);
+
+            /* Print selection ico */
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, (uint8_t)pxElement->u32Index, (uint8_t)u32IndY);
+
+            /* Draw string */
+            u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
+        }
+    }
+}
+
+static void vElementPresetRender(void * pvDisplay, void * pvScreen, void * pvElement)
+{
+    if ((pvDisplay != NULL) && (pvScreen != NULL) && (pvElement != NULL))
+    {
+        u8g2_t * pxDisplayHandler = pvDisplay;
+        ui_screen_t * pxScreen = pvScreen;
+        ui_element_t * pxElement = pvElement;
+        uint32_t u32IndX = UI_OFFSET_ELEMENT_X;
+        uint32_t u32IndY = UI_OFFSET_ELEMENT_Y;
+
+        /* Compute element offset */
+        u32IndY += u32UI_MISC_GetDrawIndexY(pxDisplayHandler, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
+
+        if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
+        {
+            /* Prepare data on buffer */
+            sprintf(pxElement->pcName, NAME_FORMAT_PRESET);
 
             /* Print selection ico */
             vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, (uint8_t)pxElement->u32Index, (uint8_t)u32IndY);
@@ -219,6 +251,22 @@ static void vElementMidiAction(void * pvMenu, void * pvEventData)
     }
 }
 
+static void vElementPresetAction(void * pvMenu, void * pvEventData)
+{
+    if ((pvMenu != NULL) && (pvEventData != NULL))
+    {
+        ui_menu_t * pxMenu = pvMenu;
+        uint32_t * pu32EventData = pvEventData;
+
+        if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        {
+            /* Set midi screen */
+            vCliPrintf(UI_TASK_NAME, "Enter in PRESET screen");
+            pxMenu->u32ScreenSelectionIndex = MENU_PRESET_SCREEN_POSITION;
+        }
+    }
+}
+
 static void vElementFmAction(void * pvMenu, void * pvEventData)
 {
     if ((pvMenu != NULL) && (pvEventData != NULL))
@@ -270,15 +318,21 @@ ui_status_t UI_screen_main_init(ui_screen_t * pxScreenHandler)
         pxScreenHandler->bElementSelection = false;
 
         /* Init name var */
-        sprintf(pcMainMidiName, NAME_FORMAT_MIDI, "None");
-        sprintf(pcMainFmName, NAME_FORMAT_FM, 0U);
-        sprintf(pcMainMappingName, NAME_FORMAT_MAPPING, 0U);
+        sprintf(pcMainMidiName, NAME_FORMAT_MIDI);
+        sprintf(pcMainPresetName, NAME_FORMAT_PRESET);
+        sprintf(pcMainFmName, NAME_FORMAT_FM);
+        sprintf(pcMainMappingName, NAME_FORMAT_MAPPING);
 
         /* Init elements */
         xMainScreenElementList[MAIN_SCREEN_ELEMENT_MIDI].pcName = pcMainMidiName;
         xMainScreenElementList[MAIN_SCREEN_ELEMENT_MIDI].u32Index = MAIN_SCREEN_ELEMENT_MIDI;
         xMainScreenElementList[MAIN_SCREEN_ELEMENT_MIDI].render_cb = vElementMidiRender;
         xMainScreenElementList[MAIN_SCREEN_ELEMENT_MIDI].action_cb = vElementMidiAction;
+
+        xMainScreenElementList[MAIN_SCREEN_ELEMENT_PRESET].pcName = pcMainPresetName;
+        xMainScreenElementList[MAIN_SCREEN_ELEMENT_PRESET].u32Index = MAIN_SCREEN_ELEMENT_PRESET;
+        xMainScreenElementList[MAIN_SCREEN_ELEMENT_PRESET].render_cb = vElementPresetRender;
+        xMainScreenElementList[MAIN_SCREEN_ELEMENT_PRESET].action_cb = vElementPresetAction;
 
         xMainScreenElementList[MAIN_SCREEN_ELEMENT_FM].pcName = pcMainFmName;
         xMainScreenElementList[MAIN_SCREEN_ELEMENT_FM].u32Index = MAIN_SCREEN_ELEMENT_FM;

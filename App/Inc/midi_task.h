@@ -29,6 +29,8 @@ extern "C" {
 
 /* Midi app parameter */
 #define MIDI_APP_MAX_BANK               ((uint8_t)SYNTH_PRESET_SOURCE_MAX)
+#define MIDI_APP_BANK_DEFAULT           ((uint8_t)SYNTH_PRESET_SOURCE_DEFAULT)
+#define MIDI_APP_BANK_USER              ((uint8_t)SYNTH_PRESET_SOURCE_USER)
 
 /* Task parameters */
 #define MIDI_TASK_NAME                  "MIDI"
