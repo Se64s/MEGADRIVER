@@ -23,7 +23,7 @@ app_data_layout_t pxSynthAppData[SYNTH_APP_DATA_NUM_PRESETS] = {0U};
 
 bool bSYNTH_APP_DATA_init(void)
 {
-    bool bRetVal = false;
+    bool bRetVal = true;
 
     for (uint32_t u32CfgIndex = 0U; u32CfgIndex < SYNTH_APP_DATA_NUM_PRESETS; u32CfgIndex++)
     {
@@ -33,14 +33,9 @@ bool bSYNTH_APP_DATA_init(void)
 
         app_data_status_t xInitStatus = xAPP_DATA_init_layout(&pxSynthAppData[u32CfgIndex]);
 
-        if (xInitStatus == APP_DATA_NOT_INIT)
+        if (xInitStatus != APP_DATA_OK)
         {
-            /* Init actions */
-            break;
-        }
-        else if (xInitStatus == APP_DATA_OK)
-        {
-            bRetVal = true;
+            bRetVal = false;
         }
     }
 

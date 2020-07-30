@@ -261,17 +261,17 @@ static void vElementBankAction(void * pvMenu, void * pvEventData)
             {
                 if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
                 {
-                    if (u8SelectionBank != 0)
+                    if (u8SelectionBank < (MIDI_APP_MAX_BANK - 1U))
                     {
-                        u8SelectionBank--;
+                        u8SelectionBank++;
                         u8SelectionProgram = 0;
                     }
                 }
                 else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
                 {
-                    if (u8SelectionBank < (MIDI_APP_MAX_BANK - 1U))
+                    if (u8SelectionBank != 0)
                     {
-                        u8SelectionBank++;
+                        u8SelectionBank--;
                         u8SelectionProgram = 0;
                     }
                 }
@@ -342,8 +342,7 @@ static void vElementSelectAction(void * pvMenu, void * pvEventData)
     if ((pvMenu != NULL) && (pvEventData != NULL))
     {
         uint32_t * pu32Event = pvEventData;
-        // ui_menu_t * pxMenu = pvMenu;
-        // ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
+        (void)pvMenu;
 
         if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
