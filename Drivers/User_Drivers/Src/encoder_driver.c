@@ -286,19 +286,22 @@ void ENCODER_irqSwHandler(encoder_id_t xDevId, encoder_sw_state_t xSwitchState)
 {
     if (xDevId == ENCODER_ID_0)
     {
-        /* Wait guard time */
-        uint32_t u32SwEventTick = __enc_0_low_level_get_time();
-
-        if ((u32SwEventTick - u32Encoder0SwTick) > ENCODER_0_TICK_CNT_GUARD_SW)
+        if (xSwitchState == ENCODER_SW_RESET)
         {
-            uint32_t u32SwState = (uint32_t)xSwitchState;
+            /* Wait guard time */
+            uint32_t u32SwEventTick = __enc_0_low_level_get_time();
 
-            if (encoder_0_event_cb != NULL)
+            if ((u32SwEventTick - u32Encoder0SwTick) > ENCODER_0_TICK_CNT_GUARD_SW)
             {
-                encoder_0_event_cb(ENCODER_EVENT_SW, u32SwState);
-            }
+                uint32_t u32SwState = (uint32_t)xSwitchState;
 
-            u32Encoder0SwTick = u32SwEventTick;
+                if (encoder_0_event_cb != NULL)
+                {
+                    encoder_0_event_cb(ENCODER_EVENT_SW, u32SwState);
+                }
+
+                u32Encoder0SwTick = u32SwEventTick;
+            }
         }
     }
 }

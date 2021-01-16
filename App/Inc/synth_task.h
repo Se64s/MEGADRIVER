@@ -58,6 +58,9 @@ extern "C" {
 /* Maximun number of user presets */
 #define SYNTH_MAX_NUM_USER_PRESET           (SYNTH_APP_DATA_NUM_PRESETS)
 
+/* Enable extended DBG */
+// #define SYNTH_DBG_VERBOSE
+
 /* Exported types ------------------------------------------------------------*/
 
 /** Synth commands */

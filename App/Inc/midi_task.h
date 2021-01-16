@@ -35,7 +35,7 @@ extern "C" {
 /* Task parameters */
 #define MIDI_TASK_NAME                  "MIDI"
 #define MIDI_TASK_STACK                 (254U)
-#define MIDI_TASK_PRIO                  (1U)
+#define MIDI_TASK_PRIO                  (3U)
 
 /* Midi msg parameter */
 #define MIDI_MSG_DATA_LEN               (4U)
@@ -45,6 +45,9 @@ extern "C" {
 #define MIDI_SIGNAL_ERROR               (1UL << 2)
 #define MIDI_SIGNAL_CHANGE_MODE_POLY    (1UL << 3)
 #define MIDI_SIGNAL_CHANGE_MODE_MONO    (1UL << 4)
+
+/* Extended debug output */
+// #define MIDI_DBG_VERBOSE
 
 /* Exported types ------------------------------------------------------------*/
 

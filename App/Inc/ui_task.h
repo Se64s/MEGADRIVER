@@ -26,6 +26,9 @@ extern "C" {
 #define UI_TASK_STACK                   (256U)
 #define UI_TASK_PRIO                    (1U)
 
+/* Enable verbose output */
+// #define UI_DBG_VERBOSE
+
 /* Check signals */
 #define CHECK_SIGNAL(VAR, SIG)          (((VAR) & (SIG)) == (SIG))
 

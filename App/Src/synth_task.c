@@ -552,7 +552,9 @@ static void vCmdVoiceOn(SynthEventPayloadMidi_t * pxCmdMsg)
         {
             if (bYM2612_set_note(u8VoiceChannel, u8Note))
             {
+#ifdef SYNTH_DBG_VERBOSE
                 vCliPrintf(SYNTH_TASK_NAME, "Key  ON: %02d - %03d", u8VoiceChannel, u8Note);
+#endif
                 vYM2612_key_on(u8VoiceChannel);
             }
         }
@@ -573,7 +575,9 @@ static void vCmdVoiceOff(SynthEventPayloadMidi_t * pxCmdMsg)
         {
             if (bYM2612_set_note(u8VoiceChannel, u8Note))
             {
+#ifdef SYNTH_DBG_VERBOSE
                 vCliPrintf(SYNTH_TASK_NAME, "Key OFF: %02d - %03d", u8VoiceChannel, u8Note);
+#endif
                 vYM2612_key_off(u8VoiceChannel);
             }
         }

@@ -611,7 +611,9 @@ static void vMidiCmdSysExCallBack(uint8_t *pu8Data, uint32_t u32LenData)
 
             if (xQueueSend(xSynthQueue, &xMidiSysExEvent, pdMS_TO_TICKS(MIDI_MSG_TIMEOUT)) == pdPASS)
             {
+#ifdef MIDI_DBG_VERBOSE
                 vCliPrintf(MIDI_TASK_NAME, "SYSEX: CMD LEN %d", u32LenData);
+#endif
             }
             else
             {
@@ -635,7 +637,9 @@ static void vMidiCmd2CallBack(uint8_t u8Cmd, uint8_t u8Data0, uint8_t u8Data1)
 
 static void vMidiCmdRtCallBack(uint8_t u8RtCmd)
 {
+#ifdef MIDI_DBG_VERBOSE
     vCliPrintf(MIDI_TASK_NAME, "RT: %02X", u8RtCmd);
+#endif
 }
 
 static void vSerialPortHandlerCallBack(serial_event_t xEvent)

@@ -80,7 +80,9 @@ void vUI_MISC_EncoderAction(ui_menu_t * pxMenu, void * pvEventData)
                 {
                     uint32_t enc_count = 0;
                     ENCODER_getCount(ENCODER_ID_0, &enc_count);
+#ifdef UI_DBG_VERBOSE
                     vCliPrintf(UI_TASK_NAME, "Encoder  CW event: %d", enc_count);
+#endif
 
                     uint32_t u32ElementIndex = pxScreen->u32ElementSelectionIndex;
                     uint32_t u32RenderIndex = pxScreen->u32ElementRenderIndex;
@@ -102,7 +104,9 @@ void vUI_MISC_EncoderAction(ui_menu_t * pxMenu, void * pvEventData)
                 {
                     uint32_t enc_count = 0;
                     ENCODER_getCount(ENCODER_ID_0, &enc_count);
+#ifdef UI_DBG_VERBOSE
                     vCliPrintf(UI_TASK_NAME, "Encoder CCW event: %d", enc_count);
+#endif // UI_DBG_VERBOSE
 
                     uint32_t u32ElementIndex = pxScreen->u32ElementSelectionIndex;
                     uint32_t u32RenderIndex = pxScreen->u32ElementRenderIndex;
