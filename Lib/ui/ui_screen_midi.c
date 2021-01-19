@@ -307,14 +307,14 @@ static void vElementChannelAction(void * pvMenu, void * pvEventData)
 
                 if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
                 {
+                    u8Channel++;
+                }
+                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+                {
                     if (u8Channel != 0U)
                     {
                         u8Channel--;
                     }
-                }
-                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
-                {
-                    u8Channel++;
                 }
 
                 (void)bMidiTaskSetChannel(u8Channel);

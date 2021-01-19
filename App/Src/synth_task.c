@@ -598,45 +598,16 @@ static bool bInitUserPreset(void)
 {
     bool bRetVal = false;
 
-    bRetVal = bSYNTH_APP_DATA_init();
-
     /* If init fails, data could be empty o corrupted so try to write default data on it */
-    if (!bRetVal)
-    {
-        uint8_t u8PresetId = 0U;
-        const xFmDevice_t * pxInitPreset = pxSYNTH_APP_DATA_CONST_get(u8PresetId);
-
-        if (pxInitPreset != NULL)
-        {
-            bRetVal = true;
-            synth_app_data_t xInitPresetData = {0};
-
-            sprintf((char*)xInitPresetData.pu8Name, "%s", "NOT INIT");
-            xInitPresetData.xPresetData = *pxInitPreset;
-
-            /* Write init preset in all user data */
-            for (uint8_t u8PresetIndex = 0U; u8PresetIndex < SYNTH_APP_DATA_NUM_PRESETS; u8PresetIndex++)
-            {
-                if (!bSYNTH_APP_DATA_write(u8PresetIndex, &xInitPresetData))
-                {
-                    bRetVal = false;
-                    break;
-                }
-            }
-        }
-        else
-        {
-            vCliPrintf(SYNTH_TASK_NAME, "Error loading flash preset");
-        }
-    }
-
-    if (bRetVal)
+    if ( LFS_init() == LFS_OK)
     {
         vCliPrintf(SYNTH_TASK_NAME, "User Preset Data Init: OK");
+        bRetVal = true;
     }
     else
     {
         vCliPrintf(SYNTH_TASK_NAME, "User Preset Data Init: ERROR");
+        ERR_ASSERT(0U);
     }
 
     return bRetVal;
@@ -645,23 +616,22 @@ static bool bInitUserPreset(void)
 static bool bSavePreset(uint8_t u8Position, uint8_t * pu8Name, xFmDevice_t * pxRegData)
 {
     bool bRetVal = false;
-
-    synth_app_data_t xPresetData = {0};
+    lfs_ym_data_t xPresetData = {0};
 
     /* Copy name */
-    (void)memcpy(&xPresetData.pu8Name, pu8Name, SYNTH_LEN_PRESET_NAME);
+    (void)memcpy(&xPresetData.pu8Name, pu8Name, LFS_YM_CF_NAME_MAX_LEN);
     /* Copy reg */
     (void)memcpy(&xPresetData.xPresetData, pxRegData, sizeof(xFmDevice_t));
 
-    if (bSYNTH_APP_DATA_write(u8Position, &xPresetData))
+    if ( LFS_write_ym_data(u8Position, &xPresetData) == LFS_OK )
     {
         vCliPrintf(SYNTH_TASK_NAME, "SAVE PRESET %d - %s: OK", u8Position, pu8Name);
-
         bRetVal = true;
     }
     else
     {
         vCliPrintf(SYNTH_TASK_NAME, "SAVE PRESET %d - %s: ERROR", u8Position, pu8Name);
+        ERR_ASSERT(0U);
     }
 
     return bRetVal;
@@ -670,19 +640,17 @@ static bool bSavePreset(uint8_t u8Position, uint8_t * pu8Name, xFmDevice_t * pxR
 static bool bLoadPreset(uint8_t u8Position)
 {
     bool bRetVal = false;
-    const synth_app_data_t * pxPresetData = pxSYNTH_APP_DATA_read(u8Position);
+    lfs_ym_data_t xPresetData = {0};
 
-    if (pxPresetData != NULL)
+    if ( LFS_read_ym_data(u8Position, &xPresetData) == LFS_OK )
     {
-        if (bSynthSetPreset(&pxPresetData->xPresetData))
-        {
-            vCliPrintf(SYNTH_TASK_NAME, "LOAD PRESET %d - %s: OK", u8Position, pxPresetData->pu8Name);
-            bRetVal = true;
-        }
+        vCliPrintf(SYNTH_TASK_NAME, "LOAD PRESET %d - %s: OK", u8Position, xPresetData.pu8Name);
+        bRetVal = true;
     }
     else
     {
         vCliPrintf(SYNTH_TASK_NAME, "LOAD PRESET %d: ERROR", u8Position);
+        ERR_ASSERT(0U);
     }
 
     return bRetVal;
@@ -728,12 +696,12 @@ static void vCmdMidiSysEx(uint8_t * pu8SysExData, uint32_t u32LenData)
         {
             void * pvSysExData = &pxSysExCmd->pu8CmdData;
             SynthSysExCmdSavePreset_t * pxSavePresetData = pvSysExData;
-            uint8_t pu8PresetName[SYNTH_LEN_PRESET_NAME] = {0};
+            uint8_t pu8PresetName[LFS_YM_CF_NAME_MAX_LEN] = {0};
 
             vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD SAVE PRESET");
 
             /* Extract name from sysex frame */
-            for (uint32_t u32NameIndex = 0U; u32NameIndex < (SYNTH_LEN_PRESET_NAME - 1U); u32NameIndex++)
+            for (uint32_t u32NameIndex = 0U; u32NameIndex < (LFS_YM_CF_NAME_MAX_LEN - 1U); u32NameIndex++)
             {
                 pu8PresetName[u32NameIndex] = pxSavePresetData->u8CodedName[u32NameIndex * 2U];
                 pu8PresetName[u32NameIndex] |= pxSavePresetData->u8CodedName[(u32NameIndex * 2U) + 1U] << 4U;
@@ -790,7 +758,7 @@ static bool bInitPreset(void)
 static void vSynthTaskMain( void *pvParameters )
 {
     /* Init delay to for pow stabilization */
-    vTaskDelay(pdMS_TO_TICKS(500U));
+    vTaskDelay(pdMS_TO_TICKS(SYNTH_TASK_INIT_DELAY));
 
     /* Show init msg */
     vCliPrintf(SYNTH_TASK_NAME, "Init");
@@ -875,7 +843,7 @@ bool bSynthLoadPreset(SynthPresetSource_t u8PresetSource, uint8_t u8PresetId)
 
 bool bSynthSaveUserPreset(xFmDevice_t * pxPreset, uint8_t u8PresetId)
 {
-    uint8_t u8UiPresetName[SYNTH_LEN_PRESET_NAME] = "UI User Preset";
+    uint8_t u8UiPresetName[LFS_YM_CF_NAME_MAX_LEN] = "UI User Preset";
     return bSavePreset(u8PresetId, u8UiPresetName, pxPreset);
 }
 

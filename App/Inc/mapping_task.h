@@ -28,7 +28,7 @@ extern "C" {
 #define MAP_TASK_NAME                   "MAP"
 #define MAP_TASK_STACK                  (128U)
 #define MAP_TASK_PRIO                   (2U)
-#define MAP_TASK_INIT_DELAY             (1000U)
+#define MAP_TASK_INIT_DELAY             (500U)
 
 /* MAPPING task signals */
 #define MAP_SIGNAL_ERROR                (1UL << 0U)

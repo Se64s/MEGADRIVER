@@ -34,8 +34,9 @@ extern "C" {
 
 /* Task parameters */
 #define MIDI_TASK_NAME                  "MIDI"
-#define MIDI_TASK_STACK                 (254U)
+#define MIDI_TASK_STACK                 (512U)
 #define MIDI_TASK_PRIO                  (3U)
+#define MIDI_TASK_INIT_DELAY            (500U)
 
 /* Midi msg parameter */
 #define MIDI_MSG_DATA_LEN               (4U)

@@ -9,6 +9,9 @@
 
 #include "main.h"
 
+/* Peripheral library */
+#include "stm32g0xx_hal.h"
+
 /* FreeRTOS kernel */
 #include "FreeRTOS.h"
 #include "task.h"
@@ -104,7 +107,8 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLN = 8;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  HAL_StatusTypeDef xRetval = HAL_RCC_OscConfig(&RCC_OscInitStruct);
+  if (xRetval != HAL_OK)
   {
     ERR_ASSERT(0U);
   }

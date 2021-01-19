@@ -15,7 +15,7 @@
 #include "synth_task.h"
 #include "cli_task.h"
 #include "synth_app_data_const.h"
-#include "synth_app_data.h"
+#include "app_lfs.h"
 #include "printf.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -259,7 +259,7 @@ static void vElementBankAction(void * pvMenu, void * pvEventData)
         {
             if (pxScreen->bElementSelection)
             {
-                if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+                if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
                 {
                     if (u8SelectionBank < (MIDI_APP_MAX_BANK - 1U))
                     {
@@ -267,7 +267,7 @@ static void vElementBankAction(void * pvMenu, void * pvEventData)
                         u8SelectionProgram = 0;
                     }
                 }
-                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
                 {
                     if (u8SelectionBank != 0)
                     {
@@ -298,7 +298,7 @@ static void vElementProgramAction(void * pvMenu, void * pvEventData)
         {
             if (pxScreen->bElementSelection)
             {
-                if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+                if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
                 {
                     if (u8SelectionBank == MIDI_APP_BANK_DEFAULT)
                     {
@@ -309,7 +309,7 @@ static void vElementProgramAction(void * pvMenu, void * pvEventData)
                     }
                     else if (u8SelectionBank == MIDI_APP_BANK_USER)
                     {
-                        if (u8SelectionProgram < (SYNTH_APP_DATA_NUM_PRESETS - 1U))
+                        if (u8SelectionProgram < (LFS_YM_SLOT_NUM - 1U))
                         {
                             u8SelectionProgram++;
                         }
@@ -319,7 +319,7 @@ static void vElementProgramAction(void * pvMenu, void * pvEventData)
                         /* Nothing to do */
                     }
                 }
-                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
                 {
                     if (u8SelectionProgram != 0U)
                     {
@@ -360,7 +360,7 @@ static void vElementSelectAction(void * pvMenu, void * pvEventData)
                 }
                 else if (u8SelectionBank == MIDI_APP_BANK_USER)
                 {
-                    if (u8SelectionProgram < SYNTH_APP_DATA_NUM_PRESETS)
+                    if (u8SelectionProgram < LFS_YM_SLOT_NUM)
                     {
                         bRetVal = true;
                     }

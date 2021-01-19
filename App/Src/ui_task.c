@@ -134,7 +134,7 @@ static void vScreenIdleCallback(TimerHandle_t xTimer)
 static void __ui_main( void *pvParameters )
 {
     /* Init delay to for pow stabilization */
-    vTaskDelay(pdMS_TO_TICKS(1000U));
+    vTaskDelay(pdMS_TO_TICKS(UI_TASK_INIT_DELAY));
     
     /* Init encoder */
     ENCODER_init(ENCODER_ID_0, encoder_cb);

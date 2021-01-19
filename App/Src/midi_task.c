@@ -11,10 +11,9 @@
 #include "cli_task.h"
 #include "ui_task.h"
 #include "synth_task.h"
-
 #include "serial_driver.h"
-
-#include "midi_app_data.h"
+#include "error.h"
+#include "app_lfs.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -41,10 +40,7 @@ typedef struct
 /* Control strcuture to manage all Midi Channels */
 typedef struct
 {
-    midiMode_t xMode;
-    uint8_t u8Bank;
-    uint8_t u8Program;
-    uint8_t u8BaseChannel;
+    lfs_midi_data_t xMidiCfg;
     MidiChannel_t pxChannelList[MIDI_NUM_CHANNEL];
     MidiChannel_t pxTmpChannelList[MIDI_NUM_CHANNEL];
     MidiChannel_t pxTmpPolyChannel;
@@ -53,7 +49,7 @@ typedef struct
 /* Private variables ---------------------------------------------------------*/
 
 /* Midi control structure */
-MidiCtrl_t xMidiCfg = {0};
+MidiCtrl_t xMidiHandler = { 0 };
 
 /* Task handler */
 TaskHandle_t xMidiTaskHandle = NULL;
@@ -178,22 +174,22 @@ static void vMidiMain(void *pvParameters);
 
 static void vResetMidiCtrl(void)
 {
-    xMidiCfg.xMode = MIDI_APP_DATA_DEFAULT_MODE;
-    xMidiCfg.u8Bank = MIDI_APP_DATA_DEFAULT_CH;
-    xMidiCfg.u8Program = MIDI_APP_DATA_DEFAULT_BANK;
-    xMidiCfg.u8BaseChannel = MIDI_APP_DATA_DEFAULT_PROG;
+    xMidiHandler.xMidiCfg.u8Mode = LFS_MIDI_CFG_DEFAULT_MODE;
+    xMidiHandler.xMidiCfg.u8Bank = LFS_MIDI_CFG_DEFAULT_BANK;
+    xMidiHandler.xMidiCfg.u8Program = LFS_MIDI_CFG_DEFAULT_PROG;
+    xMidiHandler.xMidiCfg.u8BaseChannel = LFS_MIDI_CFG_DEFAULT_CH;
 
     /* Tmp values */
     for (uint32_t u32Index = 0U; u32Index < MIDI_NUM_CHANNEL; u32Index++)
     {
-        xMidiCfg.pxChannelList[u32Index].u8Note = MIDI_DATA_NOT_VALID;
-        xMidiCfg.pxChannelList[u32Index].u8Velocity = MIDI_DATA_NOT_VALID;
+        xMidiHandler.pxChannelList[u32Index].u8Note = MIDI_DATA_NOT_VALID;
+        xMidiHandler.pxChannelList[u32Index].u8Velocity = MIDI_DATA_NOT_VALID;
 
-        xMidiCfg.pxTmpChannelList[u32Index].u8Note = MIDI_DATA_NOT_VALID;
-        xMidiCfg.pxTmpChannelList[u32Index].u8Velocity = MIDI_DATA_NOT_VALID;
+        xMidiHandler.pxTmpChannelList[u32Index].u8Note = MIDI_DATA_NOT_VALID;
+        xMidiHandler.pxTmpChannelList[u32Index].u8Velocity = MIDI_DATA_NOT_VALID;
     }
-    xMidiCfg.pxTmpPolyChannel.u8Note = MIDI_DATA_NOT_VALID;
-    xMidiCfg.pxTmpPolyChannel.u8Velocity = MIDI_DATA_NOT_VALID;
+    xMidiHandler.pxTmpPolyChannel.u8Note = MIDI_DATA_NOT_VALID;
+    xMidiHandler.pxTmpPolyChannel.u8Velocity = MIDI_DATA_NOT_VALID;
 
     /* Clear voices on synth */
     SynthEventPayloadMidi_t xTmpCmd = {0U};
@@ -203,50 +199,29 @@ static void vResetMidiCtrl(void)
 
 static bool bRestoreMidiCtrl(void)
 {
-    bool bRetVal = bMIDI_APP_DATA_init();
+    bool bRetVal = false;
 
     /* Init flash data */
-    if (bRetVal)
+    if ( LFS_init() == LFS_OK )
     {
-        const midi_app_data_t * pxFlasData = pxMIDI_APP_DATA_read();
-
-        if (pxFlasData != NULL)
+        if ( LFS_read_midi_data(&xMidiHandler.xMidiCfg) == LFS_OK )
         {
-            xMidiCfg.xMode = pxFlasData->u8Mode;
-            xMidiCfg.u8BaseChannel = pxFlasData->u8BaseChannel;
-            xMidiCfg.u8Bank = pxFlasData->u8Bank;
-            xMidiCfg.u8Program = pxFlasData->u8Program;
-
-            vCliPrintf(MIDI_TASK_NAME, "FLASH: Load Mode %02X", xMidiCfg.xMode);
-            vCliPrintf(MIDI_TASK_NAME, "FLASH: Load Channel %02X", xMidiCfg.u8BaseChannel);
-            vCliPrintf(MIDI_TASK_NAME, "FLASH: Load Bank %02X", xMidiCfg.u8Bank);
-            vCliPrintf(MIDI_TASK_NAME, "FLASH: Load Program %02X", xMidiCfg.u8Program);
-        }
-        else
-        {
-            vCliPrintf(MIDI_TASK_NAME, "FLASH: Error reading flash data");
-        }
-    }
-    else
-    {
-        /* Initiate flash with default data */
-        midi_app_data_t xMidiDefaultCfg = {0};
-
-        /* Base address */
-        xMidiDefaultCfg.u8Mode = MIDI_APP_DATA_DEFAULT_MODE;
-        xMidiDefaultCfg.u8BaseChannel = MIDI_APP_DATA_DEFAULT_CH;
-        xMidiDefaultCfg.u8Bank = MIDI_APP_DATA_DEFAULT_BANK;
-        xMidiDefaultCfg.u8Program = MIDI_APP_DATA_DEFAULT_PROG;
-
-        if (bMIDI_APP_DATA_write(&xMidiDefaultCfg) == APP_DATA_OK)
-        {
-            vCliPrintf(MIDI_TASK_NAME, "FLASH: Init Midi Default Values OK");
+            vCliPrintf(MIDI_TASK_NAME, "FLASH: Load Mode %02X", xMidiHandler.xMidiCfg.u8Mode);
+            vCliPrintf(MIDI_TASK_NAME, "FLASH: Load Channel %02X", xMidiHandler.xMidiCfg.u8BaseChannel);
+            vCliPrintf(MIDI_TASK_NAME, "FLASH: Load Bank %02X", xMidiHandler.xMidiCfg.u8Bank);
+            vCliPrintf(MIDI_TASK_NAME, "FLASH: Load Program %02X", xMidiHandler.xMidiCfg.u8Program);
             bRetVal = true;
         }
         else
         {
-            vCliPrintf(MIDI_TASK_NAME, "FLASH: Init Midi Default Values ERROR");
+            vCliPrintf(MIDI_TASK_NAME, "FLASH: Error reading flash data");
+            ERR_ASSERT(0U);
         }
+    }
+    else
+    {
+        vCliPrintf(MIDI_TASK_NAME, "FLASH: Error on init FSM");
+        ERR_ASSERT(0U);
     }
 
     return bRetVal;
@@ -282,12 +257,12 @@ static void vMidiCmdOn(uint8_t * pu8MidiCmd)
     if (pu8MidiCmd != NULL)
     {
         /* Process in MONO mode */
-        if (xMidiCfg.xMode == MidiMode4)
+        if (xMidiHandler.xMidiCfg.u8Mode == (uint8_t)MidiMode4)
         {
             vMidiCmdOnMono(pu8MidiCmd);
         }
         /* Process in POLY mode */
-        else if (xMidiCfg.xMode == MidiMode3)
+        else if (xMidiHandler.xMidiCfg.u8Mode == (uint8_t)MidiMode3)
         {
             vMidiCmdOnPoly(pu8MidiCmd);
         }
@@ -299,12 +274,12 @@ static void vMidiCmdOff(uint8_t * pu8MidiCmd)
     if (pu8MidiCmd != NULL)
     {
         /* Process in MONO mode */
-        if (xMidiCfg.xMode == MidiMode4)
+        if (xMidiHandler.xMidiCfg.u8Mode == (uint8_t)MidiMode4)
         {
             vMidiCmdOffMono(pu8MidiCmd);
         }
         /* Process in POLY mode */
-        else if (xMidiCfg.xMode == MidiMode3)
+        else if (xMidiHandler.xMidiCfg.u8Mode == (uint8_t)MidiMode3)
         {
             vMidiCmdOffPoly(pu8MidiCmd);
         }
@@ -327,12 +302,12 @@ static void vMidiCmdOnMono(uint8_t * pu8MidiCmd)
 
             if (u8Velocity != 0U)
             {
-                if ((u8Channel >= xMidiCfg.u8BaseChannel) && (u8Channel < (xMidiCfg.u8BaseChannel + MIDI_NUM_CHANNEL)))
+                if ((u8Channel >= xMidiHandler.xMidiCfg.u8BaseChannel) && (u8Channel < (xMidiHandler.xMidiCfg.u8BaseChannel + MIDI_NUM_CHANNEL)))
                 {
-                    uint8_t u8Voice = xMidiCfg.u8BaseChannel - u8Channel;
+                    uint8_t u8Voice = xMidiHandler.xMidiCfg.u8BaseChannel - u8Channel;
 
                     /* Check if voice is in use */
-                    if (xMidiCfg.pxChannelList[u8Voice].u8Note == MIDI_DATA_NOT_VALID)
+                    if (xMidiHandler.pxChannelList[u8Voice].u8Note == MIDI_DATA_NOT_VALID)
                     {
                         /* Send cmd to synth task */
                         uint32_t u32Idata = 0U;
@@ -346,15 +321,15 @@ static void vMidiCmdOnMono(uint8_t * pu8MidiCmd)
                         if (bSendSynthCmd(&xSynthCmd))
                         {
                             /* Update control structure */
-                            xMidiCfg.pxChannelList[u8Voice].u8Note = u8Note;
-                            xMidiCfg.pxChannelList[u8Voice].u8Velocity = u8Velocity;
+                            xMidiHandler.pxChannelList[u8Voice].u8Note = u8Note;
+                            xMidiHandler.pxChannelList[u8Voice].u8Velocity = u8Velocity;
                         }
                     }
-                    else if (xMidiCfg.pxChannelList[u8Voice].u8Note != u8Note)
+                    else if (xMidiHandler.pxChannelList[u8Voice].u8Note != u8Note)
                     {
                         /* If note is not already pressed, store in temporal position */
-                        xMidiCfg.pxTmpChannelList[u8Voice].u8Note = u8Note;
-                        xMidiCfg.pxTmpChannelList[u8Voice].u8Velocity = u8Velocity;
+                        xMidiHandler.pxTmpChannelList[u8Voice].u8Note = u8Note;
+                        xMidiHandler.pxTmpChannelList[u8Voice].u8Velocity = u8Velocity;
                     }
                 }
             }
@@ -383,7 +358,7 @@ static void vMidiCmdOnPoly(uint8_t * pu8MidiCmd)
 
             if (u8Velocity != 0U)
             {
-                if (u8Channel == xMidiCfg.u8BaseChannel)
+                if (u8Channel == xMidiHandler.xMidiCfg.u8BaseChannel)
                 {
                     /* Search for voice */
                     uint8_t u8Voice = MIDI_VOICE_NOT_VALID;
@@ -391,13 +366,13 @@ static void vMidiCmdOnPoly(uint8_t * pu8MidiCmd)
                     /* Check if note is already active */
                     for (uint32_t u32IndexVoice = 0U; u32IndexVoice < MIDI_NUM_CHANNEL; u32IndexVoice++)
                     {
-                        if (xMidiCfg.pxChannelList[u32IndexVoice].u8Note == u8Note)
+                        if (xMidiHandler.pxChannelList[u32IndexVoice].u8Note == u8Note)
                         {
                             u8Voice = MIDI_VOICE_NOT_VALID;
                             break;
                         }
                         /* Check and save free voice index to not iterate after */
-                        else if (xMidiCfg.pxChannelList[u32IndexVoice].u8Note == MIDI_DATA_NOT_VALID)
+                        else if (xMidiHandler.pxChannelList[u32IndexVoice].u8Note == MIDI_DATA_NOT_VALID)
                         {
                             /* Check if voice has been used before */
                             if (u8Voice == MIDI_VOICE_NOT_VALID)
@@ -422,15 +397,15 @@ static void vMidiCmdOnPoly(uint8_t * pu8MidiCmd)
                         if (bSendSynthCmd(&xSynthCmd))
                         {
                             /* Update control structure */
-                            xMidiCfg.pxChannelList[u8Voice].u8Note = u8Note;
-                            xMidiCfg.pxChannelList[u8Voice].u8Velocity = u8Velocity;
+                            xMidiHandler.pxChannelList[u8Voice].u8Note = u8Note;
+                            xMidiHandler.pxChannelList[u8Voice].u8Velocity = u8Velocity;
                         }
                     }
                     /* Not free voice found, save voice on temporal voice */
                     else
                     {
-                        xMidiCfg.pxTmpPolyChannel.u8Note = u8Note;
-                        xMidiCfg.pxTmpPolyChannel.u8Velocity = u8Velocity;
+                        xMidiHandler.pxTmpPolyChannel.u8Note = u8Note;
+                        xMidiHandler.pxTmpPolyChannel.u8Velocity = u8Velocity;
                     }
                 }
             }
@@ -455,12 +430,12 @@ static void vMidiCmdOffMono(uint8_t * pu8MidiCmd)
         {
             /* Check channel value to be in valid range */
             uint8_t u8Channel = u8Status & MIDI_STATUS_CH_MASK;
-            if ((u8Channel >= xMidiCfg.u8BaseChannel) && (u8Channel < (xMidiCfg.u8BaseChannel + MIDI_NUM_CHANNEL)))
+            if ((u8Channel >= xMidiHandler.xMidiCfg.u8BaseChannel) && (u8Channel < (xMidiHandler.xMidiCfg.u8BaseChannel + MIDI_NUM_CHANNEL)))
             {
-                uint8_t u8Voice = xMidiCfg.u8BaseChannel - u8Channel;
+                uint8_t u8Voice = xMidiHandler.xMidiCfg.u8BaseChannel - u8Channel;
 
                 /* Check if note is in use */
-                if (xMidiCfg.pxChannelList[u8Voice].u8Note == u8Note)
+                if (xMidiHandler.pxChannelList[u8Voice].u8Note == u8Note)
                 {
                     /* Send cmd to synth task */
                     uint32_t u32Idata = 0U;
@@ -475,31 +450,31 @@ static void vMidiCmdOffMono(uint8_t * pu8MidiCmd)
                     if (bSendSynthCmd(&xSynthCmd))
                     {
                         /* Update control structure */
-                        xMidiCfg.pxChannelList[u8Voice].u8Note = MIDI_DATA_NOT_VALID;
-                        xMidiCfg.pxChannelList[u8Voice].u8Velocity = MIDI_DATA_NOT_VALID;
+                        xMidiHandler.pxChannelList[u8Voice].u8Note = MIDI_DATA_NOT_VALID;
+                        xMidiHandler.pxChannelList[u8Voice].u8Velocity = MIDI_DATA_NOT_VALID;
 
                         /* Check tmp note */
-                        if (xMidiCfg.pxTmpChannelList[u8Voice].u8Note != MIDI_DATA_NOT_VALID)
+                        if (xMidiHandler.pxTmpChannelList[u8Voice].u8Note != MIDI_DATA_NOT_VALID)
                         {
                             /* Update control structure */
                             uint8_t pu8TmpMidiCmd[] = {
                                 MIDI_STATUS_NOTE_ON | u8Channel, 
-                                xMidiCfg.pxTmpChannelList[u8Voice].u8Note,
-                                xMidiCfg.pxTmpChannelList[u8Voice].u8Velocity};
+                                xMidiHandler.pxTmpChannelList[u8Voice].u8Note,
+                                xMidiHandler.pxTmpChannelList[u8Voice].u8Velocity};
 
-                            xMidiCfg.pxTmpChannelList[u8Voice].u8Note = MIDI_DATA_NOT_VALID;
-                            xMidiCfg.pxTmpChannelList[u8Voice].u8Velocity = MIDI_DATA_NOT_VALID;
+                            xMidiHandler.pxTmpChannelList[u8Voice].u8Note = MIDI_DATA_NOT_VALID;
+                            xMidiHandler.pxTmpChannelList[u8Voice].u8Velocity = MIDI_DATA_NOT_VALID;
 
                             /* Generate new note */
                             vMidiCmdOnMono(pu8TmpMidiCmd);
                         }
                     }
                 }
-                else if (xMidiCfg.pxTmpChannelList[u8Voice].u8Note == u8Note)
+                else if (xMidiHandler.pxTmpChannelList[u8Voice].u8Note == u8Note)
                 {
                     /* Clear tmp note */
-                    xMidiCfg.pxTmpChannelList[u8Voice].u8Note = MIDI_DATA_NOT_VALID;
-                    xMidiCfg.pxTmpChannelList[u8Voice].u8Velocity = MIDI_DATA_NOT_VALID;
+                    xMidiHandler.pxTmpChannelList[u8Voice].u8Note = MIDI_DATA_NOT_VALID;
+                    xMidiHandler.pxTmpChannelList[u8Voice].u8Velocity = MIDI_DATA_NOT_VALID;
                 }
             }
         }
@@ -518,14 +493,14 @@ static void vMidiCmdOffPoly(uint8_t * pu8MidiCmd)
         {
             /* Check channel value */
             uint8_t u8Channel = u8Status & MIDI_STATUS_CH_MASK;
-            if (u8Channel == xMidiCfg.u8BaseChannel)
+            if (u8Channel == xMidiHandler.xMidiCfg.u8BaseChannel)
             {
                 uint8_t u8Voice = MIDI_VOICE_NOT_VALID;
 
                 /* Check if note is already active */
                 for (uint32_t u32IndexVoice = 0U; u32IndexVoice < MIDI_NUM_CHANNEL; u32IndexVoice++)
                 {
-                    if (xMidiCfg.pxChannelList[u32IndexVoice].u8Note == u8Note)
+                    if (xMidiHandler.pxChannelList[u32IndexVoice].u8Note == u8Note)
                     {
                         /* Clear channel */
                         uint32_t u32Idata = 0U;
@@ -539,8 +514,8 @@ static void vMidiCmdOffPoly(uint8_t * pu8MidiCmd)
                         if (bSendSynthCmd(&xSynthCmd))
                         {
                             /* Update control structure */
-                            xMidiCfg.pxChannelList[u32IndexVoice].u8Note = MIDI_DATA_NOT_VALID;
-                            xMidiCfg.pxChannelList[u32IndexVoice].u8Velocity = MIDI_DATA_NOT_VALID;
+                            xMidiHandler.pxChannelList[u32IndexVoice].u8Note = MIDI_DATA_NOT_VALID;
+                            xMidiHandler.pxChannelList[u32IndexVoice].u8Velocity = MIDI_DATA_NOT_VALID;
 
                             /* Save slot cleared one time */
                             if (u8Voice == MIDI_VOICE_NOT_VALID)
@@ -552,23 +527,23 @@ static void vMidiCmdOffPoly(uint8_t * pu8MidiCmd)
                 }
 
                 /* Check tmp voice */
-                if (xMidiCfg.pxTmpPolyChannel.u8Note == u8Note)
+                if (xMidiHandler.pxTmpPolyChannel.u8Note == u8Note)
                 {
-                    xMidiCfg.pxTmpPolyChannel.u8Note = MIDI_DATA_NOT_VALID;
-                    xMidiCfg.pxTmpPolyChannel.u8Velocity = MIDI_DATA_NOT_VALID;
+                    xMidiHandler.pxTmpPolyChannel.u8Note = MIDI_DATA_NOT_VALID;
+                    xMidiHandler.pxTmpPolyChannel.u8Velocity = MIDI_DATA_NOT_VALID;
                 }
 
                 /* If there are a free voice, load tmp note */
-                if ((u8Voice != MIDI_VOICE_NOT_VALID) && (u8Voice < MIDI_NUM_CHANNEL) && (xMidiCfg.pxTmpPolyChannel.u8Note != MIDI_DATA_NOT_VALID))
+                if ((u8Voice != MIDI_VOICE_NOT_VALID) && (u8Voice < MIDI_NUM_CHANNEL) && (xMidiHandler.pxTmpPolyChannel.u8Note != MIDI_DATA_NOT_VALID))
                 {
                     /* Update control structure */
                     uint8_t pu8TmpMidiCmd[] = {
                         MIDI_STATUS_NOTE_ON | u8Channel, 
-                        xMidiCfg.pxTmpPolyChannel.u8Note,
-                        xMidiCfg.pxTmpPolyChannel.u8Velocity};
+                        xMidiHandler.pxTmpPolyChannel.u8Note,
+                        xMidiHandler.pxTmpPolyChannel.u8Velocity};
 
-                    xMidiCfg.pxTmpPolyChannel.u8Note = MIDI_DATA_NOT_VALID;
-                    xMidiCfg.pxTmpPolyChannel.u8Velocity = MIDI_DATA_NOT_VALID;
+                    xMidiHandler.pxTmpPolyChannel.u8Note = MIDI_DATA_NOT_VALID;
+                    xMidiHandler.pxTmpPolyChannel.u8Velocity = MIDI_DATA_NOT_VALID;
 
                     /* Generate new note */
                     vMidiCmdOnPoly(pu8TmpMidiCmd);
@@ -667,7 +642,7 @@ static void vSerialPortHandlerCallBack(serial_event_t xEvent)
 static void vMidiMain(void *pvParameters)
 {
     /* Init delay to for pow stabilization */
-    vTaskDelay(pdMS_TO_TICKS(500U));
+    vTaskDelay(pdMS_TO_TICKS(MIDI_TASK_INIT_DELAY));
 
     /* Show init msg */
     vCliPrintf(MIDI_TASK_NAME, "Init");
@@ -710,7 +685,7 @@ uint8_t xMidiTaskGetNote(uint8_t u8Channel)
 
     if (u8Channel < MIDI_NUM_CHANNEL)
     {
-        u8Retval = xMidiCfg.pxChannelList[u8Channel].u8Note;
+        u8Retval = xMidiHandler.pxChannelList[u8Channel].u8Note;
     }
 
     return u8Retval;
@@ -718,40 +693,41 @@ uint8_t xMidiTaskGetNote(uint8_t u8Channel)
 
 midiMode_t xMidiTaskGetMode(void)
 {
-    return xMidiCfg.xMode;
+    midiMode_t eRetval = (midiMode_t)xMidiHandler.xMidiCfg.u8Mode;
+    return eRetval;
 }
 
 uint8_t u8MidiTaskGetChannel(void)
 {
-    return xMidiCfg.u8BaseChannel;
+    return xMidiHandler.xMidiCfg.u8BaseChannel;
 }
 
 uint8_t u8MidiTaskGetBank(void)
 {
-    return xMidiCfg.u8Bank;
+    return xMidiHandler.xMidiCfg.u8Bank;
 }
 
 uint8_t u8MidiTaskGetProgram(void)
 {
-    return xMidiCfg.u8Program;
+    return xMidiHandler.xMidiCfg.u8Program;
 }
 
 bool bMidiTaskSetMode(midiMode_t xNewMode)
 {
     bool bRetval = false;
 
-    if ((xNewMode != xMidiCfg.xMode) && ((xNewMode == MidiMode3) || (xNewMode == MidiMode4)))
+    if ( (xNewMode != xMidiHandler.xMidiCfg.u8Mode) && ( (xNewMode == MidiMode3) || (xNewMode == MidiMode4) ) )
     {
-        uint8_t u8Bank = xMidiCfg.u8Bank;
-        uint8_t u8Program = xMidiCfg.u8Program;
-        uint8_t u8BaseChannel = xMidiCfg.u8BaseChannel;
+        uint8_t u8Bank = xMidiHandler.xMidiCfg.u8Bank;
+        uint8_t u8Program = xMidiHandler.xMidiCfg.u8Program;
+        uint8_t u8BaseChannel = xMidiHandler.xMidiCfg.u8BaseChannel;
 
         vResetMidiCtrl();
 
-        xMidiCfg.xMode = xNewMode;
-        xMidiCfg.u8BaseChannel = u8BaseChannel;
-        xMidiCfg.u8Program = u8Program;
-        xMidiCfg.u8Bank = u8Bank;
+        xMidiHandler.xMidiCfg.u8Mode = xNewMode;
+        xMidiHandler.xMidiCfg.u8BaseChannel = u8BaseChannel;
+        xMidiHandler.xMidiCfg.u8Program = u8Program;
+        xMidiHandler.xMidiCfg.u8Bank = u8Bank;
 
         bRetval = true;
     }
@@ -763,18 +739,18 @@ bool bMidiTaskSetChannel(uint8_t u8NewChannel)
 {
     bool bRetval = false;
 
-    if ((u8NewChannel <= MIDI_CHANNEL_MAX_VALUE) && (u8NewChannel != xMidiCfg.u8BaseChannel))
+    if ((u8NewChannel <= MIDI_CHANNEL_MAX_VALUE) && (u8NewChannel != xMidiHandler.xMidiCfg.u8BaseChannel))
     {
-        midiMode_t xMode = xMidiCfg.xMode;
-        uint8_t u8Bank = xMidiCfg.u8Bank;
-        uint8_t u8Program = xMidiCfg.u8Program;
+        midiMode_t xMode = xMidiHandler.xMidiCfg.u8Mode;
+        uint8_t u8Bank = xMidiHandler.xMidiCfg.u8Bank;
+        uint8_t u8Program = xMidiHandler.xMidiCfg.u8Program;
 
         vResetMidiCtrl();
 
-        xMidiCfg.xMode = xMode;
-        xMidiCfg.u8BaseChannel = u8NewChannel;
-        xMidiCfg.u8Program = u8Program;
-        xMidiCfg.u8Bank = u8Bank;
+        xMidiHandler.xMidiCfg.u8Mode = xMode;
+        xMidiHandler.xMidiCfg.u8BaseChannel = u8NewChannel;
+        xMidiHandler.xMidiCfg.u8Program = u8Program;
+        xMidiHandler.xMidiCfg.u8Bank = u8Bank;
 
         bRetval = true;
     }
@@ -786,21 +762,21 @@ bool bMidiTaskSetBank(uint8_t u8NewBank)
 {
     bool bRetval = false;
 
-    if ((u8NewBank < MIDI_APP_MAX_BANK) && (xMidiCfg.u8Bank != u8NewBank))
+    if ((u8NewBank < MIDI_APP_MAX_BANK) && (xMidiHandler.xMidiCfg.u8Bank != u8NewBank))
     {
         bRetval = bSynthLoadPreset(u8NewBank, 0U);
 
         if (bRetval)
         {
-            midiMode_t xMode = xMidiCfg.xMode;
-            uint8_t u8BaseChannel = xMidiCfg.u8BaseChannel;
+            midiMode_t xMode = xMidiHandler.xMidiCfg.u8Mode;
+            uint8_t u8BaseChannel = xMidiHandler.xMidiCfg.u8BaseChannel;
 
             vResetMidiCtrl();
 
-            xMidiCfg.xMode = xMode;
-            xMidiCfg.u8BaseChannel = u8BaseChannel;
-            xMidiCfg.u8Program = 0U;
-            xMidiCfg.u8Bank = u8NewBank;
+            xMidiHandler.xMidiCfg.u8Mode = xMode;
+            xMidiHandler.xMidiCfg.u8BaseChannel = u8BaseChannel;
+            xMidiHandler.xMidiCfg.u8Program = 0U;
+            xMidiHandler.xMidiCfg.u8Bank = u8NewBank;
 
             vCliPrintf(MIDI_TASK_NAME, "LOAD BANK, %d PROGRAM, %d: OK", u8NewBank, 0U);
         }
@@ -817,28 +793,28 @@ bool bMidiTaskSetProgram(uint8_t u8NewProgram)
 {
     bool bRetval = false;
 
-    if ((u8NewProgram <= MIDI_PROGRAM_MAX_VALUE) && (xMidiCfg.u8Program != u8NewProgram))
+    if ((u8NewProgram <= MIDI_PROGRAM_MAX_VALUE) && (xMidiHandler.xMidiCfg.u8Program != u8NewProgram))
     {
-        bRetval = bSynthLoadPreset(xMidiCfg.u8Bank, u8NewProgram);
+        bRetval = bSynthLoadPreset(xMidiHandler.xMidiCfg.u8Bank, u8NewProgram);
 
         if (bRetval)
         {
-            midiMode_t xMode = xMidiCfg.xMode;
-            uint8_t u8BaseChannel = xMidiCfg.u8BaseChannel;
-            uint8_t u8Bank = xMidiCfg.u8Bank;
+            midiMode_t xMode = xMidiHandler.xMidiCfg.u8Mode;
+            uint8_t u8BaseChannel = xMidiHandler.xMidiCfg.u8BaseChannel;
+            uint8_t u8Bank = xMidiHandler.xMidiCfg.u8Bank;
 
             vResetMidiCtrl();
 
-            xMidiCfg.xMode = xMode;
-            xMidiCfg.u8BaseChannel = u8BaseChannel;
-            xMidiCfg.u8Program = u8NewProgram;
-            xMidiCfg.u8Bank = u8Bank;
+            xMidiHandler.xMidiCfg.u8Mode = xMode;
+            xMidiHandler.xMidiCfg.u8BaseChannel = u8BaseChannel;
+            xMidiHandler.xMidiCfg.u8Program = u8NewProgram;
+            xMidiHandler.xMidiCfg.u8Bank = u8Bank;
 
-            vCliPrintf(MIDI_TASK_NAME, "LOAD BANK, %d PROGRAM, %d: OK", xMidiCfg.u8Bank, u8NewProgram);
+            vCliPrintf(MIDI_TASK_NAME, "LOAD BANK, %d PROGRAM, %d: OK", xMidiHandler.xMidiCfg.u8Bank, u8NewProgram);
         }
         else
         {
-            vCliPrintf(MIDI_TASK_NAME, "LOAD BANK, %d PROGRAM, %d: ERROR", xMidiCfg.u8Bank, u8NewProgram);
+            vCliPrintf(MIDI_TASK_NAME, "LOAD BANK, %d PROGRAM, %d: ERROR", xMidiHandler.xMidiCfg.u8Bank, u8NewProgram);
         }
     }
 
@@ -848,22 +824,17 @@ bool bMidiTaskSetProgram(uint8_t u8NewProgram)
 bool bMidiTaskSaveCfg(void)
 {
     bool bRetval = false;
-    midi_app_data_t xMidiSaveCfg = {0};
 
-    xMidiSaveCfg.u8Mode = xMidiCfg.xMode;
-    xMidiSaveCfg.u8BaseChannel = xMidiCfg.u8BaseChannel;
-    xMidiSaveCfg.u8Bank = 0U;
-    xMidiSaveCfg.u8Program = 0U;
-
-    bRetval = bMIDI_APP_DATA_write(&xMidiSaveCfg);
-
-    if (bRetval)
+    if ( LFS_write_midi_data(&xMidiHandler.xMidiCfg) == LFS_OK)
     {
         vCliPrintf(MIDI_TASK_NAME, "FLASH: Save Midi CFG OK");
+        ERR_ASSERT(0U);
+        bRetval = true;
     }
     else
     {
         vCliPrintf(MIDI_TASK_NAME, "FLASH: Save Midi CFG ERROR");
+        ERR_ASSERT(0U);
     }
 
     return bRetval;

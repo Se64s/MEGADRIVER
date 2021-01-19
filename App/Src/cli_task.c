@@ -23,7 +23,7 @@
 /* Private define ------------------------------------------------------------*/
 
 /* Init message */
-#define CLI_INIT_MSG    "\r\n\r\n##################\r\n##\r\n## INIT SYNTH SYSTEM\r\n##\r\n##################\r\n"
+#define CLI_INIT_MSG    "\r\n\r\n##################\r\n##\r\n## INIT MEGADRIVER\r\n##\r\n##################\r\n"
 
 /* End of line terminator */
 #define CLI_EOL         "\r\n"
@@ -92,11 +92,11 @@ void _cli_main( void *pvParameters )
     uint32_t i_rx_buff = 0;
     uint32_t tmp_event;
 
+    /* Init delay to for pow stabilization */
+    vTaskDelay(pdMS_TO_TICKS(CLI_TASK_INIT_DELAY));
+
     /* Register used functions */
     cli_cmd_init();
-
-    /* Init delay to for pow stabilization */
-    vTaskDelay(pdMS_TO_TICKS(500U));
 
     /* Start message */
     vCliRawPrintf(CLI_INIT_MSG);

@@ -25,7 +25,7 @@ extern "C" {
 
 #include "YM2612_driver.h"
 
-#include "synth_app_data.h"
+#include "app_lfs.h"
 #include "synth_app_data_const.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -33,12 +33,13 @@ extern "C" {
 
 /* Task parameters */
 #define SYNTH_TASK_NAME                     "SYNTH"
-#define SYNTH_TASK_STACK                    (256U)
+#define SYNTH_TASK_STACK                    (1024U)
 #define SYNTH_TASK_PRIO                     (2U)
+#define SYNTH_TASK_INIT_DELAY               (500U)
 
 /* SysEx CMD parameters */
 #define SYNTH_LEN_VENDOR_ID                 (3U)
-#define SYNTH_LEN_PRESET_NAME               (SYNTH_APP_DATA_LEN_PRESET_NAME)
+#define SYNTH_LEN_PRESET_NAME               (LFS_YM_CF_NAME_MAX_LEN)
 #define SYNTH_LEN_PRESET_CODED_NAME         (30U)
 #define SYNTH_LEN_MIN_SYSEX_CMD             (4U)
 #define SYNTH_LEN_SET_REG_CMD               (300U)
@@ -56,7 +57,7 @@ extern "C" {
 #define SYNTH_MAX_NUM_VOICE                 (YM2612_NUM_CHANNEL)
 
 /* Maximun number of user presets */
-#define SYNTH_MAX_NUM_USER_PRESET           (SYNTH_APP_DATA_NUM_PRESETS)
+#define SYNTH_MAX_NUM_USER_PRESET           (LFS_YM_SLOT_NUM)
 
 /* Enable extended DBG */
 // #define SYNTH_DBG_VERBOSE

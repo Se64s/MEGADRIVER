@@ -25,6 +25,7 @@ extern "C" {
 #define UI_TASK_NAME                    "UI"
 #define UI_TASK_STACK                   (256U)
 #define UI_TASK_PRIO                    (1U)
+#define UI_TASK_INIT_DELAY              (500U)
 
 /* Enable verbose output */
 // #define UI_DBG_VERBOSE
