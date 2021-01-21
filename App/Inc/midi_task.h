@@ -97,6 +97,11 @@ uint8_t u8MidiTaskGetBank(void);
 uint8_t u8MidiTaskGetProgram(void);
 
 /**
+  * @brief Send note off to all channels
+  */
+void vMidiPanic(void);
+
+/**
   * @brief Set parameter from midi conf
   * @param xNewMode new value to set.
   * @retval operation result

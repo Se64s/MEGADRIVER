@@ -57,6 +57,12 @@ TaskHandle_t xMidiTaskHandle = NULL;
 /* Private function prototypes -----------------------------------------------*/
 
 /**
+  * @brief Clear all actual notes.
+  * @retval None.
+  */
+static void vClearChannels(void);
+
+/**
   * @brief Reset medi control structure too default values.
   * @retval None.
   */
@@ -172,6 +178,30 @@ static void vMidiMain(void *pvParameters);
 
 /* Private fuctions ----------------------------------------------------------*/
 
+static void vClearChannels(void)
+{
+    SynthEventPayloadMidi_t xTmpCmd = { 0U };
+
+    for (uint32_t u32Index = 0U; u32Index < MIDI_NUM_CHANNEL; u32Index++)
+    {
+        uint32_t u32Idata = 0U;
+
+        xTmpCmd.xType = SYNTH_CMD_NOTE_OFF;
+        xTmpCmd.u8Data[u32Idata++] = u32Index;
+        xTmpCmd.u8Data[u32Idata++] = xMidiHandler.pxChannelList[u32Index].u8Note;
+        (void)bSendSynthCmd(&xTmpCmd);
+
+        xMidiHandler.pxChannelList[u32Index].u8Note = MIDI_DATA_NOT_VALID;
+        xMidiHandler.pxChannelList[u32Index].u8Velocity = MIDI_DATA_NOT_VALID;
+
+        xMidiHandler.pxTmpChannelList[u32Index].u8Note = MIDI_DATA_NOT_VALID;
+        xMidiHandler.pxTmpChannelList[u32Index].u8Velocity = MIDI_DATA_NOT_VALID;
+    }
+
+    xMidiHandler.pxTmpPolyChannel.u8Note = MIDI_DATA_NOT_VALID;
+    xMidiHandler.pxTmpPolyChannel.u8Velocity = MIDI_DATA_NOT_VALID;
+}
+
 static void vResetMidiCtrl(void)
 {
     xMidiHandler.xMidiCfg.u8Mode = LFS_MIDI_CFG_DEFAULT_MODE;
@@ -179,22 +209,7 @@ static void vResetMidiCtrl(void)
     xMidiHandler.xMidiCfg.u8Program = LFS_MIDI_CFG_DEFAULT_PROG;
     xMidiHandler.xMidiCfg.u8BaseChannel = LFS_MIDI_CFG_DEFAULT_CH;
 
-    /* Tmp values */
-    for (uint32_t u32Index = 0U; u32Index < MIDI_NUM_CHANNEL; u32Index++)
-    {
-        xMidiHandler.pxChannelList[u32Index].u8Note = MIDI_DATA_NOT_VALID;
-        xMidiHandler.pxChannelList[u32Index].u8Velocity = MIDI_DATA_NOT_VALID;
-
-        xMidiHandler.pxTmpChannelList[u32Index].u8Note = MIDI_DATA_NOT_VALID;
-        xMidiHandler.pxTmpChannelList[u32Index].u8Velocity = MIDI_DATA_NOT_VALID;
-    }
-    xMidiHandler.pxTmpPolyChannel.u8Note = MIDI_DATA_NOT_VALID;
-    xMidiHandler.pxTmpPolyChannel.u8Velocity = MIDI_DATA_NOT_VALID;
-
-    /* Clear voices on synth */
-    SynthEventPayloadMidi_t xTmpCmd = {0U};
-    xTmpCmd.xType = SYNTH_CMD_NOTE_OFF_ALL;
-    (void)bSendSynthCmd(&xTmpCmd);
+    vClearChannels();
 }
 
 static bool bRestoreMidiCtrl(void)
@@ -710,6 +725,11 @@ uint8_t u8MidiTaskGetBank(void)
 uint8_t u8MidiTaskGetProgram(void)
 {
     return xMidiHandler.xMidiCfg.u8Program;
+}
+
+void vMidiPanic(void)
+{
+    vClearChannels();
 }
 
 bool bMidiTaskSetMode(midiMode_t xNewMode)

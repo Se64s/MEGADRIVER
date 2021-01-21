@@ -181,12 +181,14 @@ static void vScreenActionIdle(void * pvMenu, void * pvEventData)
             ui_element_t * pxElement = &pxScreen->pxElementList[pxScreen->u32ElementSelectionIndex];
 
             /* Handle encoder events */
-            if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || 
-                CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW) || 
-                CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET) || 
-                CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_RESET))
+            if ( CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || 
+                 CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW) )
             {
                 bUiTaskNotify(UI_SIGNAL_RESTORE_IDLE);
+            }
+            else if ( CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET) )
+            {
+                vMidiPanic();
             }
 
             /* Handle action for selected element */
