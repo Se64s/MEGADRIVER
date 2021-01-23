@@ -1,6 +1,7 @@
 # Ignored folders
 .vscode/
 build/
+test/
 # Tools test vgi instruments
 Tools/py_tools/vgi
 # Tools python cache
