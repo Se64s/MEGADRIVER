@@ -210,7 +210,16 @@ static void __ui_main( void *pvParameters )
                 else
                 {
                     vCliPrintf(UI_TASK_NAME, "IDLE event");
-                    u32ReturnScreen = xUiMenuHandler.u32ScreenSelectionIndex;
+
+                    if (xUiMenuHandler.u32ScreenSelectionIndex != MENU_IDLE_SCREEN_POSITION)
+                    {
+                        u32ReturnScreen = xUiMenuHandler.u32ScreenSelectionIndex;
+                    }
+                    else
+                    {
+                        u32ReturnScreen = MENU_MAIN_SCREEN_POSITION;
+                    }
+
                     xUiMenuHandler.u32ScreenSelectionIndex = MENU_IDLE_SCREEN_POSITION;
                 }
 
