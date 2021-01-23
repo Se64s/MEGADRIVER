@@ -28,6 +28,13 @@ extern "C"
 /* Exported variables --------------------------------------------------------*/
 
 /**
+  * @brief Get pointer to preset name.
+  * @param u8PresetId preset id to get.
+  * @retval pointer to preset string, NULL if data not available.
+  */
+const char* pxSYNTH_APP_DATA_CONST_get_name(uint8_t u8PresetId);
+
+/**
   * @brief Get pointer to constant data.
   * @param u8PresetId preset id to get.
   * @retval pointer to constant data, NULL if data not available.

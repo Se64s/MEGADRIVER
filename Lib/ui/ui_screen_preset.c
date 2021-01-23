@@ -26,6 +26,7 @@ typedef enum
 {
     PRESET_SCREEN_ELEMENT_BANK = 0,
     PRESET_SCREEN_ELEMENT_PROGRAM,
+    PRESET_SCREEN_ELEMENT_NAME,
     PRESET_SCREEN_ELEMENT_SELECT,
     PRESET_SCREEN_ELEMENT_RETURN,
     PRESET_SCREEN_ELEMENT_LAST_ELEMENT
@@ -40,6 +41,7 @@ typedef enum
 /* Format for screen elements */
 #define NAME_FORMAT_BANK                "BANK        %02d"
 #define NAME_FORMAT_PROGRAM             "PROGRAM     %02d"
+#define NAME_FORMAT_NAME                " %s"
 #define NAME_FORMAT_SELECT              "SELECT      %s"
 #define NAME_FORMAT_RETURN              "BACK"
 
@@ -55,6 +57,7 @@ ui_element_t xPresetScreenElementList[PRESET_SCREEN_ELEMENT_LAST_ELEMENT];
 /** String var with element messages */
 char pcPresetBankName[MAX_LEN_NAME] = {0};
 char pcPresetProgramName[MAX_LEN_NAME] = {0};
+char pcPresetNameName[MAX_LEN_NAME] = {0};
 char pcPresetSelectName[MAX_LEN_NAME] = {0};
 char pcPresetReturnName[MAX_LEN_NAME] = {0};
 
@@ -73,6 +76,7 @@ uint8_t u8SelectionProgram = 0;
 static void vScreenPresetRender(void * pvDisplay, void * pvScreen);
 static void vElementBankRender(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementProgramRender(void * pvDisplay, void * pvScreen, void * pvElement);
+static void vElementNameRender(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementSelectRender(void * pvDisplay, void * pvScreen, void * pvElement);
 static void vElementReturnRender(void * pvDisplay, void * pvScreen, void * pvElement);
 
@@ -80,6 +84,7 @@ static void vElementReturnRender(void * pvDisplay, void * pvScreen, void * pvEle
 static void vScreenPresetAction(void * pvMenu, void * pvEventData);
 static void vElementBankAction(void * pvMenu, void * pvEventData);
 static void vElementProgramAction(void * pvMenu, void * pvEventData);
+static void vElementNameAction(void * pvMenu, void * pvEventData);
 static void vElementSelectAction(void * pvMenu, void * pvEventData);
 static void vElementReturnAction(void * pvMenu, void * pvEventData);
 
@@ -154,6 +159,40 @@ static void vElementProgramRender(void * pvDisplay, void * pvScreen, void * pvEl
         {
             /* Prepare data on buffer */
             sprintf(pxElement->pcName, NAME_FORMAT_PROGRAM, u8SelectionProgram);
+
+            /* Print selection ico */
+            vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
+
+            u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxElement->pcName);
+        }
+    }
+}
+
+static void vElementNameRender(void * pvDisplay, void * pvScreen, void * pvElement)
+{
+    if ((pvDisplay != NULL) && (pvScreen != NULL) && (pvElement != NULL))
+    {
+        u8g2_t * pxDisplayHandler = pvDisplay;
+        ui_screen_t * pxScreen = pvScreen;
+        ui_element_t * pxElement = pvElement;
+        uint32_t u32IndX = UI_OFFSET_ELEMENT_X;
+        uint32_t u32IndY = UI_OFFSET_ELEMENT_Y;
+
+        /* Compute element offset */
+        u32IndY += u32UI_MISC_GetDrawIndexY(pxDisplayHandler, pxScreen->u32ElementRenderIndex, pxElement->u32Index);
+
+        if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
+        {
+            if (u8SelectionBank == MIDI_APP_BANK_USER)
+            {
+                lfs_ym_data_t xYmData = { 0U };
+                LFS_read_ym_data(u8SelectionProgram, &xYmData);
+                snprintf(pxElement->pcName, MAX_LEN_NAME - 1U, NAME_FORMAT_NAME, xYmData.pu8Name);
+            }
+            else
+            {
+                snprintf(pxElement->pcName, MAX_LEN_NAME - 1U, NAME_FORMAT_NAME, pxSYNTH_APP_DATA_CONST_get_name(u8SelectionProgram));
+            }
 
             /* Print selection ico */
             vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
@@ -337,6 +376,12 @@ static void vElementProgramAction(void * pvMenu, void * pvEventData)
     }
 }
 
+static void vElementNameAction(void * pvMenu, void * pvEventData)
+{
+    (void)pvMenu;
+    (void)pvEventData;
+}
+
 static void vElementSelectAction(void * pvMenu, void * pvEventData)
 {
     if ((pvMenu != NULL) && (pvEventData != NULL))
@@ -434,6 +479,7 @@ ui_status_t UI_screen_preset_init(ui_screen_t * pxScreenHandler)
         /* Init name var */
         sprintf(pcPresetBankName, NAME_FORMAT_BANK, u8SelectionBank);
         sprintf(pcPresetProgramName, NAME_FORMAT_PROGRAM, u8SelectionProgram);
+        sprintf(pcPresetProgramName, NAME_FORMAT_NAME, "");
         sprintf(pcPresetSelectName, NAME_FORMAT_SELECT, pcPresetSlectionAuxName);
         sprintf(pcPresetReturnName, NAME_FORMAT_RETURN);
 
@@ -447,6 +493,11 @@ ui_status_t UI_screen_preset_init(ui_screen_t * pxScreenHandler)
         xPresetScreenElementList[PRESET_SCREEN_ELEMENT_PROGRAM].u32Index = PRESET_SCREEN_ELEMENT_PROGRAM;
         xPresetScreenElementList[PRESET_SCREEN_ELEMENT_PROGRAM].render_cb = vElementProgramRender;
         xPresetScreenElementList[PRESET_SCREEN_ELEMENT_PROGRAM].action_cb = vElementProgramAction;
+
+        xPresetScreenElementList[PRESET_SCREEN_ELEMENT_NAME].pcName = pcPresetNameName;
+        xPresetScreenElementList[PRESET_SCREEN_ELEMENT_NAME].u32Index = PRESET_SCREEN_ELEMENT_NAME;
+        xPresetScreenElementList[PRESET_SCREEN_ELEMENT_NAME].render_cb = vElementNameRender;
+        xPresetScreenElementList[PRESET_SCREEN_ELEMENT_NAME].action_cb = vElementNameAction;
 
         xPresetScreenElementList[PRESET_SCREEN_ELEMENT_SELECT].pcName = pcPresetSelectName;
         xPresetScreenElementList[PRESET_SCREEN_ELEMENT_SELECT].u32Index = PRESET_SCREEN_ELEMENT_SELECT;

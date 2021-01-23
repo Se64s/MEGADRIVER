@@ -55,9 +55,6 @@ typedef enum
     LFS_YM_SLOT_2,
     LFS_YM_SLOT_3,
     LFS_YM_SLOT_4,
-    // LFS_YM_SLOT_5,
-    // LFS_YM_SLOT_6,
-    // LFS_YM_SLOT_7,
     LFS_YM_SLOT_NUM,
 } lfs_ym_cfg_slot_t;
 

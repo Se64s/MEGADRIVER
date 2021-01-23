@@ -174,9 +174,6 @@ const char *lfs_ym_cfg_filename[LFS_YM_SLOT_NUM] = {
     "ym_cfg_2",
     "ym_cfg_3",
     "ym_cfg_4",
-    // "ym_cfg_5",
-    // "ym_cfg_6",
-    // "ym_cfg_7"
 };
 
 /* Callback ------------------------------------------------------------------*/
@@ -227,8 +224,10 @@ lfs_status_t LFS_init(void)
             // Init YM data
             {
                 lfs_ym_data_t xYmCfg = { 0U };
+                const char* pcName = pxSYNTH_APP_DATA_CONST_get_name(0U);
                 const xFmDevice_t * pxInitPreset = pxSYNTH_APP_DATA_CONST_get(0U);
                 xYmCfg.xPresetData = *pxInitPreset;
+                strcpy((char*)xYmCfg.pu8Name, pcName);
 
                 for ( uint32_t u32SlotIndex = 0U; u32SlotIndex < LFS_YM_SLOT_NUM; u32SlotIndex++ )
                 {

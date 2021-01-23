@@ -12,6 +12,14 @@
 /* Private defines ----------------------------------------------------------*/
 /* Private constants  -------------------------------------------------------*/
 
+/** YM cfg filenames */
+const char *preset_name[SYNTH_APP_DATA_CONST_MAX_NUM_ELEMENTS] = {
+    "Piano",
+    "Guitar",
+    "Sawtooth",
+    "Sonic",
+};
+
 static const xFmDevice_t xPresetPiano = {
 .u8LfoOn = 0U,
 .u8LfoFreq = 0U,
@@ -1342,6 +1350,18 @@ static const xFmDevice_t * pxDevicePresets[SYNTH_APP_DATA_CONST_MAX_NUM_ELEMENTS
 /* Private functions declaration --------------------------------------------*/
 /* HAL callbacks ------------------------------------------------------------*/
 /* Exported functions -------------------------------------------------------*/
+
+const char * pxSYNTH_APP_DATA_CONST_get_name(uint8_t u8PresetId)
+{
+    if (u8PresetId < SYNTH_APP_DATA_CONST_MAX_NUM_ELEMENTS)
+    {
+        return preset_name[u8PresetId];
+    }
+    else
+    {
+        return NULL;
+    }
+}
 
 const xFmDevice_t * pxSYNTH_APP_DATA_CONST_get(uint8_t u8PresetId)
 {
