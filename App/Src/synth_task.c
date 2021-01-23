@@ -618,20 +618,27 @@ static bool bSavePreset(uint8_t u8Position, uint8_t * pu8Name, xFmDevice_t * pxR
     bool bRetVal = false;
     lfs_ym_data_t xPresetData = {0};
 
-    /* Copy name */
-    (void)memcpy(&xPresetData.pu8Name, pu8Name, LFS_YM_CF_NAME_MAX_LEN);
-    /* Copy reg */
-    (void)memcpy(&xPresetData.xPresetData, pxRegData, sizeof(xFmDevice_t));
-
-    if ( LFS_write_ym_data(u8Position, &xPresetData) == LFS_OK )
+    if (u8Position < LFS_YM_SLOT_NUM)
     {
-        vCliPrintf(SYNTH_TASK_NAME, "SAVE PRESET %d - %s: OK", u8Position, pu8Name);
-        bRetVal = true;
+        /* Copy name */
+        (void)memcpy(&xPresetData.pu8Name, pu8Name, LFS_YM_CF_NAME_MAX_LEN);
+        /* Copy reg */
+        (void)memcpy(&xPresetData.xPresetData, pxRegData, sizeof(xFmDevice_t));
+
+        if ( LFS_write_ym_data(u8Position, &xPresetData) == LFS_OK )
+        {
+            vCliPrintf(SYNTH_TASK_NAME, "SAVE PRESET %d - %s: OK", u8Position, pu8Name);
+            bRetVal = true;
+        }
+        else
+        {
+            vCliPrintf(SYNTH_TASK_NAME, "SAVE PRESET %d - %s: ERROR", u8Position, pu8Name);
+            ERR_ASSERT(0U);
+        }
     }
     else
     {
-        vCliPrintf(SYNTH_TASK_NAME, "SAVE PRESET %d - %s: ERROR", u8Position, pu8Name);
-        ERR_ASSERT(0U);
+        vCliPrintf(SYNTH_TASK_NAME, "SAVE SLOT NOT VALID");
     }
 
     return bRetVal;
@@ -644,8 +651,11 @@ static bool bLoadPreset(uint8_t u8Position)
 
     if ( LFS_read_ym_data(u8Position, &xPresetData) == LFS_OK )
     {
-        vCliPrintf(SYNTH_TASK_NAME, "LOAD PRESET %d - %s: OK", u8Position, xPresetData.pu8Name);
-        bRetVal = true;
+        if (bSynthSetPreset(&xPresetData.xPresetData))
+        {
+            vCliPrintf(SYNTH_TASK_NAME, "LOAD PRESET %d - %s: OK", u8Position, xPresetData.pu8Name);
+            bRetVal = true;
+        }
     }
     else
     {
