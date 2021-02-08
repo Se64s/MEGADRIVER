@@ -144,9 +144,11 @@ display_status_t DISPLAY_update(display_port_t dev, u8g2_t * pxDisplayHandler)
     {
         char pcInitMsg0[DISPLAY_MAX_LEN] = {0};
         char pcInitMsg1[DISPLAY_MAX_LEN] = {0};
+        char pcInitMsg2[DISPLAY_MAX_LEN] = {0};
 
         (void)snprintf(pcInitMsg0, DISPLAY_MAX_LEN, "%s", DISPLAY_INIT_0);
-        (void)snprintf(pcInitMsg1, DISPLAY_MAX_LEN, "Build v%s", MAIN_APP_VERSION);
+        (void)snprintf(pcInitMsg1, DISPLAY_MAX_LEN, "Build   %s", MAIN_APP_VERSION);
+        (void)snprintf(pcInitMsg2, DISPLAY_MAX_LEN, "Rev     %x", GIT_REVISION);
 
         // Update display data
         u8g2_FirstPage(pxDisplayHandler);
@@ -154,6 +156,7 @@ display_status_t DISPLAY_update(display_port_t dev, u8g2_t * pxDisplayHandler)
             u8g2_SetFont(pxDisplayHandler, u8g2_font_amstrad_cpc_extended_8r);
             u8g2_DrawStr(pxDisplayHandler, 0, 10, pcInitMsg0);
             u8g2_DrawStr(pxDisplayHandler, 0, 25, pcInitMsg1);
+            u8g2_DrawStr(pxDisplayHandler, 0, 40, pcInitMsg2);
         } while (u8g2_NextPage(pxDisplayHandler));
 
         xRetval = DISPLAY_STATUS_OK;

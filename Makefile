@@ -9,7 +9,7 @@
 ######################################
 # target
 ######################################
-TARGET = FM_SYNTH
+TARGET = MEGADRIVER
 
 ######################################
 # building variables
@@ -22,9 +22,15 @@ OPT = -Og
 #######################################
 # User definitions
 #######################################
-
 # Application tag number
-APP_TAG = "x.x.x"
+APP_TAG := \"$(shell git describe --tags --abbrev=0 --always)\"
+
+# Get git revision
+GIT_REVISION := \"$(shell git describe --match ForceNone --abbrev=8 --always)\"
+
+# Add all defines
+DEFINES += GIT_REVISION=$(GIT_REVISION)
+DEFINES += MAIN_APP_VERSION=$(APP_TAG)
 
 #######################################
 # paths
@@ -238,8 +244,8 @@ ifdef YM2612_TEST_GPIO
 C_DEFS += -DYM2612_TEST_GPIO
 endif
 
-# Add version number
-C_DEFS += -DMAIN_APP_VERSION=\"$(APP_TAG)\"
+# Add git version
+C_DEFS += $(foreach d,$(DEFINES),-D$(d))
 
 #######################################
 # LDFLAGS
