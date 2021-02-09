@@ -18,12 +18,14 @@
 #include "FreeRTOS_CLI.h"
 #include "cli_cmd.h"
 
+#include "main.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
 /* Init message */
-#define CLI_INIT_MSG    "\r\n\r\n##################\r\n##\r\n## INIT MEGADRIVER\r\n##\r\n##################\r\n"
+#define CLI_INIT_MSG    "\r\n\r\nMEGADRIVER: FM SYNTH\r\n%s\r\nrev: %s\r\n"
 
 /* End of line terminator */
 #define CLI_EOL         "\r\n"
@@ -99,7 +101,7 @@ void _cli_main( void *pvParameters )
     cli_cmd_init();
 
     /* Start message */
-    vCliRawPrintf(CLI_INIT_MSG);
+    vCliRawPrintf(CLI_INIT_MSG, MAIN_APP_VERSION, GIT_REVISION);
 
     /* Show init msg */
     vCliPrintf(CLI_TASK_NAME, "Init");

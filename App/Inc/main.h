@@ -28,7 +28,7 @@ extern "C" {
 #endif
 
 #ifndef GIT_REVISION
-#define GIT_REVISION 0x00000000
+#define GIT_REVISION "AABBCCDD"
 #endif
 
 #ifdef __cplusplus

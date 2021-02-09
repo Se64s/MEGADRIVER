@@ -12,10 +12,11 @@
 #include "FreeRTOS_CLI.h"
 #include "cli_task.h"
 
- #include <stdlib.h>
+#include <stdlib.h>
 #include "printf.h"
 #include "stm32g0xx_hal.h"
 #include "YM2612_driver.h"
+#include "main.h"
 #include "error.h"
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,6 +51,15 @@ static BaseType_t YM2612Write(char *pcWriteBuffer, size_t xWriteBufferLen, const
  */
 static BaseType_t userAssert(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString);
 
+/**
+ * @brief  Show application version.
+ * @param  pcWriteBuffer
+ * @param  xWriteBufferLen
+ * @param  pcCommandString
+ * @retval pdFALSE, pdTRUE
+ */
+static BaseType_t showVersion(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString);
+
 /* Private variables ---------------------------------------------------------*/
 
 static const CLI_Command_Definition_t xDevReset = {
@@ -70,6 +80,13 @@ static const CLI_Command_Definition_t xUserAssert = {
     "assert",
     "assert: Force assert error",
     userAssert,
+    0
+};
+
+static const CLI_Command_Definition_t xVersion = {
+    "version",
+    "version: Show app version",
+    showVersion,
     0
 };
 
@@ -134,6 +151,14 @@ static BaseType_t userAssert(char *pcWriteBuffer,
     return pdFALSE;
 }
 
+static BaseType_t showVersion(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString)
+{
+    vCliPrintf("CLI", "APP %s", MAIN_APP_VERSION);
+    vCliPrintf("CLI", "rev %s", GIT_REVISION);
+    vCliPrintf("CLI", "OK");
+    return pdFALSE;
+}
+
 /* Public application code ---------------------------------------------------*/
 
 void cli_cmd_init(void)
@@ -141,6 +166,7 @@ void cli_cmd_init(void)
     (void)FreeRTOS_CLIRegisterCommand(&xDevReset);
     (void)FreeRTOS_CLIRegisterCommand(&xWriteReg);
     (void)FreeRTOS_CLIRegisterCommand(&xUserAssert);
+    (void)FreeRTOS_CLIRegisterCommand(&xVersion);
 }
 
 /* EOF */
