@@ -34,7 +34,7 @@ extern "C" {
 /* Task parameters */
 #define SYNTH_TASK_NAME                     "SYNTH"
 #define SYNTH_TASK_STACK                    (1024U)
-#define SYNTH_TASK_PRIO                     (2U)
+#define SYNTH_TASK_PRIO                     (3U)
 #define SYNTH_TASK_INIT_DELAY               (500U)
 
 /* SysEx CMD parameters */
@@ -59,6 +59,9 @@ extern "C" {
 /* Maximun number of user presets */
 #define SYNTH_MAX_NUM_USER_PRESET           (LFS_YM_SLOT_NUM)
 
+/* Define Max param name */
+#define SYNTH_MAX_PARAM_NAME_LEN            (12U)
+
 /* Enable extended DBG */
 // #define SYNTH_DBG_VERBOSE
 
@@ -70,6 +73,7 @@ typedef enum
     SYNTH_CMD_NOTE_ON = 0x00U,
     SYNTH_CMD_NOTE_OFF,
     SYNTH_CMD_NOTE_OFF_ALL,
+    SYNTH_CMD_CC_MAP,
     SYNTH_CMD_NO_DEF = 0xFFU
 } SynthMsgType_t;
 
@@ -187,6 +191,15 @@ typedef struct
   SynthPayload_t uPayload;
 } SynthEvent_t;
 
+/** Defined structure to track last cc command used */
+typedef struct synth_cc_map
+{
+    uint8_t u8Cmd;
+    uint8_t u8CcData;
+    uint8_t u8Data;
+    char pcParamName[SYNTH_MAX_PARAM_NAME_LEN];
+} SynthCcMap_t;
+
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions prototypes ---------------------------------------------*/
@@ -213,6 +226,12 @@ bool bSynthSaveUserPreset(xFmDevice_t * pxPreset, uint8_t u8PresetId);
   * @retval operation result, true for correct save action, false for error.
   */
 bool bSynthSetPreset(xFmDevice_t * pxPreset);
+
+/**
+  * @brief Get last CC command executed.
+  * @retval Copy of last CC cmd executed.
+  */
+SynthCcMap_t xSynthGetLastCc(void);
 
 /**
   * @brief Init resources for SYNTH tasks

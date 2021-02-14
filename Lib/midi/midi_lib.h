@@ -92,16 +92,28 @@ typedef enum
 #define MIDI_STATUS_CMD_MASK 0xF0
 
 /* CC types */
-#define MIDI_CC_MOD 0x01
-#define MIDI_CC_BRI 0x4A
-#define MIDI_CC_HAR 0x47
-#define MIDI_CC_ATT 0x49
-#define MIDI_CC_C15 0x15
-#define MIDI_CC_C16 0x16
-#define MIDI_CC_C17 0x17
-#define MIDI_CC_C18 0x18
-#define MIDI_CC_C4B 0x4B
-#define MIDI_CC_NOTE_OFF 0x7B
+#define MIDI_CC_MOD             0x01U
+#define MIDI_CC_BRI             0x4AU
+#define MIDI_CC_HAR             0x47U
+#define MIDI_CC_ATT             0x49U
+#define MIDI_CC_C15             0x15U
+#define MIDI_CC_C16             0x16U
+#define MIDI_CC_C17             0x17U
+#define MIDI_CC_C18             0x18U
+#define MIDI_CC_C4B             0x4BU
+#define MIDI_CC_NOTE_OFF        0x7BU
+
+#define MIDI_CC_USER_0_INI      0x14U
+#define MIDI_CC_USER_0_END      0x1FU
+
+#define MIDI_CC_USER_1_INI      0x34U
+#define MIDI_CC_USER_1_END      0x3FU
+
+#define MIDI_CC_USER_2_INI      0x55U
+#define MIDI_CC_USER_2_END      0x5AU
+
+#define MIDI_CC_USER_3_INI      0x66U
+#define MIDI_CC_USER_3_END      0x77U
 
 /* MIDI RT */
 #define MIDI_RT_MASK 0xF8

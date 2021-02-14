@@ -110,6 +110,13 @@ static void vMidiCmdOnPoly(uint8_t * pu8MidiCmd);
 static void vMidiCmdOff(uint8_t * pu8MidiCmd);
 
 /**
+  * @brief Handle MIDI CC.
+  * @param pu8MidiCmd pointer to midi command.
+  * @retval None.
+  */
+static void vMidiCmdCC(uint8_t * pu8MidiCmd);
+
+/**
   * @brief Handle note off in mono mode.
   * @param pu8MidiCmd pointer to midi command.
   * @retval None.
@@ -297,6 +304,41 @@ static void vMidiCmdOff(uint8_t * pu8MidiCmd)
         else if (xMidiHandler.xMidiCfg.u8Mode == (uint8_t)MidiMode3)
         {
             vMidiCmdOffPoly(pu8MidiCmd);
+        }
+    }
+}
+
+static void vMidiCmdCC(uint8_t * pu8MidiCmd)
+{
+    ERR_ASSERT(pu8MidiCmd != NULL);
+
+    uint8_t u8Status = *pu8MidiCmd++;
+    uint8_t u8CmdCc = *pu8MidiCmd++;
+    uint8_t u8Data = *pu8MidiCmd++;
+    uint8_t u8Channel = u8Status & MIDI_STATUS_CH_MASK;
+
+    /* Check if midi channel inside range */
+    if ((u8Channel >= xMidiHandler.xMidiCfg.u8BaseChannel) && (u8Channel < (xMidiHandler.xMidiCfg.u8BaseChannel + MIDI_NUM_CHANNEL)))
+    {
+        /* Process in POLY mode */
+        if (xMidiHandler.xMidiCfg.u8Mode == (uint8_t)MidiMode3)
+        {
+            u8Channel = SYNTH_MAX_NUM_VOICE;
+        }
+
+        /* Send cmd to synth task */
+        uint32_t u32Idata = 0U;
+        SynthEventPayloadMidi_t xSynthCmd = {0};
+
+        /* Build synth NOTE ON command */
+        xSynthCmd.xType = SYNTH_CMD_CC_MAP;
+        xSynthCmd.u8Data[u32Idata++] = u8Channel;
+        xSynthCmd.u8Data[u32Idata++] = u8CmdCc;
+        xSynthCmd.u8Data[u32Idata++] = u8Data;
+
+        if (!bSendSynthCmd(&xSynthCmd))
+        {
+            vCliPrintf(MIDI_TASK_NAME, "Error on sending CC message");
         }
     }
 }
@@ -581,6 +623,10 @@ static void vHandleMidiCmd(uint8_t * pu8MidiCmd)
         else if ((u8MidiCmd & MIDI_STATUS_CMD_MASK) == MIDI_STATUS_NOTE_OFF)
         {
             vMidiCmdOff(pu8MidiCmd);
+        }
+        else if ((u8MidiCmd & MIDI_STATUS_CMD_MASK) == MIDI_STATUS_CC)
+        {
+            vMidiCmdCC(pu8MidiCmd);
         }
     }
 }

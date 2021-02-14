@@ -23,13 +23,19 @@
 /* Private define ------------------------------------------------------------*/
 
 /* Display 0 address */
-#define DISPLAY_ADDRESS     0x78U
+#define DISPLAY_ADDRESS     (0x78U)
 
 /* Number of ticks per microsec */
-#define DISPLAY_TICKS_USEC  15U
+#define DISPLAY_TICKS_USEC  (15U)
 
 /* Maximun len display string */
-#define DISPLAY_MAX_LEN     16U
+#define DISPLAY_MAX_LEN     (16U)
+
+/* I2C interface */
+#define DISPLAY_I2C         (I2C_0)
+
+/* I2C transfer delay */
+#define I2C_DELAY           (10U)
 
 /* Display initial msg  */
 #define DISPLAY_INIT_0      "MEGADRIVER"
@@ -54,11 +60,11 @@ static void __HardwareInit(void);
 static void __HardwareDeInit(void);
 
 /**
-  * @brief Delay implementation us
-  * @param u32UsCount number of us to wait
+  * @brief Low level delay implementation
+  * @param number of ms to wait.
   * @retval None
   */
-static void __UsDelay(uint32_t u32UsCount);
+static void __LL_DelayMs(uint32_t u32MsCount);
 
 /* Callbacks required by u8g2 lib */
 uint8_t u8x8_byte_hw_i2c(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr);
@@ -82,11 +88,14 @@ static void __HardwareDeInit(void)
     }
 }
 
-static void __UsDelay(uint32_t u32UsCount)
+static void __LL_DelayMs(uint32_t u32MsCount)
 {
 #ifdef DISPLAY_USE_RTOS
     // Use RTOS interface for implement delays
-    vTaskDelay(10U);
+    if (u32MsCount != 0U)
+    {
+        vTaskDelay(u32MsCount);
+    }
 #else
     uint32_t tick_count = DISPLAY_TICKS_USEC * u32UsCount;
     while (tick_count-- != 0)
@@ -110,7 +119,7 @@ display_status_t DISPLAY_init(display_port_t dev, u8g2_t * pxDisplayHandler)
         u8g2_SetI2CAddress(pxDisplayHandler, DISPLAY_ADDRESS);
 
         // Init grapfic library
-        u8g2_Setup_ssd1306_i2c_128x64_noname_2(pxDisplayHandler, U8G2_R0, u8x8_byte_hw_i2c, u8x8_gpio_and_delay);
+        u8g2_Setup_ssd1306_i2c_128x64_noname_f(pxDisplayHandler, U8G2_R0, u8x8_byte_hw_i2c, u8x8_gpio_and_delay);
 
         // Init sequence to display
         u8g2_InitDisplay(pxDisplayHandler);
@@ -191,18 +200,17 @@ uint8_t u8x8_byte_hw_i2c(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_p
             break;
 
         case U8X8_MSG_BYTE_SET_DC:
-            /* ignored for i2c */
             break;
 
         case U8X8_MSG_BYTE_START_TRANSFER:
             u8BufIdx = 0;
-            __UsDelay(350U);
+            __LL_DelayMs(I2C_DELAY);
             break;
 
         case U8X8_MSG_BYTE_END_TRANSFER:
             {
                 uint16_t u16DevAddr = u8g2_GetI2CAddress(u8x8);
-                (void)I2C_master_send(I2C_0, u16DevAddr, u8Buffer, u8BufIdx);
+                (void)I2C_master_send(DISPLAY_I2C, u16DevAddr, u8Buffer, u8BufIdx);
             }
             break;
 
@@ -216,43 +224,7 @@ uint8_t u8x8_byte_hw_i2c(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_p
 
 uint8_t u8x8_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr)
 {
-    uint8_t u8RetVal = 1U;
-
-    switch(msg)
-    {
-        // Initialize I2C peripheral
-        case U8X8_MSG_GPIO_AND_DELAY_INIT:
-            /* HAL initialization contains all what we need so we can skip this part. */
-            __UsDelay(1000U);
-            break;
-
-        // Function which implements a delay, arg_int contains the amount of ms
-        case U8X8_MSG_DELAY_MILLI:
-            {
-                uint32_t u32CastMsToUs = 1000U * (uint32_t)arg_int;
-                __UsDelay(u32CastMsToUs);
-            }
-            break;
-
-        // Function which delays 10us
-        case U8X8_MSG_DELAY_10MICRO:
-            __UsDelay(10U);
-            break;
-
-        // Function which delays 100ns
-        case U8X8_MSG_DELAY_100NANO:
-            __NOP();
-            break;
-
-        case U8X8_MSG_DELAY_I2C:
-            break;
-
-        default:
-            u8RetVal = 0U;
-            break;
-    }
-
-    return u8RetVal;
+    return 0U;
 }
 
 /*****END OF FILE****/

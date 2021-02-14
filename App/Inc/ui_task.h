@@ -44,7 +44,9 @@ extern "C" {
 #define UI_SIGNAL_SCREEN_UPDATE         (1UL << 7U)
 #define UI_SIGNAL_IDLE                  (1UL << 8U)
 #define UI_SIGNAL_RESTORE_IDLE          (1UL << 9U)
-#define UI_SIGNAL_ERROR                 (1UL << 10U)
+#define UI_SIGNAL_MIDI_CC               (1UL << 10U)
+#define UI_SIGNAL_RESTORE_CC            (1UL << 11U)
+#define UI_SIGNAL_ERROR                 (1UL << 12U)
 #define UI_SIGNAL_NOT_DEF               (1UL << 31U)
 
 /* Exported types ------------------------------------------------------------*/

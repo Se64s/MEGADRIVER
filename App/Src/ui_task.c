@@ -29,7 +29,10 @@
 #define UI_DISPLAY_UPDATE_RATE_MS   (25U)
 
 /** Idle period definition in ms */
-#define UI_DISPLAY_IDLE_MS          (10000U)
+#define UI_DISPLAY_IDLE_MS          (5000U)
+
+/** Time to clear cc window */
+#define UI_DISPLAY_CC_RESTORE       (1000U)
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
@@ -42,6 +45,9 @@ TimerHandle_t xUpdateTimer = NULL;
 
 /* Timer to handle idle event */
 TimerHandle_t xIdleTimer = NULL;
+
+/* Timer to handle CC idle message */
+TimerHandle_t xCcCmdTimer = NULL;
 
 /* Pointer to display lib handler */
 static u8g2_t xDisplayHandler = {0};
@@ -75,6 +81,13 @@ static void vScreenUpdateCallback(TimerHandle_t xTimer);
   * @retval None.
   */
 static void vScreenIdleCallback(TimerHandle_t xTimer);
+
+/**
+  * @brief Timer callback to generate cc restore event for clearing CC windows from UI.
+  * @param xTimer handler that generates the event.
+  * @retval None.
+  */
+static void vScreenCcCmdTimeoutCallback(TimerHandle_t xTimer);
 
 /**
   * @brief Main task loop
@@ -131,6 +144,11 @@ static void vScreenIdleCallback(TimerHandle_t xTimer)
     xTaskNotify(ui_task_handle, UI_SIGNAL_IDLE, eSetBits);
 }
 
+static void vScreenCcCmdTimeoutCallback(TimerHandle_t xTimer)
+{
+    xTaskNotify(ui_task_handle, UI_SIGNAL_RESTORE_CC, eSetBits);
+}
+
 static void __ui_main( void *pvParameters )
 {
     /* Init delay to for pow stabilization */
@@ -176,7 +194,9 @@ static void __ui_main( void *pvParameters )
                                     UI_SIGNAL_ENC_UPDATE_SW_SET | 
                                     UI_SIGNAL_IDLE |
                                     UI_SIGNAL_RESTORE_IDLE |
-                                    UI_SIGNAL_SCREEN_UPDATE
+                                    UI_SIGNAL_SCREEN_UPDATE |
+                                    UI_SIGNAL_MIDI_CC | 
+                                    UI_SIGNAL_RESTORE_CC
                                 ), 
                                 &u32TmpEvent, 
                                 portMAX_DELAY);
@@ -197,17 +217,22 @@ static void __ui_main( void *pvParameters )
                 }
             }
 
+            /* Events to feed to ui screens */
             if (u32TmpEvent & ( UI_SIGNAL_ENC_UPDATE_CW | 
                                 UI_SIGNAL_ENC_UPDATE_CCW | 
                                 UI_SIGNAL_ENC_UPDATE_SW_RESET | 
                                 UI_SIGNAL_ENC_UPDATE_SW_SET | 
-                                UI_SIGNAL_IDLE))
+                                UI_SIGNAL_IDLE | 
+                                UI_SIGNAL_MIDI_CC |
+                                UI_SIGNAL_RESTORE_CC))
             {
-                if (!CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_IDLE))
+                if ( CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_ENC_UPDATE_CW) ||
+                     CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_ENC_UPDATE_CCW) )
                 {
                     xTimerStart(xIdleTimer, 0U);
                 }
-                else
+
+                if (CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_IDLE))
                 {
                     vCliPrintf(UI_TASK_NAME, "IDLE event");
 
@@ -221,6 +246,15 @@ static void __ui_main( void *pvParameters )
                     }
 
                     xUiMenuHandler.u32ScreenSelectionIndex = MENU_IDLE_SCREEN_POSITION;
+                }
+
+                if (CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_MIDI_CC))
+                {
+                    /* If active screen is idle, kick cc restore timer */
+                    if (xUiMenuHandler.u32ScreenSelectionIndex == MENU_IDLE_SCREEN_POSITION)
+                    {
+                        xTimerStart(xCcCmdTimer, 0U);
+                    }
                 }
 
                 UI_action(&xUiMenuHandler, &u32TmpEvent);
@@ -251,8 +285,14 @@ bool bUiTaskInit(void)
                                 (void *)0U, 
                                 vScreenIdleCallback);
 
+    xCcCmdTimer = xTimerCreate("ScreenCcRestoreTimer", 
+                                pdMS_TO_TICKS(UI_DISPLAY_CC_RESTORE), 
+                                pdFALSE, 
+                                (void *)0U, 
+                                vScreenCcCmdTimeoutCallback);
+
     /* Check resources */
-    if ((ui_task_handle != NULL) && (xUpdateTimer != NULL) && (xIdleTimer != NULL))
+    if ((ui_task_handle != NULL) && (xUpdateTimer != NULL) && (xIdleTimer != NULL) && (xCcCmdTimer != NULL))
     {
         retval = true;
     }

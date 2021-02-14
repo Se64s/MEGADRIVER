@@ -20,7 +20,7 @@
 #define SYNTH_CMD_TIMEOUT                   (1000U)
 
 /* Event queue size */
-#define SYNTH_EVENT_QUEUE_SIZE              (5U)
+#define SYNTH_EVENT_QUEUE_SIZE              (15U)
 
 /* Event queue item size */
 #define SYNTH_EVENT_QUEUE_ELEMENT_SIZE      (sizeof(SynthEvent_t))
@@ -34,6 +34,9 @@ TaskHandle_t xSynthTaskHandle = NULL;
 
 /** Queue event handler */
 QueueHandle_t xSynthEventQueueHandle = NULL;
+
+/** Last cc executed */
+SynthCcMap_t xLastCcExecuted = { 0U };
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -98,6 +101,12 @@ static void vCmdVoiceOff(SynthEventPayloadMidi_t * pxCmdMsg);
   * @retval None
   */
 static void vCmdVoiceOffAll(void);
+
+/**
+  * @brief Handle CC event.
+  * @retval None
+  */
+static void vCmdMapCC(SynthEventPayloadMidi_t * pxCmdMsg);
 
 /**
   * @brief Handler for SysEx commands.
@@ -167,6 +176,10 @@ static void vHandleMidiEvent(SynthEventPayloadMidi_t * pxEventData)
 
         case SYNTH_CMD_NOTE_OFF_ALL:
             vCmdVoiceOffAll();
+            break;
+
+        case SYNTH_CMD_CC_MAP:
+            vCmdMapCC(pxEventData);
             break;
 
         default:
@@ -584,6 +597,31 @@ static void vCmdVoiceOff(SynthEventPayloadMidi_t * pxCmdMsg)
     }
 }
 
+static void vCmdMapCC(SynthEventPayloadMidi_t * pxCmdMsg)
+{
+    ERR_ASSERT(pxCmdMsg != NULL);
+
+    uint8_t *pu8Data = pxCmdMsg->u8Data;
+
+    uint8_t u8Channel = *pu8Data++;
+    uint8_t u8CcCmd = *pu8Data++;
+    uint8_t u8CcData = *pu8Data++;
+
+    (void)u8Channel;
+
+#ifdef SYNTH_DBG_VERBOSE
+    vCliPrintf(SYNTH_TASK_NAME, "Handle CC: CH %02d - CC %03d - DATA %03d", u8Channel, u8CcCmd, u8CcData);
+#endif
+
+    xLastCcExecuted.u8Cmd = u8CcCmd;
+    xLastCcExecuted.u8CcData = u8CcData;
+    xLastCcExecuted.u8Data = u8CcData;
+
+    sprintf(xLastCcExecuted.pcParamName, "Test CC CMD");
+
+    bUiTaskNotify(UI_SIGNAL_MIDI_CC);
+}
+
 static void vCmdVoiceOffAll(void)
 {
     vCliPrintf(SYNTH_TASK_NAME, "Clear ALL voices");
@@ -669,7 +707,7 @@ static bool bLoadPreset(uint8_t u8Position)
 static bool bLoadDefaultPreset(uint8_t u8Position)
 {
     bool bRetVal = false;
-    const xFmDevice_t * pxPresetData = pxSYNTH_APP_DATA_CONST_get(u8Position);
+    xFmDevice_t * pxPresetData = (xFmDevice_t *)pxSYNTH_APP_DATA_CONST_get(u8Position);
 
     if (pxPresetData != NULL)
     {
@@ -749,7 +787,7 @@ static bool bInitPreset(void)
 {
     bool bRetval = false;
     uint8_t u8PresetId = 0U;
-    const xFmDevice_t * pxInitPreset = pxSYNTH_APP_DATA_CONST_get(u8PresetId);
+    xFmDevice_t * pxInitPreset = (xFmDevice_t *)pxSYNTH_APP_DATA_CONST_get(u8PresetId);
 
     if (pxInitPreset != NULL)
     {
@@ -872,6 +910,11 @@ bool bSynthSetPreset(xFmDevice_t * pxPreset)
     }
 
     return bRetval;
+}
+
+SynthCcMap_t xSynthGetLastCc(void)
+{
+    return xLastCcExecuted;
 }
 
 bool bSynthTaskInit(void)
