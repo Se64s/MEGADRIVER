@@ -8,10 +8,15 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "i2c_driver.h"
+#include "error.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
+
+/* Buffer size */
+#define TX_BUFF_LEN_DEV0    (64U)
+
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 
@@ -22,6 +27,9 @@ DMA_HandleTypeDef hdma_i2c1_tx;
 
 /* Event callback handler */
 static i2c_event_cb i2c1_event_cb = NULL;
+
+/* Device buffers */
+static uint8_t u8BuffTxDev0[TX_BUFF_LEN_DEV0] = { 0U };
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -39,19 +47,12 @@ static void __I2C1_Init(void);
   */
 static void __I2C1_Deinit(void);
 
-/**
-  * @brief Local error handler
-  * @param None
-  * @retval None
-  */
-static void __error_handler(void);
-
 /* Private user code ---------------------------------------------------------*/
 
 static void __I2C1_Init(void)
 {
     hi2c1.Instance = I2C1;
-    hi2c1.Init.Timing = 0x00602173;
+    hi2c1.Init.Timing = 0x00300B29;     // 1MHz
     hi2c1.Init.OwnAddress1 = 0;
     hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
     hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -59,40 +60,36 @@ static void __I2C1_Init(void)
     hi2c1.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
     hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
     hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+
     if (HAL_I2C_Init(&hi2c1) != HAL_OK)
     {
-        __error_handler();
+        ERR_ASSERT(0U);
     }
+
     /** Configure Analogue filter 
      */
     if (HAL_I2CEx_ConfigAnalogFilter(&hi2c1, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
     {
-        __error_handler();
+        ERR_ASSERT(0U);
     }
+
     /** Configure Digital filter 
      */
     if (HAL_I2CEx_ConfigDigitalFilter(&hi2c1, 0) != HAL_OK)
     {
-        __error_handler();
+        ERR_ASSERT(0U);
     }
+
+    /** I2C Fast mode Plus enable
+    */
+    HAL_I2CEx_EnableFastModePlus(I2C_FASTMODEPLUS_I2C1);
 }
 
 static void __I2C1_Deinit(void)
 {
-    /* SPI1 interrupt DeInit */
-    HAL_NVIC_DisableIRQ(I2C1_IRQn);
-
     if (HAL_I2C_DeInit(&hi2c1) != HAL_OK)
     {
-        __error_handler();
-    }
-}
-
-static void __error_handler(void)
-{
-    while (1)
-    {
-
+        ERR_ASSERT(0U);
     }
 }
 
@@ -184,24 +181,37 @@ i2c_status_t I2C_deinit(i2c_port_t dev)
 
 i2c_status_t I2C_master_send(i2c_port_t dev, uint16_t i2c_addr, uint8_t *pdata, uint16_t len)
 {
+    ERR_ASSERT(pdata != NULL);
+
     i2c_status_t xRetval = I2C_STATUS_NOTDEF;
 
     if (dev == I2C_0)
     {
-        /* Wait for peripheral ready */
-        while (HAL_I2C_GetState(&hi2c1) != HAL_I2C_STATE_READY)
-        {
-        }
+        ERR_ASSERT(len < TX_BUFF_LEN_DEV0);
 
-        /* Send data */
-        if (HAL_I2C_Master_Transmit_DMA(&hi2c1, i2c_addr, pdata, len) != HAL_OK)
+        if (HAL_I2C_GetState(&hi2c1) == HAL_I2C_STATE_READY)
         {
-            xRetval = I2C_STATUS_ERROR;
-            HAL_I2C_Master_Abort_IT(&hi2c1, i2c_addr);
+            uint16_t u16LenData = len;
+            uint8_t *pu8Data = u8BuffTxDev0;
+
+            while (u16LenData-- != 0U)
+            {
+                *pu8Data++ = *pdata++;
+            }
+
+            /* Send data */
+            if (HAL_I2C_Master_Transmit_DMA(&hi2c1, i2c_addr, u8BuffTxDev0, len) != HAL_OK)
+            {
+                xRetval = I2C_STATUS_ERROR;
+            }
+            else
+            {
+                xRetval = I2C_STATUS_OK;
+            }
         }
         else
         {
-            xRetval = I2C_STATUS_OK;
+            xRetval = I2C_STATUS_BUSY;
         }
     }
 
@@ -210,24 +220,27 @@ i2c_status_t I2C_master_send(i2c_port_t dev, uint16_t i2c_addr, uint8_t *pdata, 
 
 i2c_status_t I2C_master_read(i2c_port_t dev, uint16_t i2c_addr, uint8_t *pdata, uint16_t len)
 {
+    ERR_ASSERT(pdata != NULL);
+
     i2c_status_t xRetval = I2C_STATUS_NOTDEF;
 
     if (dev == I2C_0)
     {
-        /* Wait for peripheral ready */
-        while (HAL_I2C_GetState(&hi2c1) != HAL_I2C_STATE_READY)
+        if (HAL_I2C_GetState(&hi2c1) == HAL_I2C_STATE_READY)
         {
-        }
-
-        /* Set read data */
-        if (HAL_I2C_Master_Receive_DMA(&hi2c1, i2c_addr, pdata, len) != HAL_OK)
-        {
-            xRetval = I2C_STATUS_ERROR;
-            HAL_I2C_Master_Abort_IT(&hi2c1, i2c_addr);
+            /* Set read data */
+            if (HAL_I2C_Master_Receive_DMA(&hi2c1, i2c_addr, pdata, len) != HAL_OK)
+            {
+                xRetval = I2C_STATUS_ERROR;
+            }
+            else
+            {
+                xRetval = I2C_STATUS_OK;
+            }
         }
         else
         {
-            xRetval = I2C_STATUS_OK;
+            xRetval = I2C_STATUS_BUSY;
         }
     }
 

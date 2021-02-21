@@ -44,6 +44,8 @@ extern UART_HandleTypeDef huart3;
 extern TIM_HandleTypeDef htim3;
 extern ADC_HandleTypeDef hadc1;
 
+extern void HAL_UART_HandleRxEvent(UART_HandleTypeDef *huart);
+
 /******************************************************************************/
 /*           Cortex-M0+ Processor Interruption and Exception Handlers          */
 /******************************************************************************/
@@ -76,7 +78,7 @@ void HardFault_Handler(void)
   */
 void DMA1_Channel1_IRQHandler(void)
 {
-  HAL_DMA_IRQHandler(&hdma_i2c1_rx);
+  HAL_DMA_IRQHandler(&hdma_usart3_rx);
 }
 
 /**
@@ -85,7 +87,7 @@ void DMA1_Channel1_IRQHandler(void)
 void DMA1_Channel2_3_IRQHandler(void)
 {
   HAL_DMA_IRQHandler(&hdma_i2c1_tx);
-  HAL_DMA_IRQHandler(&hdma_usart3_rx);
+  HAL_DMA_IRQHandler(&hdma_i2c1_rx);
 }
 
 /**
@@ -118,8 +120,7 @@ void USART2_IRQHandler(void)
   {
     __HAL_UART_CLEAR_IT(&huart2, UART_CLEAR_IDLEF);
 
-    /* Abort and retrigger reception */
-    HAL_UART_Abort_IT(&huart2);
+    HAL_UART_HandleRxEvent(&huart2);
   }
 }
 
@@ -135,8 +136,7 @@ void USART3_4_IRQHandler(void)
   {
     __HAL_UART_CLEAR_IT(&huart3, UART_CLEAR_IDLEF);
 
-    /* Abort and retrigger reception */
-    HAL_UART_Abort_IT(&huart3);
+    HAL_UART_HandleRxEvent(&huart3);
   }
 }
 

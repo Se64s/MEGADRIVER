@@ -67,12 +67,12 @@ static void MX_SPI1_Init(void)
         ERR_ASSERT(0U);
     }
 
-    /* DMA1_Channel2_3_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(DMA1_Channel2_3_IRQn, 2, 0);
-    HAL_NVIC_EnableIRQ(DMA1_Channel2_3_IRQn);
+    /* DMA1_Ch4_7_DMAMUX1_OVR_IRQn interrupt configuration */
+    HAL_NVIC_SetPriority(DMA1_Ch4_7_DMAMUX1_OVR_IRQn, 1, 0);
+    HAL_NVIC_EnableIRQ(DMA1_Ch4_7_DMAMUX1_OVR_IRQn);
 
     /* SPI1 interrupt Init */
-    HAL_NVIC_SetPriority(SPI1_IRQn, 2, 0);
+    HAL_NVIC_SetPriority(SPI1_IRQn, 1, 0);
     HAL_NVIC_EnableIRQ(SPI1_IRQn);
 }
 

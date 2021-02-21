@@ -46,9 +46,11 @@ extern "C" {
 #define MIDI_SIGNAL_ERROR               (1UL << 2)
 #define MIDI_SIGNAL_CHANGE_MODE_POLY    (1UL << 3)
 #define MIDI_SIGNAL_CHANGE_MODE_MONO    (1UL << 4)
+#define MIDI_SIGNAL_ALL                 (0xFFFFFFFFU)
 
 /* Extended debug output */
 // #define MIDI_DBG_VERBOSE
+// #define MIDI_DBG_STATS
 
 /* Exported types ------------------------------------------------------------*/
 

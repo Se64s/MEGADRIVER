@@ -55,14 +55,6 @@ static void __adc_error_handler(void)
 
 static void __adc_0_low_level_init(void)
 {
-    /* Init DMA */
-    /* DMA controller clock enable */
-    __HAL_RCC_DMA1_CLK_ENABLE();
-
-    /* DMA interrupt init */
-    HAL_NVIC_SetPriority(DMA1_Ch4_7_DMAMUX1_OVR_IRQn, 3, 0);
-    HAL_NVIC_EnableIRQ(DMA1_Ch4_7_DMAMUX1_OVR_IRQn);
-
     /* Init ADC */
     ADC_ChannelConfTypeDef sConfig = {0};
 

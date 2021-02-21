@@ -24,9 +24,6 @@ extern "C"
 /* Indicate use of retos */
 #define DISPLAY_USE_RTOS
 
-/* Define initial message */
-#define DISPLAY_INIT_MSG  "Synth FM v1.0.0"
-
 /* Exported types ------------------------------------------------------------*/
 
 /* List of devices*/
@@ -63,14 +60,6 @@ display_status_t DISPLAY_init(display_port_t dev, u8g2_t * pxDisplayHandler);
   * @retval Operation status.
   */
 display_status_t DISPLAY_deinit(display_port_t dev);
-
-/**
-  * @brief  Update display image.
-  * @param  dev display number to update.
-  * @param  pxDisplayHandler pointer to display control structure.
-  * @retval Operation status.
-  */
-display_status_t DISPLAY_update(display_port_t dev, u8g2_t * pxDisplayHandler);
 
 #ifdef __cplusplus
 }

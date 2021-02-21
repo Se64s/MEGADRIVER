@@ -21,7 +21,7 @@ extern "C"
 /* Private defines -----------------------------------------------------------*/
 
 /* Data rx buffer size */
-#define SERIAL_0_CBUF_SIZE  (350U)
+#define SERIAL_0_CBUF_SIZE  (512U)
 #define SERIAL_0_RX_SIZE    (64U)
 
 #define SERIAL_1_CBUF_SIZE  (128U)

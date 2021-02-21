@@ -19,6 +19,9 @@
 #include "ui_sys.h"
 #include "ui_menu_main.h"
 
+#include "main.h"
+#include "printf.h"
+
 #include "error.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -26,7 +29,7 @@
 /* Private define ------------------------------------------------------------*/
 
 /** Update rate in ms */
-#define UI_DISPLAY_UPDATE_RATE_MS   (25U)
+#define UI_DISPLAY_UPDATE_RATE_MS   (40U)
 
 /** Idle period definition in ms */
 #define UI_DISPLAY_IDLE_MS          (5000U)
@@ -35,6 +38,10 @@
 #define UI_DISPLAY_CC_RESTORE       (1000U)
 
 /* Private macro -------------------------------------------------------------*/
+
+/* Display initial msg  */
+#define DISPLAY_INIT_MSG   "MEGADRIVER"
+
 /* Private variables ---------------------------------------------------------*/
 
 /* Task handler */
@@ -88,6 +95,12 @@ static void vScreenIdleCallback(TimerHandle_t xTimer);
   * @retval None.
   */
 static void vScreenCcCmdTimeoutCallback(TimerHandle_t xTimer);
+
+/**
+ * @brief Show init message
+ * 
+ */
+static void vScreenInitMsg( u8g2_t * pxDisplayHandler);
 
 /**
   * @brief Main task loop
@@ -149,6 +162,28 @@ static void vScreenCcCmdTimeoutCallback(TimerHandle_t xTimer)
     xTaskNotify(ui_task_handle, UI_SIGNAL_RESTORE_CC, eSetBits);
 }
 
+static void vScreenInitMsg( u8g2_t * pxDisplayHandler)
+{
+    // Init message
+    char pcInitMsg0[UI_STR_MAX_LEN] = {0};
+    char pcInitMsg1[UI_STR_MAX_LEN] = {0};
+    char pcInitMsg2[UI_STR_MAX_LEN] = {0};
+
+    (void)snprintf(pcInitMsg0, UI_STR_MAX_LEN, "%s", DISPLAY_INIT_MSG);
+    (void)snprintf(pcInitMsg1, UI_STR_MAX_LEN, "Build   %s", MAIN_APP_VERSION);
+    (void)snprintf(pcInitMsg2, UI_STR_MAX_LEN, "Rev     %x", GIT_REVISION);
+
+    /* Update display data */
+    u8g2_ClearBuffer(pxDisplayHandler);
+
+    u8g2_SetFont(pxDisplayHandler, u8g2_font_amstrad_cpc_extended_8r);
+    u8g2_DrawStr(pxDisplayHandler, 0, 10, pcInitMsg0);
+    u8g2_DrawStr(pxDisplayHandler, 0, 25, pcInitMsg1);
+    u8g2_DrawStr(pxDisplayHandler, 0, 40, pcInitMsg2);
+
+    u8g2_SendBuffer(pxDisplayHandler);
+}
+
 static void __ui_main( void *pvParameters )
 {
     /* Init delay to for pow stabilization */
@@ -174,8 +209,10 @@ static void __ui_main( void *pvParameters )
     /* Show init msg */
     vCliPrintf(UI_TASK_NAME, "Init");
 
+    /* Init msg on ui */
+    vScreenInitMsg(&xDisplayHandler);
+
     /* Update display for first time */
-    DISPLAY_update(DISPLAY_0, &xDisplayHandler);
     vTaskDelay(pdMS_TO_TICKS(2000U));
 
     /* Init timers */
@@ -186,28 +223,57 @@ static void __ui_main( void *pvParameters )
     {
         uint32_t u32TmpEvent = 0U;
 
-        BaseType_t xEventWait = xTaskNotifyWait(0, 
-                                (
-                                    UI_SIGNAL_ENC_UPDATE_CW | 
-                                    UI_SIGNAL_ENC_UPDATE_CCW | 
-                                    UI_SIGNAL_ENC_UPDATE_SW_RESET | 
-                                    UI_SIGNAL_ENC_UPDATE_SW_SET | 
-                                    UI_SIGNAL_IDLE |
-                                    UI_SIGNAL_RESTORE_IDLE |
-                                    UI_SIGNAL_SCREEN_UPDATE |
-                                    UI_SIGNAL_MIDI_CC | 
-                                    UI_SIGNAL_RESTORE_CC
-                                ), 
-                                &u32TmpEvent, 
-                                portMAX_DELAY);
+        BaseType_t xEventWait = xTaskNotifyWait(0, UI_SIGNAL_ALL, &u32TmpEvent, portMAX_DELAY);
 
         if (xEventWait == pdPASS)
         {
-            if (CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_SCREEN_UPDATE))
+            /* Events to feed to ui screens */
+
+            if (u32TmpEvent & ( UI_SIGNAL_ENC_UPDATE_CW | 
+                                UI_SIGNAL_ENC_UPDATE_CCW | 
+                                UI_SIGNAL_ENC_UPDATE_SW_SET | 
+                                UI_SIGNAL_MIDI_CC |
+                                UI_SIGNAL_RESTORE_CC))
             {
-                UI_render(&xDisplayHandler, &xUiMenuHandler);
+                UI_action(&xUiMenuHandler, &u32TmpEvent);
             }
 
+            /* Handle timer events */
+
+            /* Setup timer for restoring idle */
+            if ( CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_ENC_UPDATE_CCW) )
+            {
+                xTimerStart(xIdleTimer, 0U);
+            }
+
+            /* If CC event, start timer for restoring idle main screen */
+            if (CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_MIDI_CC))
+            {
+                /* If active screen is idle, kick cc restore timer */
+                if (xUiMenuHandler.u32ScreenSelectionIndex == MENU_IDLE_SCREEN_POSITION)
+                {
+                    xTimerStart(xCcCmdTimer, 0U);
+                }
+            }
+
+            /* If idle event, set IDLE screen */
+            if (CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_IDLE))
+            {
+                vCliPrintf(UI_TASK_NAME, "IDLE event");
+
+                if (xUiMenuHandler.u32ScreenSelectionIndex != MENU_IDLE_SCREEN_POSITION)
+                {
+                    u32ReturnScreen = xUiMenuHandler.u32ScreenSelectionIndex;
+                }
+                else
+                {
+                    u32ReturnScreen = MENU_MAIN_SCREEN_POSITION;
+                }
+
+                xUiMenuHandler.u32ScreenSelectionIndex = MENU_IDLE_SCREEN_POSITION;
+            }
+
+            /* Restore menu screen in case of restore from idle screen */
             if (CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_RESTORE_IDLE))
             {
                 if (u32ReturnScreen < MENU_LAST_SCREEN_POSITION)
@@ -217,47 +283,10 @@ static void __ui_main( void *pvParameters )
                 }
             }
 
-            /* Events to feed to ui screens */
-            if (u32TmpEvent & ( UI_SIGNAL_ENC_UPDATE_CW | 
-                                UI_SIGNAL_ENC_UPDATE_CCW | 
-                                UI_SIGNAL_ENC_UPDATE_SW_RESET | 
-                                UI_SIGNAL_ENC_UPDATE_SW_SET | 
-                                UI_SIGNAL_IDLE | 
-                                UI_SIGNAL_MIDI_CC |
-                                UI_SIGNAL_RESTORE_CC))
+            /* Periodic render signal */
+            if (CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_SCREEN_UPDATE))
             {
-                if ( CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_ENC_UPDATE_CW) ||
-                     CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_ENC_UPDATE_CCW) )
-                {
-                    xTimerStart(xIdleTimer, 0U);
-                }
-
-                if (CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_IDLE))
-                {
-                    vCliPrintf(UI_TASK_NAME, "IDLE event");
-
-                    if (xUiMenuHandler.u32ScreenSelectionIndex != MENU_IDLE_SCREEN_POSITION)
-                    {
-                        u32ReturnScreen = xUiMenuHandler.u32ScreenSelectionIndex;
-                    }
-                    else
-                    {
-                        u32ReturnScreen = MENU_MAIN_SCREEN_POSITION;
-                    }
-
-                    xUiMenuHandler.u32ScreenSelectionIndex = MENU_IDLE_SCREEN_POSITION;
-                }
-
-                if (CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_MIDI_CC))
-                {
-                    /* If active screen is idle, kick cc restore timer */
-                    if (xUiMenuHandler.u32ScreenSelectionIndex == MENU_IDLE_SCREEN_POSITION)
-                    {
-                        xTimerStart(xCcCmdTimer, 0U);
-                    }
-                }
-
-                UI_action(&xUiMenuHandler, &u32TmpEvent);
+                UI_render(&xDisplayHandler, &xUiMenuHandler);
             }
         }
     }

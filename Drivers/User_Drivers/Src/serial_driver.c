@@ -13,6 +13,19 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
+
+/** Serial port handler */
+typedef struct SerialDevHandler
+{
+    serial_port_t xSerialId;
+    UART_HandleTypeDef *pxHalPeriphHandler;
+    circular_buf_t *pxAppCircularBuffer;
+    uint8_t *pu8LowLevelBuffer;
+    uint32_t u32LowLevelBufferSize;
+    uint32_t u32LowLevelBufferPos;
+    serial_event_cb pxEventCb;
+} SerialDevHandler_t;
+
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
@@ -20,57 +33,74 @@
 /* Serial 0 resources */
 UART_HandleTypeDef huart3;
 DMA_HandleTypeDef hdma_usart3_rx;
-static circular_buf_t cbuff_uart3;
 static uint8_t rx_buf_uart3[SERIAL_0_RX_SIZE] = {0};
 static uint8_t rx_cbuf_uart3[SERIAL_0_CBUF_SIZE] = {0};
-static serial_event_cb uart3_event_cb = NULL;
+static circular_buf_t cbuff_uart3 = {
+    .buffer = rx_cbuf_uart3,
+    .head = 0U,
+    .tail = 0U,
+    .max = SERIAL_0_CBUF_SIZE,
+    .full = false,
+};
+
+static SerialDevHandler_t xSerial0Handler = {
+    .xSerialId = SERIAL_0,
+    .pxHalPeriphHandler = &huart3,
+    .pxAppCircularBuffer = &cbuff_uart3,
+    .pu8LowLevelBuffer = rx_buf_uart3,
+    .u32LowLevelBufferSize = SERIAL_0_RX_SIZE,
+    .pxEventCb = NULL
+};
 
 /* Serial 1 resources */
 UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart2_tx;
 DMA_HandleTypeDef hdma_usart2_rx;
-static circular_buf_t cbuff_uart2;
 static uint8_t rx_buf_uart2[SERIAL_1_RX_SIZE] = {0};
 static uint8_t rx_cbuf_uart2[SERIAL_1_CBUF_SIZE] = {0};
-static serial_event_cb uart2_event_cb = NULL;
+static circular_buf_t cbuff_uart2 = {
+    .buffer = rx_cbuf_uart2,
+    .head = 0U,
+    .tail = 0U,
+    .max = SERIAL_1_CBUF_SIZE,
+    .full = false,
+};
+
+static SerialDevHandler_t xSerial1Handler = {
+    .xSerialId = SERIAL_1,
+    .pxHalPeriphHandler = &huart2,
+    .pxAppCircularBuffer = &cbuff_uart2,
+    .pu8LowLevelBuffer = rx_buf_uart2,
+    .u32LowLevelBufferSize = SERIAL_1_RX_SIZE,
+    .pxEventCb = NULL
+};
 
 /* Private function prototypes -----------------------------------------------*/
 
-static void _error_handler(void);
+static void BSP_Init_Serial_0(void);
+static void BSP_DeInit_Serial_0(void);
 
-static void BSP_USART2_UART_Init(void);
-static void BSP_USART2_UART_Deinit(void);
+static void BSP_Init_Serial_1(void);
+static void BSP_DeInit_Serial_1(void);
 
-static void BSP_USART3_UART_Init(void);
-static void BSP_USART3_UART_Deinit(void);
-
-/* Private user code ---------------------------------------------------------*/
+/* Private function prototypes -----------------------------------------------*/
 
 /**
-  * @brief Error Handler for this module
-  * @param None.
-  * @retval None.
-  */
-static void _error_handler(void)
-{
-    ERR_ASSERT(0U);
-}
+ * @brief Function to proces rx buffer in following IRQs: IDLE DMA_TC and DMA_HT
+ * 
+ * @param huart 
+ */
+extern void HAL_UART_HandleRxEvent(UART_HandleTypeDef *huart);
+
+/* Private user code ---------------------------------------------------------*/
 
 /**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
   */
-static void BSP_USART2_UART_Init(void)
+static void BSP_Init_Serial_1(void)
 {
-    /* DMA1_Channel2_3_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(DMA1_Ch4_7_DMAMUX1_OVR_IRQn, 3, 0);
-    HAL_NVIC_EnableIRQ(DMA1_Ch4_7_DMAMUX1_OVR_IRQn);
-
-    /* DMA1_Channel2_3_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(USART2_IRQn, 3, 0);
-    HAL_NVIC_EnableIRQ(USART2_IRQn);
-
     huart2.Instance = USART2;
     huart2.Init.BaudRate = 115200;
     huart2.Init.WordLength = UART_WORDLENGTH_8B;
@@ -85,19 +115,19 @@ static void BSP_USART2_UART_Init(void)
 
     if (HAL_UART_Init(&huart2) != HAL_OK)
     {
-        _error_handler();
+        ERR_ASSERT(0U);
     }
     if (HAL_UARTEx_SetTxFifoThreshold(&huart2, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
     {
-        _error_handler();
+        ERR_ASSERT(0U);
     }
     if (HAL_UARTEx_SetRxFifoThreshold(&huart2, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
     {
-        _error_handler();
+        ERR_ASSERT(0U);
     }
     if (HAL_UARTEx_DisableFifoMode(&huart2) != HAL_OK)
     {
-        _error_handler();
+        ERR_ASSERT(0U);
     }
 
     /* Init additional resurces */
@@ -112,15 +142,12 @@ static void BSP_USART2_UART_Init(void)
   * @param None
   * @retval None
   */
-static void BSP_USART2_UART_Deinit(void)
+static void BSP_DeInit_Serial_1(void)
 {
-    /* Disable associated IRQ */
-    HAL_NVIC_DisableIRQ(USART2_IRQn);
-
     /* Deinit peripheral */
     if (HAL_UART_DeInit(&huart2) != HAL_OK)
     {
-        _error_handler();
+        ERR_ASSERT(0U);
     }
 
     /* Init additional resurces */
@@ -130,16 +157,8 @@ static void BSP_USART2_UART_Deinit(void)
     __HAL_UART_DISABLE_IT(&huart2, UART_IT_IDLE);
 }
 
-static void BSP_USART3_UART_Init(void)
+static void BSP_Init_Serial_0(void)
 {
-    /* DMA1_Channel2_3_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(DMA1_Channel2_3_IRQn, 3, 0);
-    HAL_NVIC_EnableIRQ(DMA1_Channel2_3_IRQn);
-
-    /* DMA1_Channel2_3_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(USART3_4_IRQn, 3, 0);
-    HAL_NVIC_EnableIRQ(USART3_4_IRQn);
-
     huart3.Instance = USART3;
     huart3.Init.BaudRate = 31250;
     huart3.Init.WordLength = UART_WORDLENGTH_8B;
@@ -148,13 +167,13 @@ static void BSP_USART3_UART_Init(void)
     huart3.Init.Mode = UART_MODE_RX;
     huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
     huart3.Init.OverSampling = UART_OVERSAMPLING_16;
-    huart3.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+    huart3.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_ENABLE;
     huart3.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-    huart3.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+    huart3.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_RXOVERRUNDISABLE_INIT;
 
     if (HAL_UART_Init(&huart3) != HAL_OK)
     {
-        _error_handler();
+        ERR_ASSERT(0U);
     }
 
     /* Init additional resurces */
@@ -164,15 +183,12 @@ static void BSP_USART3_UART_Init(void)
     __HAL_UART_ENABLE_IT(&huart3, UART_IT_IDLE);
 }
 
-static void BSP_USART3_UART_Deinit(void)
+static void BSP_DeInit_Serial_0(void)
 {
-    /* Disable associated IRQ */
-    HAL_NVIC_DisableIRQ(USART3_4_IRQn);
-
     /* Deinit peripheral */
     if (HAL_UART_DeInit(&huart3) != HAL_OK)
     {
-        _error_handler();
+        ERR_ASSERT(0U);
     }
 
     /* Init additional resurces */
@@ -184,122 +200,156 @@ static void BSP_USART3_UART_Deinit(void)
 
 /* Callback ------------------------------------------------------------------*/
 
+void HAL_UART_HandleRxEvent(UART_HandleTypeDef *huart)
+{
+    SerialDevHandler_t * pxSerialHandler = NULL;
+
+    if (huart->Instance == xSerial1Handler.pxHalPeriphHandler->Instance)
+    {
+        pxSerialHandler = &xSerial1Handler;
+    }
+    if (huart->Instance == xSerial0Handler.pxHalPeriphHandler->Instance)
+    {
+        pxSerialHandler = &xSerial0Handler;
+    }
+
+    if (pxSerialHandler != NULL)
+    {
+        uint32_t u32CurrentPos = pxSerialHandler->u32LowLevelBufferSize - huart->hdmarx->Instance->CNDTR;
+        uint8_t * pdata = pxSerialHandler->pu8LowLevelBuffer + pxSerialHandler->u32LowLevelBufferPos;
+
+        /* Detect change on buffer */
+        if (u32CurrentPos != pxSerialHandler->u32LowLevelBufferPos)
+        {
+            uint32_t u32RxData = 0U;
+
+            /* Case without overflow in circular buffer */
+            if (u32CurrentPos > pxSerialHandler->u32LowLevelBufferPos)
+            {
+                u32RxData = u32CurrentPos - pxSerialHandler->u32LowLevelBufferPos;
+                while (u32RxData-- != 0U)
+                {
+                    circular_buf_put2(pxSerialHandler->pxAppCircularBuffer, *pdata++);
+                }
+            }
+            else
+            {
+                /* Case with overflow in circular buffer */
+                u32RxData = pxSerialHandler->u32LowLevelBufferSize - pxSerialHandler->u32LowLevelBufferPos;
+                while (u32RxData-- != 0U)
+                {
+                    circular_buf_put2(pxSerialHandler->pxAppCircularBuffer, *pdata++);
+                }
+
+                pdata = pxSerialHandler->pu8LowLevelBuffer;
+                u32RxData = u32CurrentPos;
+                while (u32RxData-- != 0U)
+                {
+                    circular_buf_put2(pxSerialHandler->pxAppCircularBuffer, *pdata++);
+                }
+            }
+
+            if (pxSerialHandler->pxEventCb != NULL)
+            {
+                pxSerialHandler->pxEventCb(SERIAL_EVENT_RX_IDLE);
+            }
+        }
+
+        /* Check if end of buffer */
+        pxSerialHandler->u32LowLevelBufferPos = u32CurrentPos;
+        if (pxSerialHandler->u32LowLevelBufferPos == pxSerialHandler->u32LowLevelBufferSize)
+        {
+            pxSerialHandler->u32LowLevelBufferPos = 0U;
+        }
+    }
+}
+
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
-    if (huart->Instance == USART2)
+    SerialDevHandler_t * pxSerialHandler = NULL;
+
+    if (huart->Instance == xSerial1Handler.pxHalPeriphHandler->Instance)
     {
-        if (uart2_event_cb != NULL)
+        pxSerialHandler = &xSerial1Handler;
+    }
+    if (huart->Instance == xSerial0Handler.pxHalPeriphHandler->Instance)
+    {
+        pxSerialHandler = &xSerial0Handler;
+    }
+
+    if (pxSerialHandler != NULL)
+    {
+        if (pxSerialHandler->pxEventCb != NULL)
         {
-            uart2_event_cb(SERIAL_EVENT_TX_DONE);
+            pxSerialHandler->pxEventCb(SERIAL_EVENT_TX_DONE);
         }
     }
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-    if (huart->Instance == USART2)
+    if ((huart->Instance == xSerial0Handler.pxHalPeriphHandler->Instance) || 
+        (huart->Instance == xSerial1Handler.pxHalPeriphHandler->Instance))
     {
-        uint8_t * pdata = rx_buf_uart2;
-        uint32_t rx_size = SERIAL_1_RX_SIZE;
-        while (rx_size-- != 0)
-        {
-            if (circular_buf_put2(&cbuff_uart2, *pdata++) != 0)
-            {
-                if (uart2_event_cb != NULL)
-                {
-                    uart2_event_cb(SERIAL_EVENT_RX_BUF_FULL);
-                }
-                break;
-            }
-        }
-        HAL_UART_Receive_DMA(&huart2, rx_buf_uart2, SERIAL_1_RX_SIZE);
+        HAL_UART_HandleRxEvent(huart);
     }
-    else if (huart->Instance == USART3)
+}
+
+void HAL_UART_RxHalfCpltCallback(UART_HandleTypeDef *huart)
+{
+    if ((huart->Instance == xSerial0Handler.pxHalPeriphHandler->Instance) || 
+        (huart->Instance == xSerial1Handler.pxHalPeriphHandler->Instance))
     {
-        uint8_t * pdata = rx_buf_uart3;
-        uint32_t rx_size = SERIAL_0_RX_SIZE;
-        while (rx_size-- != 0)
-        {
-            if (circular_buf_put2(&cbuff_uart3, *pdata++) != 0)
-            {
-                if (uart3_event_cb != NULL)
-                {
-                    uart3_event_cb(SERIAL_EVENT_RX_BUF_FULL);
-                }
-                break;
-            }
-        }
-        HAL_UART_Receive_DMA(&huart3, rx_buf_uart3, SERIAL_0_RX_SIZE);
+        HAL_UART_HandleRxEvent(huart);
     }
 }
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
-    if (huart->Instance == USART2)
+    SerialDevHandler_t * pxSerialHandler = NULL;
+
+    if (huart->Instance == xSerial1Handler.pxHalPeriphHandler->Instance)
     {
-        if (uart2_event_cb != NULL)
-        {
-            uart2_event_cb(SERIAL_EVENT_ERROR);
-        }
-        HAL_UART_Receive_DMA(&huart2, rx_buf_uart2, SERIAL_1_RX_SIZE);
+        pxSerialHandler = &xSerial1Handler;
     }
-    else if (huart->Instance == USART3)
+    if (huart->Instance == xSerial0Handler.pxHalPeriphHandler->Instance)
     {
-        if (uart3_event_cb != NULL)
+        pxSerialHandler = &xSerial0Handler;
+    }
+
+    if (pxSerialHandler != NULL)
+    {
+        if (pxSerialHandler->pxEventCb != NULL)
         {
-            uart3_event_cb(SERIAL_EVENT_ERROR);
+            pxSerialHandler->pxEventCb(SERIAL_EVENT_ERROR);
         }
-        HAL_UART_Receive_DMA(&huart3, rx_buf_uart3, SERIAL_0_RX_SIZE);
+
+        pxSerialHandler->u32LowLevelBufferPos = 0U;
+        HAL_UART_Receive_DMA(huart,
+                            pxSerialHandler->pu8LowLevelBuffer,
+                            pxSerialHandler->u32LowLevelBufferSize);
     }
 }
 
 void HAL_UART_AbortCpltCallback(UART_HandleTypeDef *huart)
 {
-    if (huart->Instance == USART2)
-    {
-        uint8_t * pdata = rx_buf_uart2;
-        uint32_t rx_size = SERIAL_1_RX_SIZE - huart->hdmarx->Instance->CNDTR;
-        while (rx_size != 0)
-        {
-            if (circular_buf_put2(&cbuff_uart2, *pdata++) != 0)
-            {
-                if (uart2_event_cb != NULL)
-                {
-                    uart2_event_cb(SERIAL_EVENT_RX_BUF_FULL);
-                }
-                break;
-            }
-            rx_size--;
-        }
-        HAL_UART_Receive_DMA(&huart2, rx_buf_uart2, SERIAL_1_RX_SIZE);
+    SerialDevHandler_t * pxSerialHandler = NULL;
 
-        if (uart2_event_cb != NULL)
-        {
-            uart2_event_cb(SERIAL_EVENT_RX_IDLE);
-        }
+    if (huart->Instance == xSerial1Handler.pxHalPeriphHandler->Instance)
+    {
+        pxSerialHandler = &xSerial1Handler;
     }
-    else if (huart->Instance == USART3)
+    if (huart->Instance == xSerial0Handler.pxHalPeriphHandler->Instance)
     {
-        uint8_t * pdata = rx_buf_uart3;
-        uint32_t rx_size = SERIAL_0_RX_SIZE - huart->hdmarx->Instance->CNDTR;
-        while (rx_size != 0)
-        {
-            if (circular_buf_put2(&cbuff_uart3, *pdata++) != 0)
-            {
-                if (uart3_event_cb != NULL)
-                {
-                    uart3_event_cb(SERIAL_EVENT_RX_BUF_FULL);
-                }
-                break;
-            }
-            rx_size--;
-        }
-        HAL_UART_Receive_DMA(&huart3, rx_buf_uart3, SERIAL_0_RX_SIZE);
+        pxSerialHandler = &xSerial0Handler;
+    }
 
-        if (uart3_event_cb != NULL)
-        {
-            uart3_event_cb(SERIAL_EVENT_RX_IDLE);
-        }
+    if (pxSerialHandler != NULL)
+    {
+        pxSerialHandler->u32LowLevelBufferPos = 0U;
+        HAL_UART_Receive_DMA(huart,
+                            pxSerialHandler->pu8LowLevelBuffer,
+                            pxSerialHandler->u32LowLevelBufferSize);
     }
 }
 
@@ -308,42 +358,39 @@ void HAL_UART_AbortCpltCallback(UART_HandleTypeDef *huart)
 serial_status_t SERIAL_init(serial_port_t dev, serial_event_cb event_cb)
 {
     serial_status_t retval = SERIAL_STATUS_ERROR;
+    SerialDevHandler_t * pxSerialHandler = NULL;
 
     if (dev == SERIAL_0)
     {
-        /* Init hardware */
-        BSP_USART3_UART_Init();
+        pxSerialHandler = &xSerial0Handler;
 
-        if (event_cb != NULL)
-        {
-            uart3_event_cb = event_cb;
-        }
-
-        /* Enable reading */
-        if (HAL_UART_Receive_DMA(&huart3, rx_buf_uart3, SERIAL_0_RX_SIZE) == HAL_OK)
-        {
-            retval = SERIAL_STATUS_OK;
-        }
+        /* Low level init for serial 0 */
+        BSP_Init_Serial_0();
     }
     else if (dev == SERIAL_1)
     {
-        /* Init hardware */
-        BSP_USART2_UART_Init();
+        pxSerialHandler = &xSerial1Handler;
 
+        /* Low level init for serial 1 */
+        BSP_Init_Serial_1();
+    }
+
+    if (pxSerialHandler != NULL)
+    {
         if (event_cb != NULL)
         {
-            uart2_event_cb = event_cb;
+            pxSerialHandler->pxEventCb = event_cb;
         }
 
-        /* Enable reading */
-        if (HAL_UART_Receive_DMA(&huart2, rx_buf_uart2, SERIAL_1_RX_SIZE) == HAL_OK)
+        /* Start rx */
+        if ( HAL_UART_Receive_DMA(
+                                  pxSerialHandler->pxHalPeriphHandler, 
+                                  pxSerialHandler->pu8LowLevelBuffer, 
+                                  pxSerialHandler->u32LowLevelBufferSize 
+                                  ) == HAL_OK )
         {
             retval = SERIAL_STATUS_OK;
         }
-    }
-    else
-    {
-        /* Nothing to do */
     }
 
     return (retval);
@@ -355,12 +402,12 @@ serial_status_t SERIAL_deinit(serial_port_t dev)
 
     if (dev == SERIAL_0)
     {
-        BSP_USART3_UART_Deinit();
+        BSP_DeInit_Serial_0();
         retval = SERIAL_STATUS_OK;
     }
     else if (dev == SERIAL_1)
     {
-        BSP_USART2_UART_Deinit();
+        BSP_DeInit_Serial_1();
         retval = SERIAL_STATUS_OK;
     }
     else
@@ -374,26 +421,20 @@ serial_status_t SERIAL_deinit(serial_port_t dev)
 serial_status_t SERIAL_send(serial_port_t dev, uint8_t *pdata, uint16_t len)
 {
     serial_status_t retval = SERIAL_STATUS_NODEF;
-    UART_HandleTypeDef * phuart = NULL;
+    SerialDevHandler_t * pxSerialHandler = NULL;
 
-    /* Get serial handler */
     if (dev == SERIAL_0)
     {
-        /* code */
+        pxSerialHandler = NULL;
     }
     else if (dev == SERIAL_1)
     {
-        phuart = &huart2;
-    }
-    else
-    {
-        /* Nothing to do */
+        pxSerialHandler = &xSerial1Handler;
     }
 
-    /* If handler defined, process data */
-    if (phuart != NULL)
+    if (pxSerialHandler != NULL)
     {
-        HAL_StatusTypeDef hal_ret = HAL_UART_Transmit_DMA(phuart, pdata, len);
+        HAL_StatusTypeDef hal_ret = HAL_UART_Transmit_DMA(pxSerialHandler->pxHalPeriphHandler, pdata, len);
 
         if (hal_ret == HAL_OK)
         {
@@ -409,36 +450,30 @@ serial_status_t SERIAL_send(serial_port_t dev, uint8_t *pdata, uint16_t len)
         }
     }
 
-    return (retval);
+    return retval;
 }
 
 uint16_t SERIAL_read(serial_port_t dev, uint8_t *pdata, uint16_t max_len)
 {
-    uint16_t n_read = 0;
+    ERR_ASSERT(pdata != NULL);
 
-    /* Get serial handler */
+    uint16_t n_read = 0;
+    SerialDevHandler_t * pxSerialHandler = NULL;
+
     if (dev == SERIAL_0)
     {
-        HAL_NVIC_DisableIRQ(USART3_4_IRQn);
-        for (uint32_t i_data = 0; i_data < max_len; i_data++)
-        {
-            if (circular_buf_get(&cbuff_uart3, &pdata[i_data]) == 0)
-            {
-                n_read++;
-            }
-            else
-            {
-                break;
-            }
-        }
-        HAL_NVIC_EnableIRQ(USART3_4_IRQn);
+        pxSerialHandler = &xSerial0Handler;
     }
     else if (dev == SERIAL_1)
     {
-        HAL_NVIC_DisableIRQ(USART2_IRQn);
+        pxSerialHandler = &xSerial1Handler;
+    }
+
+    if (pxSerialHandler != NULL)
+    {
         for (uint32_t i_data = 0; i_data < max_len; i_data++)
         {
-            if (circular_buf_get(&cbuff_uart2, &pdata[i_data]) == 0)
+            if (circular_buf_get(pxSerialHandler->pxAppCircularBuffer, pdata + i_data) == 0)
             {
                 n_read++;
             }
@@ -447,39 +482,31 @@ uint16_t SERIAL_read(serial_port_t dev, uint8_t *pdata, uint16_t max_len)
                 break;
             }
         }
-        HAL_NVIC_EnableIRQ(USART2_IRQn);
-    }
-    else
-    {
-        /* Nothing to do */
     }
 
-    return (n_read);
+    return n_read;
 }
 
 uint16_t SERIAL_get_read_count(serial_port_t dev)
 {
     uint16_t n_read = 0;
+    SerialDevHandler_t * pxSerialHandler = NULL;
 
-    /* Get serial handler */
     if (dev == SERIAL_0)
     {
-        HAL_NVIC_DisableIRQ(USART3_4_IRQn);
-        n_read = circular_buf_size(&cbuff_uart3);
-        HAL_NVIC_EnableIRQ(USART3_4_IRQn);
+        pxSerialHandler = &xSerial0Handler;
     }
     else if (dev == SERIAL_1)
     {
-        HAL_NVIC_DisableIRQ(USART2_IRQn);
-        n_read = circular_buf_size(&cbuff_uart2);
-        HAL_NVIC_EnableIRQ(USART2_IRQn);
-    }
-    else
-    {
-        /* Nothing to do */
+        pxSerialHandler = &xSerial1Handler;
     }
 
-    return (n_read);
+    if (pxSerialHandler != NULL)
+    {
+        n_read = circular_buf_size(pxSerialHandler->pxAppCircularBuffer);
+    }
+
+    return n_read;
 }
 
 /*****END OF FILE****/

@@ -131,7 +131,15 @@ static void vScreenRenderIdle(void * pvDisplay, void * pvScreen)
     u8g2_SetFont(pxDisplayHandler, u8g2_font_amstrad_cpc_extended_8r);
 
     /* Draw actions on screen */
+#ifdef MIDI_DBG_STATS
+    static char pcTestStr[MAX_LEN_NAME] = {0};
+    extern volatile uint32_t u32MidiCmdCount;
+    sprintf(pcTestStr, "%s %d", pxScreen->pcName, u32MidiCmdCount);
+    u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pcTestStr);
+#else
     u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxScreen->pcName);
+#endif /* MIDI_DBG_STATS */
+
     u8g2_DrawHLine(pxDisplayHandler, u8LineX, u8LineY, u8LineWith);
 }
 

@@ -22,6 +22,10 @@ extern "C"
 #include "u8g2.h"
 
 /* Private defines -----------------------------------------------------------*/
+
+/* Maximun len display string */
+#define UI_STR_MAX_LEN     (16U)
+
 /* Exported types ------------------------------------------------------------*/
 
 /* Operation status */

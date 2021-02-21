@@ -27,6 +27,9 @@
 /* Value for not valid channel */
 #define MIDI_VOICE_NOT_VALID            (255U)
 
+/* Midi check signal */
+#define MIDI_CHECK_SIGNAL(VAR, SIG)          (((VAR) & (SIG)) == (SIG))
+
 /* Private macro -------------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
 
@@ -53,6 +56,13 @@ MidiCtrl_t xMidiHandler = { 0 };
 
 /* Task handler */
 TaskHandle_t xMidiTaskHandle = NULL;
+
+#ifdef MIDI_DBG_STATS
+volatile uint32_t u32NoteOnCount = 0U;
+volatile uint32_t u32NoteOffCount = 0U;
+volatile uint32_t u32MidiCmdCount = 0U;
+volatile uint32_t u32MidiByteCount = 0U;
+#endif
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -261,7 +271,7 @@ static bool bSendSynthCmd(SynthEventPayloadMidi_t * pxSynthCmd)
         xMidiEvent.eType = SYNTH_EVENT_MIDI_MSG;
         xMidiEvent.uPayload.xMidi = *pxSynthCmd;
 
-        if (xQueueSend( xSynthQueue, &xMidiEvent, pdMS_TO_TICKS(MIDI_MSG_TIMEOUT)) == pdPASS)
+        if (xQueueSend( xSynthQueue, &xMidiEvent, 0U) == pdPASS)
         {
             bRetVal = true;
         }
@@ -276,6 +286,10 @@ static bool bSendSynthCmd(SynthEventPayloadMidi_t * pxSynthCmd)
 
 static void vMidiCmdOn(uint8_t * pu8MidiCmd)
 {
+#ifdef MIDI_DBG_STATS
+    u32NoteOnCount++;
+#endif
+
     if (pu8MidiCmd != NULL)
     {
         /* Process in MONO mode */
@@ -293,6 +307,10 @@ static void vMidiCmdOn(uint8_t * pu8MidiCmd)
 
 static void vMidiCmdOff(uint8_t * pu8MidiCmd)
 {
+#ifdef MIDI_DBG_STATS
+    u32NoteOffCount++;
+#endif
+
     if (pu8MidiCmd != NULL)
     {
         /* Process in MONO mode */
@@ -612,6 +630,10 @@ static void vMidiCmdOffPoly(uint8_t * pu8MidiCmd)
 
 static void vHandleMidiCmd(uint8_t * pu8MidiCmd)
 {
+#ifdef MIDI_DBG_STATS
+    u32MidiCmdCount++;
+#endif
+
     if (pu8MidiCmd != NULL)
     {
         uint8_t u8MidiCmd = pu8MidiCmd[0U];
@@ -645,7 +667,7 @@ static void vMidiCmdSysExCallBack(uint8_t *pu8Data, uint32_t u32LenData)
             xMidiSysExEvent.uPayload.xMidiSysEx.u32Len = u32LenData;
             xMidiSysExEvent.uPayload.xMidiSysEx.pu8Data = pu8Data;
 
-            if (xQueueSend(xSynthQueue, &xMidiSysExEvent, pdMS_TO_TICKS(MIDI_MSG_TIMEOUT)) == pdPASS)
+            if (xQueueSend(xSynthQueue, &xMidiSysExEvent, 0U) == pdPASS)
             {
 #ifdef MIDI_DBG_VERBOSE
                 vCliPrintf(MIDI_TASK_NAME, "SYSEX: CMD LEN %d", u32LenData);
@@ -723,16 +745,25 @@ static void vMidiMain(void *pvParameters)
     for (;;)
     {
         uint32_t u32TmpEvent;
-        BaseType_t xEventWait = xTaskNotifyWait(0, MIDI_SIGNAL_RX_DATA, &u32TmpEvent, portMAX_DELAY);
+        BaseType_t xEventWait = xTaskNotifyWait(0, MIDI_SIGNAL_ALL, &u32TmpEvent, portMAX_DELAY);
 
         if (xEventWait == pdPASS)
         {
-            /* Process all buffered bytes */
-            uint8_t u8RxData = 0;
-
-            while (SERIAL_read(SERIAL_0, &u8RxData, 1) != 0)
+            if (MIDI_CHECK_SIGNAL(u32TmpEvent, MIDI_SIGNAL_RX_DATA))
             {
-                midi_update_fsm(u8RxData);
+                /* Process all buffered bytes */
+                uint8_t u8RxData = 0;
+
+                while (SERIAL_read(SERIAL_0, &u8RxData, 1) != 0)
+                {
+#ifdef MIDI_DBG_STATS
+                    if (u8RxData != 254U)
+                    {
+                        u32MidiByteCount++;
+                    }
+#endif
+                    midi_update_fsm(u8RxData);
+                }
             }
         }
     }

@@ -40,12 +40,9 @@ extern "C"
 #define ENCODER_0_VALUE_CCW           (0U)
 #define ENCODER_0_VALUE_NONE          (255U)
 
-/* Envoder tick guard */
-#define ENCODER_0_TICK_CNT_GUARD_EC   (400U)
-#define ENCODER_0_TICK_CNT_GUARD_SW   (2500U)
-
-/* Setup pull-up */
-#define ENCODER_USE_PULLUP
+/* Encoder tick guard */
+#define ENCODER_0_TICK_CNT_GUARD_EC   (45U)
+#define ENCODER_0_TICK_CNT_GUARD_SW   (500U)
 
 /* Exported types ------------------------------------------------------------*/
 

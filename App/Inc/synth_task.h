@@ -34,7 +34,7 @@ extern "C" {
 /* Task parameters */
 #define SYNTH_TASK_NAME                     "SYNTH"
 #define SYNTH_TASK_STACK                    (1024U)
-#define SYNTH_TASK_PRIO                     (3U)
+#define SYNTH_TASK_PRIO                     (4U)
 #define SYNTH_TASK_INIT_DELAY               (500U)
 
 /* SysEx CMD parameters */

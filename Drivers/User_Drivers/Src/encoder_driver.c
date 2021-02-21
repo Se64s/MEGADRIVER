@@ -55,6 +55,12 @@ static void __enc_0_low_level_deinit(void);
 */
 static uint32_t __enc_0_low_level_get_time(void);
 
+/* Low level funtions to init peripherals */
+extern void HAL_EXTI_GPIO_MspInit(void);
+
+/* Low level funtions to deinit peripherals */
+extern void HAL_EXTI_GPIO_MspDeInit(void);
+
 /* Private user code ---------------------------------------------------------*/
 
 static void __enc_error_handler(void)
@@ -64,54 +70,11 @@ static void __enc_error_handler(void)
 
 static void __enc_0_low_level_init(void)
 {
-    /* Init gpio */
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
     TIM_Encoder_InitTypeDef sEncoder = {0};
     TIM_MasterConfigTypeDef sMasterConfig = {0};
 
     /* Init SW */
-
-    /**SW GPIO Configuration
-     * PA11    ------> EXTI_IN 
-    */
-    ENCODER_0_SW_GPIO_CLK();
-    GPIO_InitStruct.Pin = ENCODER_0_SW_GPIO_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
-#ifdef ENCODER_USE_PULLUP
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-#else
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-#endif
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(ENCODER_0_SW_GPIO_PORT, &GPIO_InitStruct);
-
-    /* TIM3 interrupt Init */
-    HAL_NVIC_SetPriority(EXTI4_15_IRQn, 3, 0);
-    HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
-
-    /* Init timer */
-
-    /**TIM3 GPIO Configuration
-     * PC6     ------> TIM3_CH1 
-     * PC7     ------> TIM3_CH2 
-    */
-    ENCODER_0_ENC_GPIO_CLK();
-    GPIO_InitStruct.Pin = ENCODER_0_ENC_GPIO_PIN;
-#ifdef ENCODER_USE_PULLUP
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-#else
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-#endif
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    GPIO_InitStruct.Alternate = GPIO_AF1_TIM3;
-    HAL_GPIO_Init(ENCODER_0_ENC_GPIO_PORT, &GPIO_InitStruct);
-
-    /* TIM3 interrupt Init */
-    __HAL_RCC_TIM3_CLK_ENABLE();
-    HAL_NVIC_SetPriority(TIM3_IRQn, 3, 0);
-    HAL_NVIC_EnableIRQ(TIM3_IRQn);
+    HAL_EXTI_GPIO_MspInit();
 
     /* Init timer */
     htim3.Instance = TIM3;
@@ -161,13 +124,8 @@ static void __enc_0_low_level_deinit(void)
 {
     /* Deinit tim */
     HAL_TIM_Encoder_DeInit(&htim3);
-    __HAL_RCC_TIM3_CLK_DISABLE();
-    /* Deinit gpio */
-    HAL_GPIO_DeInit(ENCODER_0_SW_GPIO_PORT, ENCODER_0_SW_GPIO_PIN);
-    HAL_GPIO_DeInit(ENCODER_0_ENC_GPIO_PORT, ENCODER_0_ENC_GPIO_PIN);
-    /* Deinit irq */
-    HAL_NVIC_DisableIRQ(TIM3_IRQn);
-    HAL_NVIC_DisableIRQ(EXTI4_15_IRQn);
+
+    HAL_EXTI_GPIO_MspDeInit();
 }
 
 static uint32_t __enc_0_low_level_get_time(void)

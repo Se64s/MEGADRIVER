@@ -26,20 +26,13 @@
 #define DISPLAY_ADDRESS     (0x78U)
 
 /* Number of ticks per microsec */
-#define DISPLAY_TICKS_USEC  (15U)
-
-/* Maximun len display string */
-#define DISPLAY_MAX_LEN     (16U)
+#define DISPLAY_TICKS_USEC  (10U)
 
 /* I2C interface */
 #define DISPLAY_I2C         (I2C_0)
 
 /* I2C transfer delay */
-#define I2C_DELAY           (10U)
-
-/* Display initial msg  */
-#define DISPLAY_INIT_0      "MEGADRIVER"
-#define DISPLAY_INIT_1      "Build v"
+#define I2C_BUSY_DELAY      (0U)
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
@@ -64,7 +57,7 @@ static void __HardwareDeInit(void);
   * @param number of ms to wait.
   * @retval None
   */
-static void __LL_DelayMs(uint32_t u32MsCount);
+static void __LL_Delay(uint32_t u32TickCount);
 
 /* Callbacks required by u8g2 lib */
 uint8_t u8x8_byte_hw_i2c(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr);
@@ -88,19 +81,28 @@ static void __HardwareDeInit(void)
     }
 }
 
-static void __LL_DelayMs(uint32_t u32MsCount)
+static void __LL_Delay(uint32_t u32TickCount)
 {
 #ifdef DISPLAY_USE_RTOS
     // Use RTOS interface for implement delays
-    if (u32MsCount != 0U)
+    if (u32TickCount != 0U)
     {
-        vTaskDelay(u32MsCount);
+        vTaskDelay(u32TickCount);
+    }
+    else
+    {
+        taskYIELD();
     }
 #else
-    uint32_t tick_count = DISPLAY_TICKS_USEC * u32UsCount;
-    while (tick_count-- != 0)
+    // Use RTOS interface for implement delays
+    if (u32TickCount != 0U)
     {
-        __NOP();
+        // vTaskDelay(u32MsCount);
+        uint32_t tick_count = DISPLAY_TICKS_USEC * u32TickCount;
+        while (tick_count-- != 0)
+        {
+            __NOP();
+        }
     }
 #endif
 }
@@ -125,6 +127,9 @@ display_status_t DISPLAY_init(display_port_t dev, u8g2_t * pxDisplayHandler)
         u8g2_InitDisplay(pxDisplayHandler);
         u8g2_SetPowerSave(pxDisplayHandler, 0U);
 
+        // Set default font
+        u8g2_SetFont(pxDisplayHandler, u8g2_font_amstrad_cpc_extended_8r);
+
         xRetval = DISPLAY_STATUS_OK;
     }
 
@@ -138,35 +143,6 @@ display_status_t DISPLAY_deinit(display_port_t dev)
     if (dev == DISPLAY_0)
     {
         __HardwareDeInit();
-
-        xRetval = DISPLAY_STATUS_OK;
-    }
-
-    return xRetval;
-}
-
-display_status_t DISPLAY_update(display_port_t dev, u8g2_t * pxDisplayHandler)
-{
-    display_status_t xRetval = DISPLAY_STATUS_NOTDEF;
-
-    if (dev == DISPLAY_0)
-    {
-        char pcInitMsg0[DISPLAY_MAX_LEN] = {0};
-        char pcInitMsg1[DISPLAY_MAX_LEN] = {0};
-        char pcInitMsg2[DISPLAY_MAX_LEN] = {0};
-
-        (void)snprintf(pcInitMsg0, DISPLAY_MAX_LEN, "%s", DISPLAY_INIT_0);
-        (void)snprintf(pcInitMsg1, DISPLAY_MAX_LEN, "Build   %s", MAIN_APP_VERSION);
-        (void)snprintf(pcInitMsg2, DISPLAY_MAX_LEN, "Rev     %x", GIT_REVISION);
-
-        // Update display data
-        u8g2_FirstPage(pxDisplayHandler);
-        do {
-            u8g2_SetFont(pxDisplayHandler, u8g2_font_amstrad_cpc_extended_8r);
-            u8g2_DrawStr(pxDisplayHandler, 0, 10, pcInitMsg0);
-            u8g2_DrawStr(pxDisplayHandler, 0, 25, pcInitMsg1);
-            u8g2_DrawStr(pxDisplayHandler, 0, 40, pcInitMsg2);
-        } while (u8g2_NextPage(pxDisplayHandler));
 
         xRetval = DISPLAY_STATUS_OK;
     }
@@ -204,13 +180,15 @@ uint8_t u8x8_byte_hw_i2c(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_p
 
         case U8X8_MSG_BYTE_START_TRANSFER:
             u8BufIdx = 0;
-            __LL_DelayMs(I2C_DELAY);
             break;
 
         case U8X8_MSG_BYTE_END_TRANSFER:
             {
                 uint16_t u16DevAddr = u8g2_GetI2CAddress(u8x8);
-                (void)I2C_master_send(DISPLAY_I2C, u16DevAddr, u8Buffer, u8BufIdx);
+                while (I2C_master_send(DISPLAY_I2C, u16DevAddr, u8Buffer, u8BufIdx) != I2C_STATUS_OK)
+                {
+                    __LL_Delay(I2C_BUSY_DELAY);
+                }
             }
             break;
 

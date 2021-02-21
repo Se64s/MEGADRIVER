@@ -48,6 +48,7 @@ extern "C" {
 #define UI_SIGNAL_RESTORE_CC            (1UL << 11U)
 #define UI_SIGNAL_ERROR                 (1UL << 12U)
 #define UI_SIGNAL_NOT_DEF               (1UL << 31U)
+#define UI_SIGNAL_ALL                   (0xFFFFFFFFU)
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
