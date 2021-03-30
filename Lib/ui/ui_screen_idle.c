@@ -8,7 +8,7 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "ui_screen_idle.h"
-#include "error.h"
+#include "user_error.h"
 
 #include "printf.h"
 #include "ui_menu_main.h"

@@ -22,7 +22,7 @@
 #include "stm32g0xx_hal.h"
 #include "stm32g0xx_ll_system.h"
 #include "encoder_driver.h"
-#include "error.h"
+#include "user_error.h"
 
 /* External decalrations -----------------------------------------------------*/
 

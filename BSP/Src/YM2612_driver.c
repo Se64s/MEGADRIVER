@@ -8,7 +8,7 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "YM2612_driver.h"
-#include "error.h"
+#include "user_error.h"
 
 #ifdef YM2612_USE_RTOS
 #include "FreeRTOS.h"

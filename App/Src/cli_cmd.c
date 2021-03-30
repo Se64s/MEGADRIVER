@@ -17,7 +17,7 @@
 #include "stm32g0xx_hal.h"
 #include "YM2612_driver.h"
 #include "main.h"
-#include "error.h"
+#include "user_error.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/

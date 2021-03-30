@@ -1,12 +1,12 @@
 /**
- * @file    error.h
+ * @file    user_error.h
  * @author  Sebastian Del Moral Gallardo.
  * @brief   Toolset of functions and macro to conrol errors.
  *
  */
 
-#ifndef __ERROR_H
-#define __ERROR_H
+#ifndef __USER_ERROR_H
+#define __USER_ERROR_H
 
 #ifdef  __cplusplus
 extern "C"
@@ -26,11 +26,10 @@ typedef struct sAssertInfo
 {
     uint32_t pc;
     uint32_t lr;
-    uint32_t line;
 } sAssertInfo_t;
 
 /** Function definition to print out assert data */
-typedef void (* err_print_data)(const char *Format, ...);
+typedef void (* err_print_data)(char *msg, uint32_t len);
 
 /* Exported macro ------------------------------------------------------------*/
 
@@ -46,16 +45,20 @@ do{                                 \
     void *pc;                       \
     ERR_GET_PC(pc);                 \
     const void *lr = ERR_GET_LR();  \
-    vErrorAssert(pc, lr, __LINE__); \
+    vErrorAssert(pc, lr); \
 } while (0)
 
 /** Execute assert */
+#ifdef USE_USER_ASSERT
 #define ERR_ASSERT(exp)     \
 do {                        \
     if (!(exp)) {           \
       ERR_ASSERT_RECORD();  \
     }                       \
 } while (0)
+#else
+#define ERR_ASSERT(A)      {while(1U);}
+#endif
 
 /* Exported variables --------------------------------------------------------*/
 
@@ -74,13 +77,12 @@ void vErrorInit(err_print_data vPrintError);
   * @brief Funtion to output assert information.
   * @param pc program counter register value.
   * @param lr link register value.
-  * @param line line of error.
   * @retval None.
   */
-void vErrorAssert(const void *pc, const void *lr, uint32_t line);
+void vErrorAssert(const void *pc, const void *lr);
 
 #ifdef  __cplusplus
 }
 #endif
 
-#endif /* __ERROR_H */
+#endif /* __USER_ERROR_H */

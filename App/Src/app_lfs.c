@@ -13,7 +13,7 @@
 
 #include "app_lfs.h"
 #include "lfs.h"
-#include "error.h"
+#include "user_error.h"
 #include "stm32g0xx_hal.h"
 
 /* Private includes ----------------------------------------------------------*/

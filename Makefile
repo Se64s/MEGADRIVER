@@ -52,10 +52,20 @@ App/Src/cli_task.c \
 App/Src/cli_cmd.c \
 App/Src/mapping_task.c \
 App/Src/app_lfs.c \
-App/Src/stm32g0xx_it.c \
-App/Src/stm32g0xx_hal_msp.c \
-App/Src/system_stm32g0xx.c \
+BSP/Src/sys_mcu.c \
+BSP/Src/sys_rtos.c \
+BSP/Src/system_stm32g0xx.c \
+BSP/Src/stm32g0xx_it.c \
+BSP/Src/stm32g0xx_hal_msp.c \
+BSP/Src/sys_ll_serial.c \
+BSP/Src/serial_driver.c \
+BSP/Src/i2c_driver.c \
+BSP/Src/adc_driver.c \
+BSP/Src/YM2612_driver.c \
+BSP/Src/encoder_driver.c \
+BSP/Src/display_driver.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_gpio.c \
+Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_gpio.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc_ex.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_tim.c \
@@ -77,12 +87,7 @@ Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_pwr_ex.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_cortex.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_exti.c \
-Drivers/User_Drivers/Src/serial_driver.c \
-Drivers/User_Drivers/Src/i2c_driver.c \
-Drivers/User_Drivers/Src/adc_driver.c \
-Drivers/User_Drivers/Src/YM2612_driver.c \
-Drivers/User_Drivers/Src/encoder_driver.c \
-Drivers/User_Drivers/Src/display_driver.c \
+Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_usart.c \
 Lib/printf/printf.c \
 Lib/cbuf/circular_buffer.c \
 Lib/midi/midi_lib.c \
@@ -135,7 +140,7 @@ Lib/u8g2/u8x8_u8toa.c \
 Lib/u8g2/u8x8_u16toa.c \
 Lib/littlefs/lfs_util.c \
 Lib/littlefs/lfs.c \
-Lib/error_handler/error.c \
+Lib/UserError/user_error.c \
 RTOS/FreeRTOS/Source/croutine.c \
 RTOS/FreeRTOS/Source/event_groups.c \
 RTOS/FreeRTOS/Source/list.c \
@@ -198,7 +203,9 @@ AS_DEFS =
 # C defines
 C_DEFS =  \
 -DUSE_HAL_DRIVER \
--DSTM32G070xx
+-DSTM32G070xx \
+-DUSE_FULL_LL_DRIVER \
+-DUSE_USER_ASSERT \
 
 # AS includes
 AS_INCLUDES = 
@@ -206,14 +213,14 @@ AS_INCLUDES =
 # C includes
 C_INCLUDES =  \
 -IApp/Inc \
+-IBSP/Inc \
 -ILib/u8g2 \
 -ILib/ui \
 -ILib/cbuf \
 -ILib/printf \
 -ILib/midi \
 -ILib/littlefs \
--ILib/error_handler \
--IDrivers/User_Drivers/Inc \
+-ILib/UserError \
 -IDrivers/STM32G0xx_HAL_Driver/Inc \
 -IDrivers/STM32G0xx_HAL_Driver/Inc/Legacy \
 -IDrivers/CMSIS/Device/ST/STM32G0xx/Include \
@@ -288,7 +295,7 @@ $(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 	$(BIN) $< $@	
 	
 $(BUILD_DIR):
-	mkdir $@		
+	mkdir $@
 
 #######################################
 # clean up

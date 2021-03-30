@@ -11,7 +11,7 @@
 #include "ui_task.h"
 #include "midi_task.h"
 #include "printf.h"
-#include "error.h"
+#include "user_error.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/

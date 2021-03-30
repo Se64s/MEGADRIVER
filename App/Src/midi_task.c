@@ -12,7 +12,7 @@
 #include "ui_task.h"
 #include "synth_task.h"
 #include "serial_driver.h"
-#include "error.h"
+#include "user_error.h"
 #include "app_lfs.h"
 
 /* Private includes ----------------------------------------------------------*/
