@@ -141,6 +141,8 @@ Lib/u8g2/u8x8_u16toa.c \
 Lib/littlefs/lfs_util.c \
 Lib/littlefs/lfs.c \
 Lib/UserError/user_error.c \
+Lib/CrashCatcher/Core/src/CrashCatcher.c \
+Lib/CrashCatcher/Usr/src/crash_hexdump.c \
 RTOS/FreeRTOS/Source/croutine.c \
 RTOS/FreeRTOS/Source/event_groups.c \
 RTOS/FreeRTOS/Source/list.c \
@@ -154,7 +156,8 @@ RTOS/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c \
 
 # ASM sources
 ASM_SOURCES =  \
-startup_stm32g070xx.s
+startup_stm32g070xx.s \
+Lib/CrashCatcher/Core/src/CrashCatcher_armv6m.s \
 
 #######################################
 # binaries
@@ -206,6 +209,7 @@ C_DEFS =  \
 -DSTM32G070xx \
 -DUSE_FULL_LL_DRIVER \
 -DUSE_USER_ASSERT \
+-DCUSTOM_HARD_FAULT \
 
 # AS includes
 AS_INCLUDES = 
@@ -221,6 +225,8 @@ C_INCLUDES =  \
 -ILib/midi \
 -ILib/littlefs \
 -ILib/UserError \
+-ILib/CrashCatcher/include \
+-ILib/CrashCatcher/Core/src \
 -IDrivers/STM32G0xx_HAL_Driver/Inc \
 -IDrivers/STM32G0xx_HAL_Driver/Inc/Legacy \
 -IDrivers/CMSIS/Device/ST/STM32G0xx/Include \
