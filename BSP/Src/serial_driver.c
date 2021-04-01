@@ -9,7 +9,7 @@
 
 #include "serial_driver.h"
 #include "circular_buffer.h"
-#include "error.h"
+#include "user_error.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/

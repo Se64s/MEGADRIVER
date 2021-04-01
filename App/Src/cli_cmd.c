@@ -17,7 +17,7 @@
 #include "stm32g0xx_hal.h"
 #include "YM2612_driver.h"
 #include "main.h"
-#include "error.h"
+#include "user_error.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -60,6 +60,15 @@ static BaseType_t userAssert(char *pcWriteBuffer, size_t xWriteBufferLen, const 
  */
 static BaseType_t showVersion(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString);
 
+/**
+ * @brief  Force hard fault.
+ * @param  pcWriteBuffer
+ * @param  xWriteBufferLen
+ * @param  pcCommandString
+ * @retval pdFALSE, pdTRUE
+ */
+static BaseType_t userHardFault(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString);
+
 /* Private variables ---------------------------------------------------------*/
 
 static const CLI_Command_Definition_t xDevReset = {
@@ -80,6 +89,13 @@ static const CLI_Command_Definition_t xUserAssert = {
     "assert",
     "assert: Force assert error",
     userAssert,
+    0
+};
+
+static const CLI_Command_Definition_t xUserFault = {
+    "fault",
+    "fault:\tForce hardfaul",
+    userHardFault,
     0
 };
 
@@ -151,6 +167,14 @@ static BaseType_t userAssert(char *pcWriteBuffer,
     return pdFALSE;
 }
 
+static BaseType_t userHardFault(char *pcWriteBuffer,
+        size_t xWriteBufferLen,
+        const char *pcCommandString)
+{
+    __builtin_trap();
+    return pdFALSE;
+}
+
 static BaseType_t showVersion(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString)
 {
     vCliPrintf("CLI", "APP %s", MAIN_APP_VERSION);
@@ -166,6 +190,7 @@ void cli_cmd_init(void)
     (void)FreeRTOS_CLIRegisterCommand(&xDevReset);
     (void)FreeRTOS_CLIRegisterCommand(&xWriteReg);
     (void)FreeRTOS_CLIRegisterCommand(&xUserAssert);
+    (void)FreeRTOS_CLIRegisterCommand(&xUserFault);
     (void)FreeRTOS_CLIRegisterCommand(&xVersion);
 }
 

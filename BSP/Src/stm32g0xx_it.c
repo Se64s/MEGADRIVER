@@ -56,6 +56,7 @@ void NMI_Handler(void)
 {
 }
 
+#ifndef CUSTOM_HARD_FAULT
 /**
   * @brief This function handles Hard fault interrupt.
   */
@@ -65,6 +66,7 @@ void HardFault_Handler(void)
   {
   }
 }
+#endif
 
 /******************************************************************************/
 /* STM32G0xx Peripheral Interrupt Handlers                                    */

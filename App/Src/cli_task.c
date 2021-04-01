@@ -13,7 +13,7 @@
 #include "cli_task.h"
 #include "serial_driver.h"
 #include "printf.h"
-#include "error.h"
+#include "user_error.h"
 
 #include "FreeRTOS_CLI.h"
 #include "cli_cmd.h"

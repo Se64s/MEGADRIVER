@@ -9,7 +9,7 @@
 
 #include "display_driver.h"
 #include "i2c_driver.h"
-#include "error.h"
+#include "user_error.h"
 #include "printf.h"
 #include "main.h"
 

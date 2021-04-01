@@ -8,7 +8,7 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "mapping_task.h"
-#include "error.h"
+#include "user_error.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
