@@ -6,26 +6,44 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
+
 #include "synth_task.h"
+
+#include "sys_rtos.h"
+
 #include "cli_task.h"
-#include "ui_task.h"
+// #include "ui_task.h"
 #include "midi_task.h"
+
 #include "printf.h"
 #include "user_error.h"
 
-/* Private includes ----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
 /* Timeout for rx a cmd */
-#define SYNTH_CMD_TIMEOUT                   (1000U)
+#define SYNTH_CMD_TIMEOUT                   ( 1000U )
 
 /* Event queue size */
-#define SYNTH_EVENT_QUEUE_SIZE              (15U)
+#define SYNTH_EVENT_QUEUE_SIZE              ( 15U )
 
 /* Event queue item size */
-#define SYNTH_EVENT_QUEUE_ELEMENT_SIZE      (sizeof(SynthEvent_t))
+#define SYNTH_EVENT_QUEUE_ELEMENT_SIZE      ( sizeof(SynthCmd_t) )
+
+/* Special registers for midi CC conversion */
+#define SYNTH_CC_REG_NONE                   ( 0x00U )
+#define SYNTH_CC_REG_VOICE                  ( 0xF0U )
+#define SYNTH_CC_REG_OPERATOR               ( 0xF1U )
+#define SYNTH_CC_REG_NOT_FOUND              ( 0xFFU )
 
 /* Private typedef -----------------------------------------------------------*/
+
+/** Handler for synth task */
+typedef struct
+{
+    uint8_t u8CcVoice;
+    uint8_t u8CcOperator;
+} SynthCtrl_t;
+
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 
@@ -35,86 +53,53 @@ TaskHandle_t xSynthTaskHandle = NULL;
 /** Queue event handler */
 QueueHandle_t xSynthEventQueueHandle = NULL;
 
-/** Last cc executed */
-SynthCcMap_t xLastCcExecuted = { 0U };
+/** Synth device handler */
+SynthCtrl_t xSynthDevHandler = { 0U };
 
 /* Private function prototypes -----------------------------------------------*/
 
 /**
-  * @brief Handle Midi event.
-  * @param pxEventData pointer to event data.
+  * @brief Handle synth cmd voice update mono.
+  * @param pxCmdData pointer to event data.
   * @retval None
   */
-static void vHandleMidiEvent(SynthEventPayloadMidi_t * pxEventData);
+static void vHandleCmdVoiceUpdateMono(SynthCmdPayloadVoiceUpdateMono_t * pxCmdData);
 
 /**
-  * @brief Handle SysEx Midi event.
-  * @param pxEventData pointer to event data.
+  * @brief Handle synth cmd voice update poly.
+  * @param pxCmdData pointer to event data.
   * @retval None
   */
-static void vHandleMidiSysExEvent(SynthEventPayloadMidiSysEx_t * pxEventData);
+static void vHandleCmdVoiceUpdatePoly(SynthCmdPayloadVoiceUpdatePoly_t * pxCmdData);
 
 /**
-  * @brief Handle Note On Off event.
-  * @param pxEventData pointer to event data.
+  * @brief Handle synth cmd parameter update.
+  * @param pxCmdData pointer to event data.
   * @retval None
   */
-static void vHandleNoteOnOffEvent(SynthEventPayloadNoteOnOff_t * pxEventData);
+static void vHandleCmdParameterUpdate(SynthCmdPayloadParamUpdate_t * pxCmdData);
 
 /**
-  * @brief Handle Change Note event.
-  * @param pxEventData pointer to event data.
-  * @retval None
-  */
-static void vHandleChangeNoteEvent(SynthEventPayloadChangeNote_t * pxEventData);
+ * @brief Cast Cc command id to YM register id
+ * @param u8CcId Midi Cc value to cast
+ * @return uint8_t YM register value, 0xFF if not match found.
+ */
+static uint8_t u8CcToRegId(uint8_t u8CcId);
 
 /**
-  * @brief Handle Change Parameter event.
-  * @param pxEventData pointer to event data.
-  * @retval None
-  */
-static void vHandleChangeParameterEvent(SynthEventPayloadChangeParameter_t * pxEventData);
+ * @brief Cast Cc value to register value.
+ * @param u8CcId Midi Cc Id.
+ * @param u8CcData Midi Cc value to cast.
+ * @return uint8_t YM register value, 0xFF if not match found.
+ */
+static uint8_t u8CcToRegData(uint8_t u8CcId, uint8_t u8CcData);
 
 /**
-  * @brief Handle Update Preset parameter event.
-  * @param pxEventData pointer to event data.
+  * @brief Handle synth cmd preset update.
+  * @param pxCmdData pointer to event data.
   * @retval None
   */
-static void vHandleUpdatePresetEvent(SynthEventPayloadUpdatePreset_t * pxEventData);
-
-/**
-  * @brief Activate voice.
-  * @param pxCmdMsg pointer to synth cmd.
-  * @retval None
-  */
-static void vCmdVoiceOn(SynthEventPayloadMidi_t * pxCmdMsg);
-
-/**
-  * @brief Deactivate voice.
-  * @param pxCmdMsg pointer to synth cmd.
-  * @retval None
-  */
-static void vCmdVoiceOff(SynthEventPayloadMidi_t * pxCmdMsg);
-
-/**
-  * @brief Deactivate all voices.
-  * @retval None
-  */
-static void vCmdVoiceOffAll(void);
-
-/**
-  * @brief Handle CC event.
-  * @retval None
-  */
-static void vCmdMapCC(SynthEventPayloadMidi_t * pxCmdMsg);
-
-/**
-  * @brief Handler for SysEx commands.
-  * @param pu8SysExData pointer to sysex data.
-  * @param u32LenData sysex payload len.
-  * @retval None
-  */
-static void vCmdMidiSysEx(uint8_t * pu8SysExData, uint32_t u32LenData);
+static void vHandleCmdPresetUpdate(SynthCmdPayloadPresetUpdate_t * pxCmdData);
 
 /**
   * @brief  Init user preset.
@@ -129,27 +114,33 @@ static bool bInitUserPreset(void);
   * @param pxRegData Preset reg data.
   * @retval true, preset saved, false, error on saving.
   */
-static bool bSavePreset(uint8_t u8Position, uint8_t * pu8Name, xFmDevice_t * pxRegData);
+static bool bSavePresetFlash(uint8_t u8Position, uint8_t * pu8Name, xFmDevice_t * pxRegData);
 
 /**
   * @brief Load preset.
   * @param u8Position Position where save the preset.
   * @retval true, preset loaded, false, error on loading.
   */
-static bool bLoadPreset(uint8_t u8Position);
+static bool bLoadPresetFlash(uint8_t u8Position);
 
 /**
   * @brief Load default preset.
   * @param u8Position Position where save the preset.
   * @retval true, preset loaded, false, error on loading.
   */
-static bool bLoadDefaultPreset(uint8_t u8Position);
+static bool bLoadPresetRom(uint8_t u8Position);
 
 /**
   * @brief  Default setup for YM2612
   * @retval Operation result: true OK, false any error
   */
 static bool bInitPreset(void);
+
+/**
+  * @brief Deactivate all voices.
+  * @retval None
+  */
+static void vCmdVoiceOffAll(void);
 
 /**
   * @brief Main task loop
@@ -160,373 +151,308 @@ static void vSynthTaskMain(void *pvParameters);
 
 /* Private fuctions ----------------------------------------------------------*/
 
-static void vHandleMidiEvent(SynthEventPayloadMidi_t * pxEventData)
+static void vHandleCmdVoiceUpdateMono(SynthCmdPayloadVoiceUpdateMono_t * pxCmdData)
 {
-    if (pxEventData != NULL)
-    {
-        switch (pxEventData->xType)
-        {
-        case SYNTH_CMD_NOTE_ON:
-            vCmdVoiceOn(pxEventData);
-            break;
-
-        case SYNTH_CMD_NOTE_OFF:
-            vCmdVoiceOff(pxEventData);
-            break;
-
-        case SYNTH_CMD_NOTE_OFF_ALL:
-            vCmdVoiceOffAll();
-            break;
-
-        case SYNTH_CMD_CC_MAP:
-            vCmdMapCC(pxEventData);
-            break;
-
-        default:
-            break;
-        }
-    }
+    ERR_ASSERT(pxCmdData);
 }
 
-static void vHandleMidiSysExEvent(SynthEventPayloadMidiSysEx_t * pxEventData)
+static void vHandleCmdVoiceUpdatePoly(SynthCmdPayloadVoiceUpdatePoly_t * pxCmdData)
 {
-    if ((pxEventData != NULL) && (pxEventData->pu8Data != NULL))
-    {
-        vCmdMidiSysEx(pxEventData->pu8Data, pxEventData->u32Len);
-    }
+    ERR_ASSERT(pxCmdData);
 }
 
-static void vHandleNoteOnOffEvent(SynthEventPayloadNoteOnOff_t * pxEventData)
+static void vHandleCmdParameterUpdate(SynthCmdPayloadParamUpdate_t * pxCmdData)
 {
-    ERR_ASSERT(pxEventData != NULL);
-
-    uint8_t u8VoiceChannel = pxEventData->u8VoiceId;
-
-    /* Check voice range */
-    if (u8VoiceChannel < SYNTH_MAX_NUM_VOICE)
-    {
-        if (pxEventData->bGateState)
-        {
-            vYM2612_key_on(u8VoiceChannel);
-        }
-        else
-        {
-            vYM2612_key_off(u8VoiceChannel);
-        }
-    }
-    else if (u8VoiceChannel == SYNTH_MAX_NUM_VOICE)
-    {
-        for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
-        {
-            if (pxEventData->bGateState)
-            {
-                vYM2612_key_on(u8Index);
-            }
-            else
-            {
-                vYM2612_key_off(u8Index);
-            }
-        }
-    }
-}
-
-static void vHandleChangeNoteEvent(SynthEventPayloadChangeNote_t * pxEventData)
-{
-    ERR_ASSERT(pxEventData != NULL);
-
-    uint8_t u8VoiceChannel = pxEventData->u8VoiceId;
-    uint8_t u8Note = pxEventData->u8Note;
-
-    /* Check voice range */
-    if (u8VoiceChannel < SYNTH_MAX_NUM_VOICE)
-    {
-        if (!bYM2612_set_note(u8VoiceChannel, u8Note))
-        {
-            vCliPrintf(SYNTH_TASK_NAME, "VOICE: %d  SET NOTE %03d - ERROR", u8VoiceChannel, u8Note);
-        }
-    }
-    else if (u8VoiceChannel == SYNTH_MAX_NUM_VOICE)
-    {
-        for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
-        {
-            if (!bYM2612_set_note(u8Index, u8Note))
-            {
-                vCliPrintf(SYNTH_TASK_NAME, "VOICE: %d  SET NOTE %03d - ERROR", u8Index, u8Note);
-            }
-        }
-    }
-}
-
-static void vHandleChangeParameterEvent(SynthEventPayloadChangeParameter_t * pxEventData)
-{
-    ERR_ASSERT(pxEventData != NULL);
+    ERR_ASSERT(pxCmdData);
 
     xFmDevice_t * pxDevCfg = pxYM2612_get_reg_preset();
+
     bool bRegUpdate = false;
 
-    switch (pxEventData->u8ParameterId)
+    uint8_t u8RegId = u8CcToRegId(pxCmdData->u8Id);
+    uint8_t u8RegData = u8CcToRegData(pxCmdData->u8Id, pxCmdData->u8Data);
+    uint8_t u8RegVoice = xSynthDevHandler.u8CcVoice;
+    uint8_t u8RegOperator = xSynthDevHandler.u8CcOperator;
+
+    switch (u8RegId)
     {
     case FM_VAR_LFO_ON:
-        pxDevCfg->u8LfoOn = pxEventData->u8Value;
+        pxDevCfg->u8LfoOn = u8RegData;
         bRegUpdate = true;
         break;
 
+    case SYNTH_CC_REG_OPERATOR:
+        if (u8RegData < YM2612_NUM_OP_CHANNEL)
+        {
+            xSynthDevHandler.u8CcOperator = u8RegData;
+            bRegUpdate = true;
+        }
+        break;
+
+    case SYNTH_CC_REG_VOICE:
+        if (u8RegData <= YM2612_NUM_CHANNEL)
+        {
+            xSynthDevHandler.u8CcOperator = u8RegData;
+            bRegUpdate = true;
+        }
+        break;
+
     case FM_VAR_LFO_FREQ:
-        pxDevCfg->u8LfoFreq = pxEventData->u8Value;
+        pxDevCfg->u8LfoFreq = u8RegData;
         bRegUpdate = true;
         break;
 
     case FM_VAR_VOICE_FEEDBACK:
-        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        if (u8RegVoice < SYNTH_MAX_NUM_VOICE)
         {
-            pxDevCfg->xChannel[pxEventData->u8VoiceId].u8Feedback = pxEventData->u8Value;
+            pxDevCfg->xChannel[u8RegVoice].u8Feedback = u8RegData;
             bRegUpdate = true;
         }
-        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        else if (u8RegVoice == SYNTH_MAX_NUM_VOICE)
         {
             for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
             {
-                pxDevCfg->xChannel[u8Index].u8Feedback = pxEventData->u8Value;
+                pxDevCfg->xChannel[u8Index].u8Feedback = u8RegData;
             }
             bRegUpdate = true;
         }
         break;
 
     case FM_VAR_VOICE_ALGORITHM:
-        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        if (u8RegVoice < SYNTH_MAX_NUM_VOICE)
         {
-            pxDevCfg->xChannel[pxEventData->u8VoiceId].u8Algorithm = pxEventData->u8Value;
+            pxDevCfg->xChannel[u8RegVoice].u8Algorithm = u8RegData;
             bRegUpdate = true;
         }
-        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        else if (u8RegVoice == SYNTH_MAX_NUM_VOICE)
         {
             for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
             {
-                pxDevCfg->xChannel[u8Index].u8Algorithm = pxEventData->u8Value;
+                pxDevCfg->xChannel[u8Index].u8Algorithm = u8RegData;
             }
             bRegUpdate = true;
         }
         break;
 
     case FM_VAR_VOICE_AUDIO_OUT:
-        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        if (u8RegVoice < SYNTH_MAX_NUM_VOICE)
         {
-            pxDevCfg->xChannel[pxEventData->u8VoiceId].u8AudioOut = pxEventData->u8Value;
+            pxDevCfg->xChannel[u8RegVoice].u8AudioOut = u8RegData;
             bRegUpdate = true;
         }
-        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        else if (u8RegVoice == SYNTH_MAX_NUM_VOICE)
         {
             for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
             {
-                pxDevCfg->xChannel[u8Index].u8AudioOut = pxEventData->u8Value;
+                pxDevCfg->xChannel[u8Index].u8AudioOut = u8RegData;
             }
             bRegUpdate = true;
         }
         break;
 
     case FM_VAR_VOICE_AMP_MOD_SENS:
-        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        if (u8RegVoice < SYNTH_MAX_NUM_VOICE)
         {
-            pxDevCfg->xChannel[pxEventData->u8VoiceId].u8AmpModSens = pxEventData->u8Value;
+            pxDevCfg->xChannel[u8RegVoice].u8AmpModSens = u8RegData;
             bRegUpdate = true;
         }
-        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        else if (u8RegVoice == SYNTH_MAX_NUM_VOICE)
         {
             for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
             {
-                pxDevCfg->xChannel[u8Index].u8AmpModSens = pxEventData->u8Value;
+                pxDevCfg->xChannel[u8Index].u8AmpModSens = u8RegData;
             }
             bRegUpdate = true;
         }
         break;
 
     case FM_VAR_VOICE_PHA_MOD_SENS:
-        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        if (u8RegVoice < SYNTH_MAX_NUM_VOICE)
         {
-            pxDevCfg->xChannel[pxEventData->u8VoiceId].u8PhaseModSens = pxEventData->u8Value;
+            pxDevCfg->xChannel[u8RegVoice].u8PhaseModSens = u8RegData;
             bRegUpdate = true;
         }
-        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        else if (u8RegVoice == SYNTH_MAX_NUM_VOICE)
         {
             for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
             {
-                pxDevCfg->xChannel[u8Index].u8PhaseModSens = pxEventData->u8Value;
+                pxDevCfg->xChannel[u8Index].u8PhaseModSens = u8RegData;
             }
             bRegUpdate = true;
         }
         break;
 
     case FM_VAR_OPERATOR_DETUNE:
-        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        if (u8RegVoice < SYNTH_MAX_NUM_VOICE)
         {
-            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8Detune = pxEventData->u8Value;
+            pxDevCfg->xChannel[u8RegVoice].xOperator[u8RegOperator].u8Detune = u8RegData;
             bRegUpdate = true;
         }
-        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        else if (u8RegVoice == SYNTH_MAX_NUM_VOICE)
         {
             for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
             {
-                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8Detune = pxEventData->u8Value;
+                pxDevCfg->xChannel[u8Index].xOperator[u8RegOperator].u8Detune = u8RegData;
             }
             bRegUpdate = true;
         }
         break;
 
     case FM_VAR_OPERATOR_MULTIPLE:
-        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        if (u8RegVoice < SYNTH_MAX_NUM_VOICE)
         {
-            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8Multiple = pxEventData->u8Value;
+            pxDevCfg->xChannel[u8RegVoice].xOperator[u8RegOperator].u8Multiple = u8RegData;
             bRegUpdate = true;
         }
-        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        else if (u8RegVoice == SYNTH_MAX_NUM_VOICE)
         {
             for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
             {
-                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8Multiple = pxEventData->u8Value;
+                pxDevCfg->xChannel[u8Index].xOperator[u8RegOperator].u8Multiple = u8RegData;
             }
             bRegUpdate = true;
         }
         break;
 
     case FM_VAR_OPERATOR_TOTAL_LEVEL:
-        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        if (u8RegVoice < SYNTH_MAX_NUM_VOICE)
         {
-            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8TotalLevel = pxEventData->u8Value;
+            pxDevCfg->xChannel[u8RegVoice].xOperator[u8RegOperator].u8TotalLevel = u8RegData;
             bRegUpdate = true;
         }
-        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        else if (u8RegVoice == SYNTH_MAX_NUM_VOICE)
         {
             for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
             {
-                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8TotalLevel = pxEventData->u8Value;
+                pxDevCfg->xChannel[u8Index].xOperator[u8RegOperator].u8TotalLevel = u8RegData;
             }
             bRegUpdate = true;
         }
         break;
 
     case FM_VAR_OPERATOR_KEY_SCALE:
-        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        if (u8RegVoice < SYNTH_MAX_NUM_VOICE)
         {
-            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8KeyScale = pxEventData->u8Value;
+            pxDevCfg->xChannel[u8RegVoice].xOperator[u8RegOperator].u8KeyScale = u8RegData;
             bRegUpdate = true;
         }
-        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        else if (u8RegVoice == SYNTH_MAX_NUM_VOICE)
         {
             for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
             {
-                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8KeyScale = pxEventData->u8Value;
+                pxDevCfg->xChannel[u8Index].xOperator[u8RegOperator].u8KeyScale = u8RegData;
             }
             bRegUpdate = true;
         }
         break;
 
     case FM_VAR_OPERATOR_ATTACK_RATE:
-        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        if (u8RegVoice < SYNTH_MAX_NUM_VOICE)
         {
-            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8AttackRate = pxEventData->u8Value;
+            pxDevCfg->xChannel[u8RegVoice].xOperator[u8RegOperator].u8AttackRate = u8RegData;
             bRegUpdate = true;
         }
-        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        else if (u8RegVoice == SYNTH_MAX_NUM_VOICE)
         {
             for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
             {
-                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8AttackRate = pxEventData->u8Value;
+                pxDevCfg->xChannel[u8Index].xOperator[u8RegOperator].u8AttackRate = u8RegData;
             }
             bRegUpdate = true;
         }
         break;
 
     case FM_VAR_OPERATOR_AMP_MOD:
-        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        if (u8RegVoice < SYNTH_MAX_NUM_VOICE)
         {
-            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8AmpMod = pxEventData->u8Value;
+            pxDevCfg->xChannel[u8RegVoice].xOperator[u8RegOperator].u8AmpMod = u8RegData;
             bRegUpdate = true;
         }
-        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        else if (u8RegVoice == SYNTH_MAX_NUM_VOICE)
         {
             for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
             {
-                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8AmpMod = pxEventData->u8Value;
+                pxDevCfg->xChannel[u8Index].xOperator[u8RegOperator].u8AmpMod = u8RegData;
             }
             bRegUpdate = true;
         }
         break;
 
     case FM_VAR_OPERATOR_DECAY_RATE:
-        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        if (u8RegVoice < SYNTH_MAX_NUM_VOICE)
         {
-            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8DecayRate = pxEventData->u8Value;
+            pxDevCfg->xChannel[u8RegVoice].xOperator[u8RegOperator].u8DecayRate = u8RegData;
             bRegUpdate = true;
         }
-        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        else if (u8RegVoice == SYNTH_MAX_NUM_VOICE)
         {
             for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
             {
-                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8DecayRate = pxEventData->u8Value;
+                pxDevCfg->xChannel[u8Index].xOperator[u8RegOperator].u8DecayRate = u8RegData;
             }
             bRegUpdate = true;
         }
         break;
 
     case FM_VAR_OPERATOR_SUSTAIN_RATE:
-        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        if (u8RegVoice < SYNTH_MAX_NUM_VOICE)
         {
-            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8SustainRate = pxEventData->u8Value;
+            pxDevCfg->xChannel[u8RegVoice].xOperator[u8RegOperator].u8SustainRate = u8RegData;
             bRegUpdate = true;
         }
-        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        else if (u8RegVoice == SYNTH_MAX_NUM_VOICE)
         {
             for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
             {
-                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8SustainRate = pxEventData->u8Value;
+                pxDevCfg->xChannel[u8Index].xOperator[u8RegOperator].u8SustainRate = u8RegData;
             }
             bRegUpdate = true;
         }
         break;
 
     case FM_VAR_OPERATOR_SUSTAIN_LEVEL:
-        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        if (u8RegVoice < SYNTH_MAX_NUM_VOICE)
         {
-            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8SustainLevel = pxEventData->u8Value;
+            pxDevCfg->xChannel[u8RegVoice].xOperator[u8RegOperator].u8SustainLevel = u8RegData;
             bRegUpdate = true;
         }
-        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        else if (u8RegVoice == SYNTH_MAX_NUM_VOICE)
         {
             for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
             {
-                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8SustainLevel = pxEventData->u8Value;
+                pxDevCfg->xChannel[u8Index].xOperator[u8RegOperator].u8SustainLevel = u8RegData;
             }
             bRegUpdate = true;
         }
         break;
 
     case FM_VAR_OPERATOR_RELEASE_RATE:
-        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        if (u8RegVoice < SYNTH_MAX_NUM_VOICE)
         {
-            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8ReleaseRate = pxEventData->u8Value;
+            pxDevCfg->xChannel[u8RegVoice].xOperator[u8RegOperator].u8ReleaseRate = u8RegData;
             bRegUpdate = true;
         }
-        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        else if (u8RegVoice == SYNTH_MAX_NUM_VOICE)
         {
             for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
             {
-                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8ReleaseRate = pxEventData->u8Value;
+                pxDevCfg->xChannel[u8Index].xOperator[u8RegOperator].u8ReleaseRate = u8RegData;
             }
             bRegUpdate = true;
         }
         break;
 
     case FM_VAR_OPERATOR_SSG_ENVELOPE:
-        if (pxEventData->u8VoiceId < SYNTH_MAX_NUM_VOICE)
+        if (u8RegVoice < SYNTH_MAX_NUM_VOICE)
         {
-            pxDevCfg->xChannel[pxEventData->u8VoiceId].xOperator[pxEventData->u8operatorId].u8SsgEg = pxEventData->u8Value;
+            pxDevCfg->xChannel[u8RegVoice].xOperator[u8RegOperator].u8SsgEg = u8RegData;
             bRegUpdate = true;
         }
-        else if (pxEventData->u8VoiceId == SYNTH_MAX_NUM_VOICE)
+        else if (u8RegVoice == SYNTH_MAX_NUM_VOICE)
         {
             for (uint8_t u8Index = 0U; u8Index < SYNTH_MAX_NUM_VOICE; u8Index++)
             {
-                pxDevCfg->xChannel[u8Index].xOperator[pxEventData->u8operatorId].u8SsgEg = pxEventData->u8Value;
+                pxDevCfg->xChannel[u8Index].xOperator[u8RegOperator].u8SsgEg = u8RegData;
             }
             bRegUpdate = true;
         }
@@ -539,97 +465,240 @@ static void vHandleChangeParameterEvent(SynthEventPayloadChangeParameter_t * pxE
     /* If value updated, apply new cfg */
     if (bRegUpdate)
     {
+#ifdef SYNTH_DBG_VERBOSE
+        vCliPrintf(SYNTH_TASK_NAME, "Process parameter: CC %02X - %02X, REG %02X - %02X", pxCmdData->u8Id, pxCmdData->u8Data, u8RegId, u8RegData);
+#endif
         vYM2612_set_reg_preset(pxDevCfg);
     }
-}
-
-static void vHandleUpdatePresetEvent(SynthEventPayloadUpdatePreset_t * pxEventData)
-{
-    ERR_ASSERT(pxEventData != NULL);
-
-    /* Update preset values */
-    vYM2612_set_reg_preset(pxEventData->pxPreset);
-}
-
-static void vCmdVoiceOn(SynthEventPayloadMidi_t * pxCmdMsg)
-{
-    ERR_ASSERT(pxCmdMsg != NULL);
-
-    if (pxCmdMsg->xType == SYNTH_CMD_NOTE_ON)
+    else
     {
-        uint8_t u8VoiceChannel = pxCmdMsg->u8Data[0U];
-        uint8_t u8Note = pxCmdMsg->u8Data[1U];
-
-        /* Check voice range */
-        if (u8VoiceChannel < SYNTH_MAX_NUM_VOICE)
-        {
-            if (bYM2612_set_note(u8VoiceChannel, u8Note))
-            {
 #ifdef SYNTH_DBG_VERBOSE
-                vCliPrintf(SYNTH_TASK_NAME, "Key  ON: %02d - %03d", u8VoiceChannel, u8Note);
+        vCliPrintf(SYNTH_TASK_NAME, "Process parameter: CC %02X - %02X, FAIL", pxCmdData->u8Id, pxCmdData->u8Data);
 #endif
-                vYM2612_key_on(u8VoiceChannel);
-            }
+    }
+}
+
+static uint8_t u8CcToRegId(uint8_t u8CcId)
+{
+    uint8_t u8RegId = SYNTH_CC_REG_NONE;
+
+    switch ( u8CcId )
+    {
+    case MIDI_CC_C20:
+        u8RegId = (uint8_t)FM_VAR_LFO_ON;
+        break;
+
+    case MIDI_CC_C21:
+        u8RegId = (uint8_t)FM_VAR_LFO_FREQ;
+        break;
+
+    case MIDI_CC_C22:
+        u8RegId = SYNTH_CC_REG_VOICE;
+        break;
+
+    case MIDI_CC_C23:
+        u8RegId = SYNTH_CC_REG_OPERATOR;
+        break;
+
+    case MIDI_CC_C24:
+        u8RegId = (uint8_t)FM_VAR_VOICE_FEEDBACK;
+        break;
+
+    case MIDI_CC_C15:
+        u8RegId = (uint8_t)FM_VAR_VOICE_ALGORITHM;
+        break;
+
+    case MIDI_CC_C25:
+        u8RegId = (uint8_t)FM_VAR_VOICE_AUDIO_OUT;
+        break;
+
+    case MIDI_CC_C26:
+        u8RegId = (uint8_t)FM_VAR_VOICE_AMP_MOD_SENS;
+        break;
+
+    case MIDI_CC_C27:
+        u8RegId = (uint8_t)FM_VAR_VOICE_PHA_MOD_SENS;
+        break;
+
+    case MIDI_CC_C52:
+        u8RegId = (uint8_t)FM_VAR_OPERATOR_DETUNE;
+        break;
+
+    case MIDI_CC_C53:
+        u8RegId = (uint8_t)FM_VAR_OPERATOR_MULTIPLE;
+        break;
+
+    case MIDI_CC_C54:
+        u8RegId = (uint8_t)FM_VAR_OPERATOR_TOTAL_LEVEL;
+        break;
+
+    case MIDI_CC_C55:
+        u8RegId = (uint8_t)FM_VAR_OPERATOR_KEY_SCALE;
+        break;
+
+    case MIDI_CC_C56:
+        u8RegId = (uint8_t)FM_VAR_OPERATOR_ATTACK_RATE;
+        break;
+
+    case MIDI_CC_C57:
+        u8RegId = (uint8_t)FM_VAR_OPERATOR_AMP_MOD;
+        break;
+
+    case MIDI_CC_C58:
+        u8RegId = (uint8_t)FM_VAR_OPERATOR_DECAY_RATE;
+        break;
+
+    case MIDI_CC_C59:
+        u8RegId = (uint8_t)FM_VAR_OPERATOR_SUSTAIN_RATE;
+        break;
+
+    case MIDI_CC_C60:
+        u8RegId = (uint8_t)FM_VAR_OPERATOR_SUSTAIN_LEVEL;
+        break;
+
+    case MIDI_CC_C61:
+        u8RegId = (uint8_t)FM_VAR_OPERATOR_RELEASE_RATE;
+        break;
+
+    case MIDI_CC_C62:
+        u8RegId = (uint8_t)FM_VAR_OPERATOR_SSG_ENVELOPE;
+        break;
+
+    default:
+        u8RegId = SYNTH_CC_REG_NOT_FOUND;
+        break;
+    }
+
+    return u8RegId;
+}
+
+static uint8_t u8CcToRegData(uint8_t u8CcId, uint8_t u8CcData)
+{
+    uint8_t u8RegData = 0U;
+
+    switch ( u8CcId )
+    {
+    case MIDI_CC_C20:
+        u8RegData = (u8CcData < MAX_VALUE_LFO_ON) ? u8CcData : (MAX_VALUE_LFO_ON - 1U);
+        break;
+
+    case MIDI_CC_C21:
+        u8RegData = (u8CcData < MAX_VALUE_LFO_FREQ) ? u8CcData : (MAX_VALUE_LFO_FREQ - 1U);
+        break;
+
+    case MIDI_CC_C22:
+        u8RegData = (u8CcData <= YM2612_NUM_CHANNEL) ? u8CcData : YM2612_NUM_CHANNEL;
+        break;
+
+    case MIDI_CC_C23:
+        u8RegData = (u8CcData < YM2612_NUM_OP_CHANNEL) ? u8CcData : (YM2612_NUM_OP_CHANNEL - 1U);
+        break;
+
+    case MIDI_CC_C24:
+        u8RegData = (u8CcData < MAX_VALUE_FEEDBACK) ? u8CcData : (MAX_VALUE_FEEDBACK - 1U);
+        break;
+
+    case MIDI_CC_C15:
+        u8RegData = (u8CcData < MAX_VALUE_ALGORITHM) ? u8CcData : (MAX_VALUE_ALGORITHM - 1U);
+        break;
+
+    case MIDI_CC_C25:
+        u8RegData = (u8CcData < MAX_VALUE_VOICE_OUT) ? u8CcData : (MAX_VALUE_VOICE_OUT - 1U);
+        break;
+
+    case MIDI_CC_C26:
+        u8RegData = (u8CcData < MAX_VALUE_AMP_MOD_SENS) ? u8CcData : (MAX_VALUE_AMP_MOD_SENS - 1U);
+        break;
+
+    case MIDI_CC_C27:
+        u8RegData = (u8CcData < MAX_VALUE_PHA_MOD_SENS) ? u8CcData : (MAX_VALUE_PHA_MOD_SENS - 1U);
+        break;
+
+    case MIDI_CC_C52:
+        u8RegData = (u8CcData < MAX_VALUE_DETUNE) ? u8CcData : (MAX_VALUE_DETUNE - 1U);
+        break;
+
+    case MIDI_CC_C53:
+        u8RegData = (u8CcData < MAX_VALUE_MULTIPLE) ? u8CcData : (MAX_VALUE_MULTIPLE - 1U);
+        break;
+
+    case MIDI_CC_C54:
+        u8RegData = (u8CcData < MAX_VALUE_TOTAL_LEVEL) ? u8CcData : (MAX_VALUE_TOTAL_LEVEL - 1U);
+        break;
+
+    case MIDI_CC_C55:
+        u8RegData = (u8CcData < MAX_VALUE_KEY_SCALE) ? u8CcData : (MAX_VALUE_KEY_SCALE - 1U);
+        break;
+
+    case MIDI_CC_C56:
+        u8RegData = (u8CcData < MAX_VALUE_ATTACK_RATE) ? u8CcData : (MAX_VALUE_ATTACK_RATE - 1U);
+        break;
+
+    case MIDI_CC_C57:
+        u8RegData = (u8CcData < MAX_VALUE_AMP_MOD_EN) ? u8CcData : (MAX_VALUE_AMP_MOD_EN - 1U);
+        break;
+
+    case MIDI_CC_C58:
+        u8RegData = (u8CcData < MAX_VALUE_DECAY_RATE) ? u8CcData : (MAX_VALUE_DECAY_RATE - 1U);
+        break;
+
+    case MIDI_CC_C59:
+        u8RegData = (u8CcData < MAX_VALUE_SUSTAIN_RATE) ? u8CcData : (MAX_VALUE_SUSTAIN_RATE - 1U);
+        break;
+
+    case MIDI_CC_C60:
+        u8RegData = (u8CcData < MAX_VALUE_SUSTAIN_LEVEL) ? u8CcData : (MAX_VALUE_SUSTAIN_LEVEL - 1U);
+        break;
+
+    case MIDI_CC_C61:
+        u8RegData = (u8CcData < MAX_VALUE_RELEASE_RATE) ? u8CcData : (MAX_VALUE_RELEASE_RATE - 1U);
+        break;
+
+    case MIDI_CC_C62:
+        u8RegData = (u8CcData < MAX_VALUE_SSG_ENVELOPE) ? u8CcData : (MAX_VALUE_SSG_ENVELOPE - 1U);
+        break;
+
+    default:
+        // Not CC found
+        break;
+    }
+
+    return u8RegData;
+}
+
+static void vHandleCmdPresetUpdate(SynthCmdPayloadPresetUpdate_t * pxCmdData)
+{
+    ERR_ASSERT(pxCmdData);
+
+    if ( pxCmdData->u8Action == (uint8_t)SYNTH_PRESET_ACTION_LOAD )
+    {
+        if ( pxCmdData->u8Bank == (uint8_t)LFS_MIDI_BANK_ROM )
+        {
+            (void)bLoadPresetRom(pxCmdData->u8Program);
+        }
+        else if ( pxCmdData->u8Bank == (uint8_t)LFS_MIDI_BANK_FLASH )
+        {
+            (void)bLoadPresetFlash(pxCmdData->u8Program);
+        }
+        else
+        {
+            vCliPrintf(SYNTH_TASK_NAME, "LOAD PRESET: Not valid Bank - %d", pxCmdData->u8Bank);
         }
     }
-}
-
-static void vCmdVoiceOff(SynthEventPayloadMidi_t * pxCmdMsg)
-{
-    ERR_ASSERT(pxCmdMsg != NULL);
-
-    if (pxCmdMsg->xType == SYNTH_CMD_NOTE_OFF)
+    else if ( pxCmdData->u8Action == (uint8_t)SYNTH_PRESET_ACTION_SAVE )
     {
-        uint8_t u8VoiceChannel = pxCmdMsg->u8Data[0U];
-        uint8_t u8Note = pxCmdMsg->u8Data[1U];
-
-        /* Check voice range */
-        if (u8VoiceChannel < SYNTH_MAX_NUM_VOICE)
+        if ( pxCmdData->u8Bank == (uint8_t)LFS_MIDI_BANK_FLASH )
         {
-            if (bYM2612_set_note(u8VoiceChannel, u8Note))
-            {
-#ifdef SYNTH_DBG_VERBOSE
-                vCliPrintf(SYNTH_TASK_NAME, "Key OFF: %02d - %03d", u8VoiceChannel, u8Note);
-#endif
-                vYM2612_key_off(u8VoiceChannel);
-            }
+            xFmDevice_t * pxDevCfg = pxYM2612_get_reg_preset();
+            char pcTestStr[] = "UserPresetLive";
+
+            (void)bSavePresetFlash(pxCmdData->u8Program, (uint8_t *)&pcTestStr, pxDevCfg);
+        }
+        else
+        {
+            vCliPrintf(SYNTH_TASK_NAME, "SAVE PRESET: Not valid Bank - %d", pxCmdData->u8Bank);
         }
     }
-}
-
-static void vCmdMapCC(SynthEventPayloadMidi_t * pxCmdMsg)
-{
-    ERR_ASSERT(pxCmdMsg != NULL);
-
-    uint8_t *pu8Data = pxCmdMsg->u8Data;
-
-    uint8_t u8Channel = *pu8Data++;
-    uint8_t u8CcCmd = *pu8Data++;
-    uint8_t u8CcData = *pu8Data++;
-
-    (void)u8Channel;
-
-#ifdef SYNTH_DBG_VERBOSE
-    vCliPrintf(SYNTH_TASK_NAME, "Handle CC: CH %02d - CC %03d - DATA %03d", u8Channel, u8CcCmd, u8CcData);
-#endif
-
-    xLastCcExecuted.u8Cmd = u8CcCmd;
-    xLastCcExecuted.u8CcData = u8CcData;
-    xLastCcExecuted.u8Data = u8CcData;
-
-    sprintf(xLastCcExecuted.pcParamName, "Test CC CMD");
-
-    bUiTaskNotify(UI_SIGNAL_MIDI_CC);
-}
-
-static void vCmdVoiceOffAll(void)
-{
-    vCliPrintf(SYNTH_TASK_NAME, "Clear ALL voices");
-    for (uint8_t u8VoiceIndex = 0U; u8VoiceIndex < SYNTH_MAX_NUM_VOICE; u8VoiceIndex++)
-    {
-        vYM2612_key_off(u8VoiceIndex);
-    }
-    bUiTaskNotify(UI_SIGNAL_SYNTH_OFF);
 }
 
 static bool bInitUserPreset(void)
@@ -651,7 +720,7 @@ static bool bInitUserPreset(void)
     return bRetVal;
 }
 
-static bool bSavePreset(uint8_t u8Position, uint8_t * pu8Name, xFmDevice_t * pxRegData)
+static bool bSavePresetFlash(uint8_t u8Position, uint8_t * pu8Name, xFmDevice_t * pxRegData)
 {
     bool bRetVal = false;
     lfs_ym_data_t xPresetData = {0};
@@ -682,18 +751,17 @@ static bool bSavePreset(uint8_t u8Position, uint8_t * pu8Name, xFmDevice_t * pxR
     return bRetVal;
 }
 
-static bool bLoadPreset(uint8_t u8Position)
+static bool bLoadPresetFlash(uint8_t u8Position)
 {
     bool bRetVal = false;
     lfs_ym_data_t xPresetData = {0};
 
     if ( LFS_read_ym_data(u8Position, &xPresetData) == LFS_OK )
     {
-        if (bSynthSetPreset(&xPresetData.xPresetData))
-        {
-            vCliPrintf(SYNTH_TASK_NAME, "LOAD PRESET %d - %s: OK", u8Position, xPresetData.pu8Name);
-            bRetVal = true;
-        }
+        vYM2612_set_reg_preset(&xPresetData.xPresetData);
+
+        vCliPrintf(SYNTH_TASK_NAME, "LOAD PRESET %d - %s: OK", u8Position, xPresetData.pu8Name);
+        bRetVal = true;
     }
     else
     {
@@ -704,18 +772,17 @@ static bool bLoadPreset(uint8_t u8Position)
     return bRetVal;
 }
 
-static bool bLoadDefaultPreset(uint8_t u8Position)
+static bool bLoadPresetRom(uint8_t u8Position)
 {
     bool bRetVal = false;
     xFmDevice_t * pxPresetData = (xFmDevice_t *)pxSYNTH_APP_DATA_CONST_get(u8Position);
 
     if (pxPresetData != NULL)
     {
-        if (bSynthSetPreset(pxPresetData))
-        {
-            vCliPrintf(SYNTH_TASK_NAME, "LOAD DEFAULT PRESET %d", u8Position);
-            bRetVal = true;
-        }
+        vYM2612_set_reg_preset(pxPresetData);
+
+        vCliPrintf(SYNTH_TASK_NAME, "LOAD DEFAULT PRESET %d", u8Position);
+        bRetVal = true;
     }
     else
     {
@@ -723,64 +790,6 @@ static bool bLoadDefaultPreset(uint8_t u8Position)
     }
 
     return bRetVal;
-}
-
-static void vCmdMidiSysEx(uint8_t * pu8SysExData, uint32_t u32LenData)
-{
-    if (u32LenData >= SYNTH_LEN_MIN_SYSEX_CMD)
-    {
-        SynthSysExCmd_t * pxSysExCmd = (SynthSysExCmd_t *)pu8SysExData;
-
-        vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD %02X LEN %d", pxSysExCmd->xSysExCmd, u32LenData);
-
-        if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_SET_PRESET) && (u32LenData == SYNTH_LEN_SET_REG_CMD))
-        {
-            void * pvSysExData = &pxSysExCmd->pu8CmdData;
-            xFmDevice_t * pxPresetData = pvSysExData;
-            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD SET PRESET");
-            vYM2612_set_reg_preset(pxPresetData);
-        }
-        else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_SAVE_PRESET) && (u32LenData == SYNTH_LEN_SAVE_PRESET_CMD))
-        {
-            void * pvSysExData = &pxSysExCmd->pu8CmdData;
-            SynthSysExCmdSavePreset_t * pxSavePresetData = pvSysExData;
-            uint8_t pu8PresetName[LFS_YM_CF_NAME_MAX_LEN] = {0};
-
-            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD SAVE PRESET");
-
-            /* Extract name from sysex frame */
-            for (uint32_t u32NameIndex = 0U; u32NameIndex < (LFS_YM_CF_NAME_MAX_LEN - 1U); u32NameIndex++)
-            {
-                pu8PresetName[u32NameIndex] = pxSavePresetData->u8CodedName[u32NameIndex * 2U];
-                pu8PresetName[u32NameIndex] |= pxSavePresetData->u8CodedName[(u32NameIndex * 2U) + 1U] << 4U;
-            }
-            /* Process data */
-            bSavePreset(pxSavePresetData->u8Position, pu8PresetName, &pxSavePresetData->xRegData);
-        }
-        else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_LOAD_PRESET) && (u32LenData == SYNTH_LEN_LOAD_PRESET_CMD))
-        {
-            void * pvSysExData = &pxSysExCmd->pu8CmdData;
-            SynthSysExCmdLoadPreset_t * pxLoadPresetData = pvSysExData;
-
-            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD LOAD PRESET");
-
-            /* Process data */
-            (void)bLoadPreset(pxLoadPresetData->u8Position);
-        }
-        else if ((pxSysExCmd->xSysExCmd == SYNTH_SYSEX_CMD_LOAD_DEFAULT_PRESET) && (u32LenData == SYNTH_LEN_LOAD_DEFAULT_PRESET_CMD))
-        {
-            void * pvSysExData = &pxSysExCmd->pu8CmdData;
-            SynthSysExCmdLoadPreset_t * pxLoadPresetData = pvSysExData;
-
-            vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD LOAD DEFAULT PRESET");
-
-            (void)bLoadDefaultPreset(pxLoadPresetData->u8Position);
-        }
-    }
-    else
-    {
-        vCliPrintf(SYNTH_TASK_NAME, "SysEx CMD too short");
-    }
 }
 
 static bool bInitPreset(void)
@@ -803,10 +812,20 @@ static bool bInitPreset(void)
     return bRetval;
 }
 
+static void vCmdVoiceOffAll(void)
+{
+    vCliPrintf(SYNTH_TASK_NAME, "Clear ALL voices");
+    for (uint8_t u8VoiceIndex = 0U; u8VoiceIndex < SYNTH_MAX_NUM_VOICE; u8VoiceIndex++)
+    {
+        vYM2612_key_off(u8VoiceIndex);
+    }
+    // bUiTaskNotify(UI_SIGNAL_SYNTH_OFF);
+}
+
 static void vSynthTaskMain( void *pvParameters )
 {
     /* Init delay to for pow stabilization */
-    vTaskDelay(pdMS_TO_TICKS(SYNTH_TASK_INIT_DELAY));
+    vTaskDelay( pdMS_TO_TICKS(SYNTH_TASK_INIT_DELAY) );
 
     /* Show init msg */
     vCliPrintf(SYNTH_TASK_NAME, "Init");
@@ -815,7 +834,7 @@ static void vSynthTaskMain( void *pvParameters )
     (void)xYM2612_init();
 
     /* Init user preset */
-    if (!bInitUserPreset())
+    if ( !bInitUserPreset() )
     {
         vCliPrintf(SYNTH_TASK_NAME, "User preset init ERROR");
     }
@@ -825,38 +844,34 @@ static void vSynthTaskMain( void *pvParameters )
 
     for(;;)
     {
-        SynthEvent_t xEvent;
+        SynthCmd_t xSynthCmd = { 0U };
 
-        if (xQueueReceive(xSynthEventQueueHandle, &xEvent, portMAX_DELAY) == pdPASS)
+        if (xQueueReceive(xSynthEventQueueHandle, &xSynthCmd, portMAX_DELAY) == pdPASS)
         {
-            switch (xEvent.eType)
+            switch (xSynthCmd.eCmd)
             {
-                case SYNTH_EVENT_MIDI_MSG:
-                    vHandleMidiEvent(&xEvent.uPayload.xMidi);
+                case SYNTH_CMD_VOICE_UPDATE_MONO:
+                    vHandleCmdVoiceUpdateMono(&xSynthCmd.uPayload.xVoiceUpdateMono);
                     break;
 
-                case SYNTH_EVENT_MIDI_SYSEX_MSG:
-                    vHandleMidiSysExEvent(&xEvent.uPayload.xMidiSysEx);
+                case SYNTH_CMD_VOICE_UPDATE_POLY:
+                    vHandleCmdVoiceUpdatePoly(&xSynthCmd.uPayload.xVoiceUpdatePoly);
                     break;
 
-                case SYNTH_EVENT_NOTE_ON_OFF:
-                    vHandleNoteOnOffEvent(&xEvent.uPayload.xNoteOnOff);
+                case SYNTH_CMD_PARAM_UPDATE:
+                    vHandleCmdParameterUpdate(&xSynthCmd.uPayload.xParamUpdate);
                     break;
 
-                case SYNTH_EVENT_CHANGE_NOTE:
-                    vHandleChangeNoteEvent(&xEvent.uPayload.xChangeNote);
+                case SYNTH_CMD_PRESET_UPDATE:
+                    vHandleCmdPresetUpdate(&xSynthCmd.uPayload.xPresetUpdate);
                     break;
 
-                case SYNTH_EVENT_MOD_PARAM:
-                    vHandleChangeParameterEvent(&xEvent.uPayload.xChangeParameter);
-                    break;
-
-                case SYNTH_EVENT_UPDATE_PRESET:
-                    vHandleUpdatePresetEvent(&xEvent.uPayload.xUpdatePreset);
+                case SYNTH_CMD_VOICE_MUTE:
+                    vCmdVoiceOffAll();
                     break;
 
                 default:
-                    vCliPrintf(SYNTH_TASK_NAME, "Not defined event; %02X", xEvent.eType);
+                    vCliPrintf(SYNTH_TASK_NAME, "Not defined command: x%02X", xSynthCmd.eCmd);
                     break;
             }
         }
@@ -865,92 +880,40 @@ static void vSynthTaskMain( void *pvParameters )
 
 /* Public fuctions -----------------------------------------------------------*/
 
-bool bSynthLoadPreset(SynthPresetSource_t u8PresetSource, uint8_t u8PresetId)
+void vSynthTaskInit(void)
+{
+    /* Create task */
+    xTaskCreate(vSynthTaskMain, SYNTH_TASK_NAME, SYNTH_TASK_STACK, NULL, SYNTH_TASK_PRIO, &xSynthTaskHandle);
+    ERR_ASSERT(xSynthTaskHandle);
+
+    /* Create task queue */
+    xSynthEventQueueHandle = xQueueCreate(SYNTH_EVENT_QUEUE_SIZE, SYNTH_EVENT_QUEUE_ELEMENT_SIZE);
+    ERR_ASSERT(xSynthEventQueueHandle);
+}
+
+bool bSynthSendCmd(SynthCmd_t xSynthCmd)
 {
     bool bRetval = false;
 
-    if (u8PresetSource < SYNTH_PRESET_SOURCE_MAX)
+    if ( xSynthEventQueueHandle != NULL )
     {
-        switch (u8PresetSource)
+        if ( xQueueSend(xSynthEventQueueHandle, &xSynthCmd, 0U) == pdPASS )
         {
-            case SYNTH_PRESET_SOURCE_DEFAULT:
-                bRetval = bLoadDefaultPreset(u8PresetId);
-                break;
-
-            case SYNTH_PRESET_SOURCE_USER:
-                bRetval = bLoadPreset(u8PresetId);
-                break;
-
-            default:
-                break;
+            bRetval = true;
+        }
+        else
+        {
+            vCliPrintf(SYNTH_TASK_NAME, "CMD: Queue Error");
         }
     }
 
     return bRetval;
 }
 
-bool bSynthSaveUserPreset(xFmDevice_t * pxPreset, uint8_t u8PresetId)
+SynthParam_t xSynthGetParam(uint8_t u8ParamId)
 {
-    uint8_t u8UiPresetName[LFS_YM_CF_NAME_MAX_LEN] = "UI User Preset";
-    return bSavePreset(u8PresetId, u8UiPresetName, pxPreset);
+    SynthParam_t xRetParam = { 0U };
+    return xRetParam;
 }
 
-bool bSynthSetPreset(xFmDevice_t * pxPreset)
-{
-    ERR_ASSERT(pxPreset != NULL);
-    ERR_ASSERT(xSynthEventQueueHandle != NULL);
-
-    bool bRetval = true;
-    SynthEvent_t xSynthEvent = {.eType = SYNTH_EVENT_UPDATE_PRESET, .uPayload.xUpdatePreset.pxPreset = pxPreset};
-
-    if (xQueueSend(xSynthEventQueueHandle, &xSynthEvent, pdMS_TO_TICKS(SYNTH_QUEUE_TIMEOUT)) != pdPASS)
-    {
-        vCliPrintf(SYNTH_TASK_NAME, "CMD: Queue Error");
-        bRetval = false;
-    }
-
-    return bRetval;
-}
-
-SynthCcMap_t xSynthGetLastCc(void)
-{
-    return xLastCcExecuted;
-}
-
-bool bSynthTaskInit(void)
-{
-    bool bRetval = false;
-
-    /* Create task */
-    xTaskCreate(vSynthTaskMain, SYNTH_TASK_NAME, SYNTH_TASK_STACK, NULL, SYNTH_TASK_PRIO, &xSynthTaskHandle);
-
-    /* Create task queue */
-    xSynthEventQueueHandle = xQueueCreate(SYNTH_EVENT_QUEUE_SIZE, SYNTH_EVENT_QUEUE_ELEMENT_SIZE);
-
-    /* Check resources */
-    if ((xSynthTaskHandle != NULL) && (xSynthEventQueueHandle != NULL))
-    {
-        bRetval = true;
-    }
-
-    return bRetval;
-}
-
-bool bSynthTaskNotify(uint32_t u32Event)
-{
-    bool bRetval = false;
-    /* Check if task has been init */
-    if (xSynthTaskHandle != NULL)
-    {
-      xTaskNotify(xSynthTaskHandle, u32Event, eSetBits);
-      bRetval = true;
-    }
-    return bRetval;
-}
-
-QueueHandle_t pxSynthTaskGetQueue(void)
-{
-    return xSynthEventQueueHandle;
-}
-
-/*****END OF FILE****/
+/* EOF */

@@ -127,25 +127,25 @@ extern "C"
 /** List of available parameters */
 typedef enum
 {
-  FM_VAR_LFO_ON = 0U,
-  FM_VAR_LFO_FREQ,
-  FM_VAR_VOICE_FEEDBACK,
-  FM_VAR_VOICE_ALGORITHM,
-  FM_VAR_VOICE_AUDIO_OUT,
-  FM_VAR_VOICE_AMP_MOD_SENS,
-  FM_VAR_VOICE_PHA_MOD_SENS,
-  FM_VAR_OPERATOR_DETUNE,
-  FM_VAR_OPERATOR_MULTIPLE,
-  FM_VAR_OPERATOR_TOTAL_LEVEL,
-  FM_VAR_OPERATOR_KEY_SCALE,
-  FM_VAR_OPERATOR_ATTACK_RATE,
-  FM_VAR_OPERATOR_AMP_MOD,
-  FM_VAR_OPERATOR_DECAY_RATE,
-  FM_VAR_OPERATOR_SUSTAIN_RATE,
-  FM_VAR_OPERATOR_SUSTAIN_LEVEL,
-  FM_VAR_OPERATOR_RELEASE_RATE,
-  FM_VAR_OPERATOR_SSG_ENVELOPE,
-  FM_VAR_SIZE_NUMBER
+    FM_VAR_LFO_ON = 0U,
+    FM_VAR_LFO_FREQ,
+    FM_VAR_VOICE_FEEDBACK,
+    FM_VAR_VOICE_ALGORITHM,
+    FM_VAR_VOICE_AUDIO_OUT,
+    FM_VAR_VOICE_AMP_MOD_SENS,
+    FM_VAR_VOICE_PHA_MOD_SENS,
+    FM_VAR_OPERATOR_DETUNE,
+    FM_VAR_OPERATOR_MULTIPLE,
+    FM_VAR_OPERATOR_TOTAL_LEVEL,
+    FM_VAR_OPERATOR_KEY_SCALE,
+    FM_VAR_OPERATOR_ATTACK_RATE,
+    FM_VAR_OPERATOR_AMP_MOD,
+    FM_VAR_OPERATOR_DECAY_RATE,
+    FM_VAR_OPERATOR_SUSTAIN_RATE,
+    FM_VAR_OPERATOR_SUSTAIN_LEVEL,
+    FM_VAR_OPERATOR_RELEASE_RATE,
+    FM_VAR_OPERATOR_SSG_ENVELOPE,
+    FM_VAR_SIZE_NUMBER
 } eFmParameter_t;
 
 /** Operation status */
@@ -209,36 +209,36 @@ typedef enum
 /** Operator parameter structure */
 typedef struct 
 {
-  uint8_t u8Detune;
-  uint8_t u8Multiple;
-  uint8_t u8TotalLevel;
-  uint8_t u8KeyScale;
-  uint8_t u8AttackRate;
-  uint8_t u8AmpMod;
-  uint8_t u8DecayRate;
-  uint8_t u8SustainRate;
-  uint8_t u8SustainLevel;
-  uint8_t u8ReleaseRate;
-  uint8_t u8SsgEg;
+    uint8_t u8Detune;
+    uint8_t u8Multiple;
+    uint8_t u8TotalLevel;
+    uint8_t u8KeyScale;
+    uint8_t u8AttackRate;
+    uint8_t u8AmpMod;
+    uint8_t u8DecayRate;
+    uint8_t u8SustainRate;
+    uint8_t u8SustainLevel;
+    uint8_t u8ReleaseRate;
+    uint8_t u8SsgEg;
 } xFmOperator_t;
 
 /** Channel voice parameter structure */
 typedef struct 
 {
-  uint8_t u8Feedback;
-  uint8_t u8Algorithm;
-  uint8_t u8AudioOut;
-  uint8_t u8AmpModSens;
-  uint8_t u8PhaseModSens;
-  xFmOperator_t xOperator[YM2612_NUM_OP_CHANNEL];
+    uint8_t u8Feedback;
+    uint8_t u8Algorithm;
+    uint8_t u8AudioOut;
+    uint8_t u8AmpModSens;
+    uint8_t u8PhaseModSens;
+    xFmOperator_t xOperator[YM2612_NUM_OP_CHANNEL];
 } xFmChannel_t;
 
 /** Overall paramater structure */
 typedef struct xFmDevice
 {
-  uint8_t u8LfoOn;
-  uint8_t u8LfoFreq;
-  xFmChannel_t xChannel[YM2612_NUM_CHANNEL];
+    uint8_t u8LfoOn;
+    uint8_t u8LfoFreq;
+    xFmChannel_t xChannel[YM2612_NUM_CHANNEL];
 } xFmDevice_t;
 
 /* Exported constants --------------------------------------------------------*/

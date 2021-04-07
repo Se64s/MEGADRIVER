@@ -42,15 +42,26 @@ BUILD_DIR = build
 # source
 ######################################
 # C sources
+# App/Src/ui_task.c \
+# App/Src/mapping_task.c \
+# BSP/Src/display_driver.c \
+# Lib/ui/ui_sys.c \
+# Lib/ui/ui_sys_misc.c \
+# Lib/ui/ui_menu_main.c \
+# Lib/ui/ui_screen_main.c \
+# Lib/ui/ui_screen_midi.c \
+# Lib/ui/ui_screen_preset.c \
+# Lib/ui/ui_screen_fm.c \
+# Lib/ui/ui_screen_mapping.c \
+# Lib/ui/ui_screen_idle.c \
+
 C_SOURCES =  \
 App/Src/main.c \
 App/Src/midi_task.c \
-App/Src/ui_task.c \
 App/Src/synth_task.c \
 App/Src/synth_app_data_const.c \
 App/Src/cli_task.c \
 App/Src/cli_cmd.c \
-App/Src/mapping_task.c \
 App/Src/app_lfs.c \
 BSP/Src/sys_mcu.c \
 BSP/Src/sys_rtos.c \
@@ -63,7 +74,6 @@ BSP/Src/i2c_driver.c \
 BSP/Src/adc_driver.c \
 BSP/Src/YM2612_driver.c \
 BSP/Src/encoder_driver.c \
-BSP/Src/display_driver.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_gpio.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_gpio.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc.c \
@@ -91,15 +101,6 @@ Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_usart.c \
 Lib/printf/printf.c \
 Lib/cbuf/circular_buffer.c \
 Lib/midi/midi_lib.c \
-Lib/ui/ui_sys.c \
-Lib/ui/ui_sys_misc.c \
-Lib/ui/ui_menu_main.c \
-Lib/ui/ui_screen_main.c \
-Lib/ui/ui_screen_midi.c \
-Lib/ui/ui_screen_preset.c \
-Lib/ui/ui_screen_fm.c \
-Lib/ui/ui_screen_mapping.c \
-Lib/ui/ui_screen_idle.c \
 Lib/u8g2/u8g2_bitmap.c \
 Lib/u8g2/u8g2_box.c \
 Lib/u8g2/u8g2_buffer.c \

@@ -161,25 +161,18 @@ void _cli_main( void *pvParameters )
 
 /* Public fuctions -----------------------------------------------------------*/
 
-bool bCliTaskInit(void)
+void vCliTaskInit(void)
 {
-    bool retval = false;
-
     /* Init HW resources */
     (void)SERIAL_init(SERIAL_1, _event_cb);
 
     /* Create mutex */
     cli_serial_mutex = xSemaphoreCreateMutex();
+    ERR_ASSERT( cli_serial_mutex );
 
     /* Create task */
     xTaskCreate(_cli_main, CLI_TASK_NAME, CLI_TASK_STACK, NULL, CLI_TASK_PRIO, &cli_task_handle);
-
-    /* Check resources */
-    if ((cli_serial_mutex != NULL) && (cli_task_handle != NULL))
-    {
-        retval = true;
-    }
-    return(retval);
+    ERR_ASSERT( cli_task_handle );
 }
 
 /* CLI printf implementation */
