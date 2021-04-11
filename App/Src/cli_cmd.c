@@ -13,6 +13,7 @@
 
 #include "cli_task.h"
 #include "synth_task.h"
+#include "midi_task.h"
 
 #include <stdlib.h>
 #include "printf.h"
@@ -80,6 +81,15 @@ static BaseType_t userHardFault(char *pcWriteBuffer, size_t xWriteBufferLen, con
  */
 static BaseType_t midiCc(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString);
 
+/**
+ * @brief  Force midi cc parameter.
+ * @param  pcWriteBuffer
+ * @param  xWriteBufferLen
+ * @param  pcCommandString
+ * @retval pdFALSE, pdTRUE
+ */
+static BaseType_t midiChangeMode(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString);
+
 /* Private variables ---------------------------------------------------------*/
 
 static const CLI_Command_Definition_t xDevReset = {
@@ -122,6 +132,13 @@ static const CLI_Command_Definition_t xMidiCc = {
     "midiCc:\tSimulate midi CC command, use: midiCc <cc 0-127> <data 0-127>",
     midiCc,
     2U
+};
+
+static const CLI_Command_Definition_t xMidiChangeMode = {
+    "midiMode",
+    "midiMode:\tChange Midi mode to MONO or POLY, use: midiMode <0 Mono,1 Poly>",
+    midiChangeMode,
+    1U
 };
 
 /* Callbacks -----------------------------------------------------------------*/
@@ -227,6 +244,50 @@ static BaseType_t midiCc(char *pcWriteBuffer, size_t xWriteBufferLen, const char
     return pdFALSE;
 }
 
+static BaseType_t midiChangeMode(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString)
+{
+    uint8_t u8MidiMode;
+    char *pcParameter1;
+    BaseType_t xParameter1StringLength;
+
+    /* Get cmd parameters */
+    pcParameter1 = (char *)FreeRTOS_CLIGetParameter(pcCommandString, 1U, &xParameter1StringLength);
+    pcParameter1[xParameter1StringLength] = 0U;
+    u8MidiMode = (uint8_t)atoi(pcParameter1);
+
+    MidiTaskCmd_t xMidiCmd = { 0U };
+    xMidiCmd.eCmd = MIDI_CMD_SET_MODE;
+
+    if ( u8MidiMode == 0U )  // MONO
+    {
+        vCliPrintf(CLI_TASK_NAME, "MONO");
+        xMidiCmd.uPayload.xSetMode.u8Mode = (uint8_t)MidiMode4;
+    }
+    else if ( u8MidiMode == 1U ) // POLY
+    {
+        vCliPrintf(CLI_TASK_NAME, "POLY");
+        xMidiCmd.uPayload.xSetMode.u8Mode = (uint8_t)MidiMode3;
+    }
+
+    if ( xMidiCmd.uPayload.xSetMode.u8Mode != 0U )
+    {
+        if ( bMidiSendCmd(xMidiCmd) )
+        {
+            (void)snprintf(pcWriteBuffer, xWriteBufferLen, "OK");
+        }
+        else
+        {
+            (void)snprintf(pcWriteBuffer, xWriteBufferLen, "ERROR: Midi queue full");
+        }
+    }
+    else
+    {
+        (void)snprintf(pcWriteBuffer, xWriteBufferLen, "ERROR: Not valid Mode");
+    }
+
+    return pdFALSE;
+}
+
 static BaseType_t showVersion(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString)
 {
     vCliPrintf(CLI_TASK_NAME, "APP %s", MAIN_APP_VERSION);
@@ -245,6 +306,7 @@ void cli_cmd_init(void)
     (void)FreeRTOS_CLIRegisterCommand(&xUserFault);
     (void)FreeRTOS_CLIRegisterCommand(&xVersion);
     (void)FreeRTOS_CLIRegisterCommand(&xMidiCc);
+    (void)FreeRTOS_CLIRegisterCommand(&xMidiChangeMode);
 }
 
 /* EOF */

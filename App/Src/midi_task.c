@@ -350,7 +350,7 @@ static void vMidiCmdOn(uint8_t * pu8MidiCmd)
     SynthCmd_t xSynthCmd = { 0U };
 
     // Send new cmd VociceChUpdate
-    if ( xMidiHandler.u8Mode == MidiMode3 )
+    if ( xMidiHandler.u8Mode == (uint8_t)MidiMode4 )
     {
         uint8_t u8VoiceChannel = u8Channel - xMidiHandler.u8BaseChannel;
 
@@ -363,15 +363,18 @@ static void vMidiCmdOn(uint8_t * pu8MidiCmd)
 
         (void)bSynthSendCmd(xSynthCmd);
     }
-    else if ( xMidiHandler.u8Mode == MidiMode4 )
+    else if ( xMidiHandler.u8Mode == (uint8_t)MidiMode3 )
     {
-        xSynthCmd.eCmd = SYNTH_CMD_VOICE_UPDATE_POLY;
+        if ( xMidiHandler.u8BaseChannel == u8Channel )
+        {
+            xSynthCmd.eCmd = SYNTH_CMD_VOICE_UPDATE_POLY;
 
-        xSynthCmd.uPayload.xVoiceUpdateMono.u8Note = u8Note;
-        xSynthCmd.uPayload.xVoiceUpdateMono.u8Velocity = u8Velocity;
-        xSynthCmd.uPayload.xVoiceUpdateMono.u8VoiceState = (uint8_t)SYNTH_VOICE_STATE_ON;
+            xSynthCmd.uPayload.xVoiceUpdatePoly.u8Note = u8Note;
+            xSynthCmd.uPayload.xVoiceUpdatePoly.u8Velocity = u8Velocity;
+            xSynthCmd.uPayload.xVoiceUpdatePoly.u8VoiceState = (uint8_t)SYNTH_VOICE_STATE_ON;
 
-        (void)bSynthSendCmd(xSynthCmd);
+            (void)bSynthSendCmd(xSynthCmd);
+        }
     }
 }
 
@@ -394,7 +397,7 @@ static void vMidiCmdOff(uint8_t * pu8MidiCmd)
     SynthCmd_t xSynthCmd = { 0U };
 
     // Send new cmd VociceChUpdate
-    if ( xMidiHandler.u8Mode == MidiMode4 )
+    if ( xMidiHandler.u8Mode == (uint8_t)MidiMode4 )
     {
         uint8_t u8VoiceChannel = u8Channel - xMidiHandler.u8BaseChannel;
 
@@ -407,15 +410,18 @@ static void vMidiCmdOff(uint8_t * pu8MidiCmd)
 
         (void)bSynthSendCmd(xSynthCmd);
     }
-    else if ( xMidiHandler.u8Mode == MidiMode3 )
+    else if ( xMidiHandler.u8Mode == (uint8_t)MidiMode3 )
     {
-        xSynthCmd.eCmd = SYNTH_CMD_VOICE_UPDATE_POLY;
+        if ( xMidiHandler.u8BaseChannel == u8Channel )
+        {
+            xSynthCmd.eCmd = SYNTH_CMD_VOICE_UPDATE_POLY;
 
-        xSynthCmd.uPayload.xVoiceUpdateMono.u8Note = u8Note;
-        xSynthCmd.uPayload.xVoiceUpdateMono.u8Velocity = u8Velocity;
-        xSynthCmd.uPayload.xVoiceUpdateMono.u8VoiceState = (uint8_t)SYNTH_VOICE_STATE_OFF;
+            xSynthCmd.uPayload.xVoiceUpdatePoly.u8Note = u8Note;
+            xSynthCmd.uPayload.xVoiceUpdatePoly.u8Velocity = u8Velocity;
+            xSynthCmd.uPayload.xVoiceUpdatePoly.u8VoiceState = (uint8_t)SYNTH_VOICE_STATE_OFF;
 
-        (void)bSynthSendCmd(xSynthCmd);
+            (void)bSynthSendCmd(xSynthCmd);
+        }
     }
 }
 
