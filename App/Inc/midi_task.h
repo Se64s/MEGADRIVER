@@ -40,6 +40,7 @@ extern "C" {
 
 /* Extended debug output */
 // #define MIDI_DBG_STATS
+// #define MIDI_DBG_VERBOSE
 
 /* Exported types ------------------------------------------------------------*/
 

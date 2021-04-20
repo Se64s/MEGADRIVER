@@ -344,7 +344,9 @@ static void vMidiCmdOn(uint8_t * pu8MidiCmd)
     uint8_t u8Velocity = *pu8MidiCmd++;
     uint8_t u8Channel = u8Status & MIDI_STATUS_CH_MASK;
 
+#ifdef MIDI_DBG_VERBOSE
     vCliPrintf(MIDI_TASK_NAME, "NOTE_ON : CH x%02X, NOTE x%02X, VEL x%02X", u8Channel, u8Note, u8Velocity);
+#endif
 
     SynthCmd_t xSynthCmd = { 0U };
 
@@ -390,7 +392,9 @@ static void vMidiCmdOff(uint8_t * pu8MidiCmd)
     uint8_t u8Velocity = *pu8MidiCmd++;
     uint8_t u8Channel = u8Status & MIDI_STATUS_CH_MASK;
 
+#ifdef MIDI_DBG_VERBOSE
     vCliPrintf(MIDI_TASK_NAME, "NOTE_OFF: CH x%02X, NOTE x%02X, VEL x%02X", u8Channel, u8Note, u8Velocity);
+#endif
 
     // Send new cmd VociceChUpdate
     SynthCmd_t xSynthCmd = { 0U };
@@ -433,7 +437,9 @@ static void vMidiCmdCC(uint8_t * pu8MidiCmd)
     uint8_t u8Data = *pu8MidiCmd++;
     uint8_t u8Channel = u8Status & MIDI_STATUS_CH_MASK;
 
+#ifdef MIDI_DBG_VERBOSE
     vCliPrintf(MIDI_TASK_NAME, "CC: CH x%02X, CC x%02X, DATA: x%02X", u8Channel, u8CmdCc, u8Data);
+#endif
 
     if ( u8Channel == xMidiHandler.u8BaseChannel )
     {
@@ -480,7 +486,9 @@ static void vMidiCmdSysExCallBack(uint8_t *pu8Data, uint32_t u32LenData)
 {
     ERR_ASSERT(pu8Data);
 
+#ifdef MIDI_DBG_VERBOSE
     vCliPrintf(MIDI_TASK_NAME, "SYSEX: CMD LEN %d", u32LenData);
+#endif
 }
 
 static void vMidiCmd1CallBack(uint8_t u8Cmd, uint8_t u8Data)

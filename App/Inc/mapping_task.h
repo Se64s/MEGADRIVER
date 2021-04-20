@@ -22,7 +22,7 @@ extern "C" {
 /* Private defines -----------------------------------------------------------*/
 
 /* Activate debug output */
-#define MAP_DEBUG
+// #define MAP_DEBUG
 
 /* Task parameters */
 #define MAP_TASK_NAME                   "MAP"

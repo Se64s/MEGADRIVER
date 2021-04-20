@@ -43,7 +43,7 @@ extern "C" {
 #define SYNTH_MAX_NUM_USER_PRESET           ( LFS_YM_SLOT_NUM )
 
 /* Enable extended DBG */
-#define SYNTH_DBG_VERBOSE
+// #define SYNTH_DBG_VERBOSE
 
 /* Exported types ------------------------------------------------------------*/
 
