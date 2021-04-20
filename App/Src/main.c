@@ -18,7 +18,7 @@
 #include "cli_task.h"
 #include "synth_task.h"
 #include "ui_task.h"
-// #include "mapping_task.h"
+#include "mapping_task.h"
 
 /* Main app ------------------------------------------------------------------*/
 
@@ -38,7 +38,7 @@ int main(void)
     vCliTaskInit();
     vSynthTaskInit();
     vUiTaskInit();
-    // (void)bMapTaskInit();
+    vMapTaskInit();
 
     /* Start the scheduler so the tasks start executing. */
     vTaskStartScheduler();

@@ -22,7 +22,7 @@ extern "C"
 #include "ui_screen_midi.h"
 #include "ui_screen_preset.h"
 #include "ui_screen_fm.h"
-// #include "ui_screen_mapping.h"
+#include "ui_screen_mapping.h"
 #include "ui_screen_idle.h"
 
 /* Private defines -----------------------------------------------------------*/
@@ -34,7 +34,7 @@ typedef enum
     MENU_MIDI_SCREEN_POSITION,
     MENU_PRESET_SCREEN_POSITION,
     MENU_FM_SCREEN_POSITION,
-    // MENU_MAPPING_SCREEN_POSITION,
+    MENU_MAPPING_SCREEN_POSITION,
     MENU_IDLE_SCREEN_POSITION,
     MENU_LAST_SCREEN_POSITION,
 } eMenuScreenPosition_t;

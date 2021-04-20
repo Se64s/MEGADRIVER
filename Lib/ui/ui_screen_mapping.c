@@ -226,14 +226,7 @@ static void vElementRenderVoice(void * pvDisplay, void * pvScreen, void * pvElem
         /* Prepare data on buffer */
         MapElement_t xMapCfg = xMapGetCfg(u8MapCfgId);
 
-        if (xMapCfg.u8Voice == YM2612_NUM_CHANNEL)
-        {
-            sprintf(pxElement->pcName, NAME_FORMAT_VOICE_ALL);
-        }
-        else
-        {
-            sprintf(pxElement->pcName, NAME_FORMAT_VOICE, xMapCfg.u8Voice);
-        }
+        sprintf(pxElement->pcName, NAME_FORMAT_VOICE, xMapCfg.u8Voice);
 
         /* Print selection ico */
         vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
@@ -357,7 +350,7 @@ static void vScreenActionMap(void * pvMenu, void * pvEventData)
             ui_element_t * pxElement = &pxScreen->pxElementList[pxScreen->u32ElementSelectionIndex];
 
             /* Handle encoder events */
-            if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+            if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
             {
                 vUI_MISC_EncoderAction(pxMenu, pvEventData);
             }
@@ -383,18 +376,18 @@ static void vElementActionCfgId(void * pvMenu, void * pvEventData)
     ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
     /* Handle encoder events */
-    if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+    if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
     {
         if (pxScreen->bElementSelection)
         {
-            if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+            if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
             {
                 if (u8MapCfgId > 0U)
                 {
                     u8MapCfgId--;
                 }
             }
-            else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+            else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
             {
                 if (u8MapCfgId < (MAP_CH_NUM - 1U))
                 {
@@ -404,7 +397,7 @@ static void vElementActionCfgId(void * pvMenu, void * pvEventData)
         }
     }
     /* Element selection action */
-    if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+    if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
     {
         pxScreen->bElementSelection = !pxScreen->bElementSelection;
     }
@@ -420,7 +413,7 @@ static void vElementActionMode(void * pvMenu, void * pvEventData)
     ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
     /* Handle encoder events */
-    if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+    if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
     {
         if (pxScreen->bElementSelection)
         {
@@ -428,14 +421,14 @@ static void vElementActionMode(void * pvMenu, void * pvEventData)
             MapElement_t xMapCfg = xMapGetCfg(u8MapCfgId);
             uint8_t u8TmpVar = xMapCfg.xMode;
 
-            if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+            if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
             {
                 if (xMapCfg.xMode > 0U)
                 {
                     xMapCfg.xMode--;
                 }
             }
-            else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+            else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
             {
                 if (xMapCfg.xMode < (MAP_MODE_NUM - 1U))
                 {
@@ -450,7 +443,7 @@ static void vElementActionMode(void * pvMenu, void * pvEventData)
         }
     }
     /* Element selection action */
-    if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+    if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
     {
         pxScreen->bElementSelection = !pxScreen->bElementSelection;
     }
@@ -466,7 +459,7 @@ static void vElementActionVoice(void * pvMenu, void * pvEventData)
     ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
     /* Handle encoder events */
-    if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+    if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
     {
         if (pxScreen->bElementSelection)
         {
@@ -474,16 +467,16 @@ static void vElementActionVoice(void * pvMenu, void * pvEventData)
             MapElement_t xMapCfg = xMapGetCfg(u8MapCfgId);
             uint8_t u8TmpVar = xMapCfg.u8Voice;
 
-            if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+            if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
             {
                 if (xMapCfg.u8Voice > 0U)
                 {
                     xMapCfg.u8Voice--;
                 }
             }
-            else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+            else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
             {
-                if (xMapCfg.u8Voice < YM2612_NUM_CHANNEL)
+                if ( xMapCfg.u8Voice < (YM2612_NUM_CHANNEL - 1U) )
                 {
                     xMapCfg.u8Voice++;
                 }
@@ -496,7 +489,7 @@ static void vElementActionVoice(void * pvMenu, void * pvEventData)
         }
     }
     /* Element selection action */
-    if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+    if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
     {
         pxScreen->bElementSelection = !pxScreen->bElementSelection;
     }
@@ -512,7 +505,7 @@ static void vElementActionOperator(void * pvMenu, void * pvEventData)
     ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
     /* Handle encoder events */
-    if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+    if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
     {
         if (pxScreen->bElementSelection)
         {
@@ -520,14 +513,14 @@ static void vElementActionOperator(void * pvMenu, void * pvEventData)
             MapElement_t xMapCfg = xMapGetCfg(u8MapCfgId);
             uint8_t u8TmpVar = xMapCfg.u8Operator;
 
-            if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+            if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
             {
                 if (xMapCfg.u8Operator > 0U)
                 {
                     xMapCfg.u8Operator--;
                 }
             }
-            else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+            else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
             {
                 if (xMapCfg.u8Operator < (YM2612_NUM_OP_CHANNEL - 1U))
                 {
@@ -542,7 +535,7 @@ static void vElementActionOperator(void * pvMenu, void * pvEventData)
         }
     }
     /* Element selection action */
-    if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+    if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
     {
         pxScreen->bElementSelection = !pxScreen->bElementSelection;
     }
@@ -558,7 +551,7 @@ static void vElementActionParameter(void * pvMenu, void * pvEventData)
     ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
     /* Handle encoder events */
-    if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+    if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
     {
         if (pxScreen->bElementSelection)
         {
@@ -566,14 +559,14 @@ static void vElementActionParameter(void * pvMenu, void * pvEventData)
             MapElement_t xMapCfg = xMapGetCfg(u8MapCfgId);
             uint8_t u8TmpVar = xMapCfg.u8ParameterId;
 
-            if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+            if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
             {
                 if (xMapCfg.u8ParameterId > 0U)
                 {
                     xMapCfg.u8ParameterId--;
                 }
             }
-            else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+            else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
             {
                 if (xMapCfg.u8ParameterId < (YM2612_NUM_PARAMETERS - 1U))
                 {
@@ -588,7 +581,7 @@ static void vElementActionParameter(void * pvMenu, void * pvEventData)
         }
     }
     /* Element selection action */
-    if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+    if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
     {
         pxScreen->bElementSelection = !pxScreen->bElementSelection;
     }
@@ -601,7 +594,7 @@ static void vElementActionReturn(void * pvMenu, void * pvEventData)
         ui_menu_t * pxMenu = pvMenu;
         uint32_t * pu32EventData = pvEventData;
 
-        if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        if (RTOS_CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             /* Set midi screen */
             vCliPrintf(UI_TASK_NAME, "Event Return");

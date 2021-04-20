@@ -42,14 +42,12 @@ BUILD_DIR = build
 # source
 ######################################
 # C sources
-# App/Src/mapping_task.c \
-# Lib/ui/ui_screen_mapping.c \
-
 C_SOURCES =  \
 App/Src/main.c \
 App/Src/midi_task.c \
 App/Src/synth_task.c \
 App/Src/ui_task.c \
+App/Src/mapping_task.c \
 App/Src/synth_app_data_const.c \
 App/Src/cli_task.c \
 App/Src/cli_cmd.c \
@@ -101,6 +99,7 @@ Lib/ui/ui_screen_midi.c \
 Lib/ui/ui_screen_preset.c \
 Lib/ui/ui_screen_fm.c \
 Lib/ui/ui_screen_idle.c \
+Lib/ui/ui_screen_mapping.c \
 Lib/u8g2/u8g2_bitmap.c \
 Lib/u8g2/u8g2_box.c \
 Lib/u8g2/u8g2_buffer.c \

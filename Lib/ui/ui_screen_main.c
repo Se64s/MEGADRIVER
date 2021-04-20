@@ -25,7 +25,7 @@ typedef enum
     MAIN_SCREEN_ELEMENT_MIDI = 0,
     MAIN_SCREEN_ELEMENT_PRESET,
     MAIN_SCREEN_ELEMENT_FM,
-    // MAIN_SCREEN_ELEMENT_MAPPING,
+    MAIN_SCREEN_ELEMENT_MAPPING,
     MAIN_SCREEN_LAST_ELEMENT,
 } eMainScreenElement_t;
 
@@ -283,21 +283,21 @@ static void vElementFmAction(void * pvMenu, void * pvEventData)
     }
 }
 
-// static void vElementMappingAction(void * pvMenu, void * pvEventData)
-// {
-//     if ((pvMenu != NULL) && (pvEventData != NULL))
-//     {
-//         ui_menu_t * pxMenu = pvMenu;
-//         uint32_t * pu32EventData = pvEventData;
+static void vElementMappingAction(void * pvMenu, void * pvEventData)
+{
+    if ((pvMenu != NULL) && (pvEventData != NULL))
+    {
+        ui_menu_t * pxMenu = pvMenu;
+        uint32_t * pu32EventData = pvEventData;
 
-//         if (RTOS_CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
-//         {
-//             /* Set midi screen */
-//             vCliPrintf(UI_TASK_NAME, "Enter in MAPPING screen");
-//             pxMenu->u32ScreenSelectionIndex = MENU_MAPPING_SCREEN_POSITION;
-//         }
-//     }
-// }
+        if (RTOS_CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        {
+            /* Set midi screen */
+            vCliPrintf(UI_TASK_NAME, "Enter in MAPPING screen");
+            pxMenu->u32ScreenSelectionIndex = MENU_MAPPING_SCREEN_POSITION;
+        }
+    }
+}
 
 /* Public user code ----------------------------------------------------------*/
 
@@ -339,10 +339,10 @@ ui_status_t UI_screen_main_init(ui_screen_t * pxScreenHandler)
         xMainScreenElementList[MAIN_SCREEN_ELEMENT_FM].render_cb = vElementFmRender;
         xMainScreenElementList[MAIN_SCREEN_ELEMENT_FM].action_cb = vElementFmAction;
 
-        // xMainScreenElementList[MAIN_SCREEN_ELEMENT_MAPPING].pcName = pcMainMappingName;
-        // xMainScreenElementList[MAIN_SCREEN_ELEMENT_MAPPING].u32Index = MAIN_SCREEN_ELEMENT_MAPPING;
-        // xMainScreenElementList[MAIN_SCREEN_ELEMENT_MAPPING].render_cb = vElementMappingRender;
-        // xMainScreenElementList[MAIN_SCREEN_ELEMENT_MAPPING].action_cb = vElementMappingAction;
+        xMainScreenElementList[MAIN_SCREEN_ELEMENT_MAPPING].pcName = pcMainMappingName;
+        xMainScreenElementList[MAIN_SCREEN_ELEMENT_MAPPING].u32Index = MAIN_SCREEN_ELEMENT_MAPPING;
+        xMainScreenElementList[MAIN_SCREEN_ELEMENT_MAPPING].render_cb = vElementMappingRender;
+        xMainScreenElementList[MAIN_SCREEN_ELEMENT_MAPPING].action_cb = vElementMappingAction;
 
         retval = UI_STATUS_OK;
     }

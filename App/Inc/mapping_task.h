@@ -22,19 +22,19 @@ extern "C" {
 /* Private defines -----------------------------------------------------------*/
 
 /* Activate debug output */
-//#define MAP_DEBUG
+#define MAP_DEBUG
 
 /* Task parameters */
 #define MAP_TASK_NAME                   "MAP"
-#define MAP_TASK_STACK                  (128U)
-#define MAP_TASK_PRIO                   (2U)
-#define MAP_TASK_INIT_DELAY             (500U)
+#define MAP_TASK_STACK                  ( 128U )
+#define MAP_TASK_PRIO                   ( 2U )
+#define MAP_TASK_INIT_DELAY             ( 500U )
 
 /* MAPPING task signals */
-#define MAP_SIGNAL_ERROR                (1UL << 0U)
-#define MAP_SIGNAL_ADC_UPDATE           (1UL << 1U)
-#define MAP_SIGNAL_MAPPING_UPDATE       (1UL << 2U)
-#define MAP_SIGNAL_NOT_DEF              (1UL << 31U)
+#define MAP_SIGNAL_ERROR                ( 1UL << 0U )
+#define MAP_SIGNAL_ADC_UPDATE           ( 1UL << 1U )
+#define MAP_SIGNAL_MAPPING_UPDATE       ( 1UL << 2U )
+#define MAP_SIGNAL_NOT_DEF              ( 1UL << 31U )
 
 /* Exported types ------------------------------------------------------------*/
 
@@ -88,10 +88,10 @@ MapElement_t xMapGetCfg(uint8_t u8MapId);
 void vMapSetCfg(uint8_t u8MapId, MapElement_t xMapValue);
 
 /**
-  * @brief Init resources for MAPPING tasks
-  * @retval operation result, true for correct creation, false for error
+  * @brief Init resources for MAPPING tasks.
+  * @retval None.
   */
-bool bMapTaskInit(void);
+void vMapTaskInit(void);
 
 /**
   * @brief Notify event to a task.
@@ -106,4 +106,4 @@ bool bMapTaskNotify(uint32_t u32Event);
 
 #endif /* __MAPPING_TASK_H */
 
-/*****END OF FILE****/
+/* EOF */

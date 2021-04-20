@@ -44,7 +44,7 @@ ui_status_t UI_menu_main_init(ui_menu_t * pxMenuHandler)
         UI_screen_midi_init(&xMenuScreenListMenu[MENU_MIDI_SCREEN_POSITION]);
         UI_screen_preset_init(&xMenuScreenListMenu[MENU_PRESET_SCREEN_POSITION]);
         UI_screen_fm_init(&xMenuScreenListMenu[MENU_FM_SCREEN_POSITION]);
-        // UI_screen_map_init(&xMenuScreenListMenu[MENU_MAPPING_SCREEN_POSITION]);
+        UI_screen_map_init(&xMenuScreenListMenu[MENU_MAPPING_SCREEN_POSITION]);
         UI_screen_idle_init(&xMenuScreenListMenu[MENU_IDLE_SCREEN_POSITION]);
 
         retval = UI_STATUS_OK;
