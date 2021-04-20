@@ -12,6 +12,7 @@
 #include "ui_task.h"
 #include "cli_task.h"
 #include "midi_task.h"
+#include "midi_lib.h"
 #include "ui_menu_main.h"
 #include "encoder_driver.h"
 
@@ -114,11 +115,13 @@ static void vElementModeRender(void * pvDisplay, void * pvScreen, void * pvEleme
         if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
         {
             /* Get data to print */
-            if (xMidiTaskGetMode() == MidiMode3)
+            MidiParam_t xMidiParam = xMidiGetParam(MIDI_PARAM_MODE);
+
+            if (xMidiParam.uData.u8Mode == (uint8_t)MidiMode3)
             {
                 sprintf(pxElement->pcName, NAME_FORMAT_MODE, "POLY");
             }
-            else if (xMidiTaskGetMode() == MidiMode4)
+            else if (xMidiParam.uData.u8Mode == (uint8_t)MidiMode4)
             {
                 sprintf(pxElement->pcName, NAME_FORMAT_MODE, "MONO");
             }
@@ -150,8 +153,10 @@ static void vElementChannelRender(void * pvDisplay, void * pvScreen, void * pvEl
 
         if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
         {
+            MidiParam_t xMidiParam = xMidiGetParam(MIDI_PARAM_CHANNEL);
+
             /* Prepare data on buffer */
-            sprintf(pxElement->pcName, NAME_FORMAT_CHANNEL, u8MidiTaskGetChannel());
+            sprintf(pxElement->pcName, NAME_FORMAT_CHANNEL, xMidiParam.uData.u8Channel);
 
             /* Print selection ico */
             vUI_MISC_DrawSelection(pxDisplayHandler, pxScreen, pxElement->u32Index, (uint8_t)u32IndY);
@@ -240,7 +245,7 @@ static void vScreenMidiAction(void * pvMenu, void * pvEventData)
             ui_element_t * pxElement = &pxScreen->pxElementList[pxScreen->u32ElementSelectionIndex];
 
             /* Handle encoder events */
-            if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+            if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
             {
                 vUI_MISC_EncoderAction(pxMenu, pvEventData);
             }
@@ -263,27 +268,31 @@ static void vElementModeAction(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
-                midiMode_t xTmpMode = xMidiTaskGetMode();
+                MidiParam_t xMidiParam = xMidiGetParam(MIDI_PARAM_MODE);
 
-                if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+                if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
                 {
-                    xTmpMode++;
-                    
+                    xMidiParam.uData.u8Mode++;
                 }
-                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+                else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
                 {
-                    xTmpMode--;
+                    xMidiParam.uData.u8Mode--;
                 }
 
-                (void)bMidiTaskSetMode(xTmpMode);
+                MidiTaskCmd_t xMidiTaskCmd = {
+                    .eCmd = MIDI_CMD_SET_MODE, 
+                    .uPayload.xSetMode.u8Mode = xMidiParam.uData.u8Mode
+                };
+
+                (void)bMidiSendCmd(xMidiTaskCmd);
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -299,29 +308,34 @@ static void vElementChannelAction(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
-                uint8_t u8Channel = u8MidiTaskGetChannel();
+                MidiParam_t xMidiParam = xMidiGetParam(MIDI_PARAM_CHANNEL);
 
-                if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+                if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
                 {
-                    u8Channel++;
+                    xMidiParam.uData.u8Channel++;
                 }
-                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+                else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
                 {
-                    if (u8Channel != 0U)
+                    if (xMidiParam.uData.u8Channel != 0U)
                     {
-                        u8Channel--;
+                        xMidiParam.uData.u8Channel--;
                     }
                 }
 
-                (void)bMidiTaskSetChannel(u8Channel);
+                MidiTaskCmd_t xMidiTaskCmd = {
+                    .eCmd = MIDI_CMD_SET_CH, 
+                    .uPayload.xSetCh.u8Channel = xMidiParam.uData.u8Channel
+                };
+
+                (void)bMidiSendCmd(xMidiTaskCmd);
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -336,13 +350,15 @@ static void vElementSaveAction(void * pvMenu, void * pvEventData)
     {
         uint32_t * pu32EventData = pvEventData;
 
-        if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        if (RTOS_CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             /* Set midi screen */
             vCliPrintf(UI_TASK_NAME, "Event Save");
 
             /* Save current CFG midi screen */
-            if (bMidiTaskSaveCfg())
+            MidiTaskCmd_t xMidiTaskCmd = { .eCmd = MIDI_CMD_SAVE_MIDI_CFG };
+
+            if ( bMidiSendCmd(xMidiTaskCmd) )
             {
                 sprintf(pcMidiSaveAuxName, "OK");
             }
@@ -361,7 +377,7 @@ static void vElementReturnAction(void * pvMenu, void * pvEventData)
         ui_menu_t * pxMenu = pvMenu;
         uint32_t * pu32EventData = pvEventData;
 
-        if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        if (RTOS_CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             /* Set midi screen */
             vCliPrintf(UI_TASK_NAME, "Event Return");

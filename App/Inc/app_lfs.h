@@ -37,7 +37,7 @@ extern "C"
 #define LFS_MIDI_CFG_DEFAULT_BANK           ( LFS_MIDI_BANK_ROM )
 #define LFS_MIDI_CFG_DEFAULT_PROG           ( 0U )
 
-#define LFS_MIDI_CFG_MAX_BANK               ( 3U )
+#define LFS_MIDI_CFG_MAX_BANK               ( LFS_MIDI_BANK_MAX_NUM )
 #define LFS_MIDI_CFG_MAX_PROG_BANK_FIX      ( SYNTH_APP_DATA_CONST_MAX_NUM_ELEMENTS )
 #define LFS_MIDI_CFG_MAX_PROG_BANK_FLASH    ( LFS_YM_SLOT_NUM )
 #define LFS_MIDI_CFG_MAX_PROG_BANK_SD       ( 255U )
@@ -57,7 +57,7 @@ typedef enum
 {
     LFS_MIDI_BANK_ROM = 0U,
     LFS_MIDI_BANK_FLASH,
-    LFS_MIDI_BANK_SD,
+    // LFS_MIDI_BANK_SD,
     LFS_MIDI_BANK_MAX_NUM,
 } lfs_midi_bank_t;
 

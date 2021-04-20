@@ -17,7 +17,7 @@
 #include "midi_task.h"
 #include "cli_task.h"
 #include "synth_task.h"
-// #include "ui_task.h"
+#include "ui_task.h"
 // #include "mapping_task.h"
 
 /* Main app ------------------------------------------------------------------*/
@@ -37,7 +37,7 @@ int main(void)
     vMidiTaskInit();
     vCliTaskInit();
     vSynthTaskInit();
-    // (void)bUiTaskInit();
+    vUiTaskInit();
     // (void)bMapTaskInit();
 
     /* Start the scheduler so the tasks start executing. */

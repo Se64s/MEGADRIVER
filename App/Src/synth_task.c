@@ -12,7 +12,7 @@
 #include "sys_rtos.h"
 
 #include "cli_task.h"
-// #include "ui_task.h"
+#include "ui_task.h"
 #include "midi_task.h"
 
 #include "printf.h"
@@ -47,14 +47,12 @@ typedef struct
 /** Voice mono control structure */
 typedef struct
 {
-    SynthVoice_t xVoice[SYNTH_MAX_NUM_VOICE];
     SynthVoice_t xVoiceTmp[SYNTH_MAX_NUM_VOICE];
 } SynthCtrlMono_t;
 
 /** Voice poly control structure */
 typedef struct
 {
-    SynthVoice_t xVoice[SYNTH_MAX_NUM_VOICE];
     SynthVoice_t xVoiceTmp;
 } SynthCtrlPoly_t;
 
@@ -63,6 +61,7 @@ typedef struct
 {
     uint8_t u8CcVoice;
     uint8_t u8CcOperator;
+    SynthVoice_t xVoice[SYNTH_MAX_NUM_VOICE];
     SynthCtrlMono_t xCtrlMono;
     SynthCtrlPoly_t xCtrlPoly;
 } SynthCtrl_t;
@@ -270,6 +269,17 @@ static void vHandleCmdParameterUpdate(SynthCmdPayloadParamUpdate_t * pxCmdData)
     uint8_t u8RegData = u8CcToRegData(pxCmdData->u8Id, pxCmdData->u8Data);
     uint8_t u8RegVoice = xSynthDevHandler.u8CcVoice;
     uint8_t u8RegOperator = xSynthDevHandler.u8CcOperator;
+
+    /* Report CC processing in UI task */
+    {
+        UiCmd_t xUiTaskCmd = { 0U };
+
+        xUiTaskCmd.eCmd = UI_CMD_CC_UPDATE;
+        xUiTaskCmd.uPayload.xCcUpdate.u8CcId = pxCmdData->u8Id;
+        xUiTaskCmd.uPayload.xCcUpdate.u8Data = pxCmdData->u8Data;
+
+        (void)bUiSendCmd(xUiTaskCmd);
+    }
 
     switch (u8RegId)
     {
@@ -892,8 +902,39 @@ static bool bLoadPresetRom(uint8_t u8Position)
 static bool bInitPreset(void)
 {
     bool bRetval = false;
-    uint8_t u8PresetId = 0U;
-    xFmDevice_t * pxInitPreset = (xFmDevice_t *)pxSYNTH_APP_DATA_CONST_get(u8PresetId);
+    MidiParam_t xMidiTmpParam = { 0U };
+    xFmDevice_t * pxInitPreset = NULL;
+
+    /* Try to get las used preset */
+    xMidiTmpParam = xMidiGetParam( MIDI_PARAM_BANK );
+
+    if ( xMidiTmpParam.uData.u8Bank == (uint8_t)LFS_MIDI_BANK_ROM )
+    {
+        xMidiTmpParam = xMidiGetParam( MIDI_PARAM_PROGRAM );
+
+        if ( xMidiTmpParam.uData.u8Program < LFS_MIDI_CFG_MAX_PROG_BANK_FIX )
+        {
+            pxInitPreset = (xFmDevice_t *)pxSYNTH_APP_DATA_CONST_get( xMidiTmpParam.uData.u8Program );
+        }
+    }
+    else if ( xMidiTmpParam.uData.u8Bank == (uint8_t)LFS_MIDI_BANK_FLASH )
+    {
+        xMidiTmpParam = xMidiGetParam( MIDI_PARAM_PROGRAM );
+
+        if ( xMidiTmpParam.uData.u8Program < LFS_MIDI_CFG_MAX_PROG_BANK_FLASH )
+        {
+            lfs_ym_data_t xYmData = { 0U };
+
+            (void)LFS_read_ym_data(xMidiTmpParam.uData.u8Program, &xYmData);
+
+            pxInitPreset = &xYmData.xPresetData;
+        }
+    }
+    else
+    {
+        // Get default preset
+        pxInitPreset = (xFmDevice_t *)pxSYNTH_APP_DATA_CONST_get( LFS_MIDI_CFG_DEFAULT_PROG );
+    }
 
     if (pxInitPreset != NULL)
     {
@@ -916,28 +957,23 @@ static void vCmdVoiceOffAll(void)
     /* Clear voices in synth chip and control structure */
     for (uint8_t u8VoiceIndex = 0U; u8VoiceIndex < SYNTH_MAX_NUM_VOICE; u8VoiceIndex++)
     {
-        xSynthDevHandler.xCtrlMono.xVoice[u8VoiceIndex].u8Note = MIDI_DATA_NOT_VALID;
-        xSynthDevHandler.xCtrlMono.xVoice[u8VoiceIndex].u8Velocity = MIDI_DATA_NOT_VALID;
+        xSynthDevHandler.xVoice[u8VoiceIndex].u8Note = MIDI_DATA_NOT_VALID;
+        xSynthDevHandler.xVoice[u8VoiceIndex].u8Velocity = MIDI_DATA_NOT_VALID;
 
         xSynthDevHandler.xCtrlMono.xVoiceTmp[u8VoiceIndex].u8Note = MIDI_DATA_NOT_VALID;
         xSynthDevHandler.xCtrlMono.xVoiceTmp[u8VoiceIndex].u8Velocity = MIDI_DATA_NOT_VALID;
-
-        xSynthDevHandler.xCtrlPoly.xVoice[u8VoiceIndex].u8Note = MIDI_DATA_NOT_VALID;
-        xSynthDevHandler.xCtrlPoly.xVoice[u8VoiceIndex].u8Velocity = MIDI_DATA_NOT_VALID;
 
         vYM2612_key_off(u8VoiceIndex);
     }
 
     xSynthDevHandler.xCtrlPoly.xVoiceTmp.u8Note = MIDI_DATA_NOT_VALID;
     xSynthDevHandler.xCtrlPoly.xVoiceTmp.u8Velocity = MIDI_DATA_NOT_VALID;
-
-    // bUiTaskNotify(UI_SIGNAL_SYNTH_OFF);
 }
 
 static void vHandleVoiceMonoOn(uint8_t u8Voice, uint8_t u8Note, uint8_t u8Velocity)
 {
     /* Check if voice is in use */
-    if ( xSynthDevHandler.xCtrlMono.xVoice[u8Voice].u8Note == MIDI_DATA_NOT_VALID )
+    if ( xSynthDevHandler.xVoice[u8Voice].u8Note == MIDI_DATA_NOT_VALID )
     {
         /* Build synth NOTE ON command */
         if ( u8Voice < SYNTH_MAX_NUM_VOICE )
@@ -947,8 +983,8 @@ static void vHandleVoiceMonoOn(uint8_t u8Voice, uint8_t u8Note, uint8_t u8Veloci
                 vYM2612_key_on(u8Voice);
 
                 /* Update control structure */
-                xSynthDevHandler.xCtrlMono.xVoice[u8Voice].u8Note = u8Note;
-                xSynthDevHandler.xCtrlMono.xVoice[u8Voice].u8Velocity = u8Velocity;
+                xSynthDevHandler.xVoice[u8Voice].u8Note = u8Note;
+                xSynthDevHandler.xVoice[u8Voice].u8Velocity = u8Velocity;
 
 #ifdef SYNTH_DBG_VERBOSE
                 vCliPrintf(SYNTH_TASK_NAME, "Key  ON : %02d - %03d", u8Voice, u8Note);
@@ -960,7 +996,7 @@ static void vHandleVoiceMonoOn(uint8_t u8Voice, uint8_t u8Note, uint8_t u8Veloci
             vCliPrintf(SYNTH_TASK_NAME, "Voice id not valid: %d", u8Voice);
         }
     }
-    else if ( xSynthDevHandler.xCtrlMono.xVoice[u8Voice].u8Note != u8Note )
+    else if ( xSynthDevHandler.xVoice[u8Voice].u8Note != u8Note )
     {
         /* If note is not already pressed, store in temporal position */
         xSynthDevHandler.xCtrlMono.xVoiceTmp[u8Voice].u8Note = u8Note;
@@ -971,7 +1007,7 @@ static void vHandleVoiceMonoOn(uint8_t u8Voice, uint8_t u8Note, uint8_t u8Veloci
 static void vHandleVoiceMonoOff(uint8_t u8Voice, uint8_t u8Note, uint8_t u8Velocity)
 {
     /* Check if note is in use */
-    if ( xSynthDevHandler.xCtrlMono.xVoice[u8Voice].u8Note == u8Note )
+    if ( xSynthDevHandler.xVoice[u8Voice].u8Note == u8Note )
     {
         /* Sed voice off */
         vYM2612_key_off(u8Voice);
@@ -981,8 +1017,8 @@ static void vHandleVoiceMonoOff(uint8_t u8Voice, uint8_t u8Note, uint8_t u8Veloc
 #endif
 
         /* Update control structure */
-        xSynthDevHandler.xCtrlMono.xVoice[u8Voice].u8Note = MIDI_DATA_NOT_VALID;
-        xSynthDevHandler.xCtrlMono.xVoice[u8Voice].u8Velocity = MIDI_DATA_NOT_VALID;
+        xSynthDevHandler.xVoice[u8Voice].u8Note = MIDI_DATA_NOT_VALID;
+        xSynthDevHandler.xVoice[u8Voice].u8Velocity = MIDI_DATA_NOT_VALID;
 
         /* Check tmp note */
         if ( xSynthDevHandler.xCtrlMono.xVoiceTmp[u8Voice].u8Note != MIDI_DATA_NOT_VALID )
@@ -1014,13 +1050,13 @@ static void vHandleVoicePolyOn(uint8_t u8Note, uint8_t u8Velocity)
     /* Check if note is already active */
     for ( uint32_t u32IndexVoice = 0U; u32IndexVoice < SYNTH_MAX_NUM_VOICE; u32IndexVoice++ )
     {
-        if ( xSynthDevHandler.xCtrlPoly.xVoice[u32IndexVoice].u8Note == u8Note )
+        if ( xSynthDevHandler.xVoice[u32IndexVoice].u8Note == u8Note )
         {
             u8Voice = MIDI_DATA_NOT_VALID;
             break;
         }
         /* Check and save free voice index to not iterate after */
-        else if ( xSynthDevHandler.xCtrlPoly.xVoice[u32IndexVoice].u8Note == MIDI_DATA_NOT_VALID )
+        else if ( xSynthDevHandler.xVoice[u32IndexVoice].u8Note == MIDI_DATA_NOT_VALID )
         {
             /* Check if voice has been used before */
             if (u8Voice == MIDI_DATA_NOT_VALID)
@@ -1038,8 +1074,8 @@ static void vHandleVoicePolyOn(uint8_t u8Note, uint8_t u8Velocity)
             vYM2612_key_on(u8Voice);
 
             /* Update control structure */
-            xSynthDevHandler.xCtrlPoly.xVoice[u8Voice].u8Note = u8Note;
-            xSynthDevHandler.xCtrlPoly.xVoice[u8Voice].u8Velocity = u8Velocity;
+            xSynthDevHandler.xVoice[u8Voice].u8Note = u8Note;
+            xSynthDevHandler.xVoice[u8Voice].u8Velocity = u8Velocity;
 
 #ifdef SYNTH_DBG_VERBOSE
             vCliPrintf(SYNTH_TASK_NAME, "Key  ON : %02d - %03d", u8Voice, u8Note);
@@ -1061,7 +1097,7 @@ static void vHandleVoicePolyOff(uint8_t u8Note, uint8_t u8Velocity)
     /* Check if note is already active */
     for ( uint32_t u32IndexVoice = 0U; u32IndexVoice < SYNTH_MAX_NUM_VOICE; u32IndexVoice++ )
     {
-        if ( xSynthDevHandler.xCtrlPoly.xVoice[u32IndexVoice].u8Note == u8Note )
+        if ( xSynthDevHandler.xVoice[u32IndexVoice].u8Note == u8Note )
         {
             /* Clear channel */
             vYM2612_key_off(u32IndexVoice);
@@ -1070,8 +1106,8 @@ static void vHandleVoicePolyOff(uint8_t u8Note, uint8_t u8Velocity)
             vCliPrintf(SYNTH_TASK_NAME, "Key  OFF: %02d - %03d", u32IndexVoice, u8Note);
 #endif
 
-            xSynthDevHandler.xCtrlPoly.xVoice[u32IndexVoice].u8Note = MIDI_DATA_NOT_VALID;
-            xSynthDevHandler.xCtrlPoly.xVoice[u32IndexVoice].u8Velocity = MIDI_DATA_NOT_VALID;
+            xSynthDevHandler.xVoice[u32IndexVoice].u8Note = MIDI_DATA_NOT_VALID;
+            xSynthDevHandler.xVoice[u32IndexVoice].u8Velocity = MIDI_DATA_NOT_VALID;
 
             /* Save slot cleared one time */
             if (u8Voice == MIDI_DATA_NOT_VALID)
@@ -1199,7 +1235,14 @@ bool bSynthSendCmd(SynthCmd_t xSynthCmd)
 
 SynthParam_t xSynthGetParam(uint8_t u8ParamId)
 {
-    SynthParam_t xRetParam = { 0U };
+    SynthParam_t xRetParam = { .u8ParamId = SYNTH_PARAM_NOT_DEF, .u32ParamValue = 0U };
+
+    if ( u8ParamId <= SYNTH_PARAM_VOICE_5_NOTE )
+    {
+        xRetParam.u8ParamId = u8ParamId;
+        xRetParam.u32ParamValue = xSynthDevHandler.xVoice[u8ParamId].u8Note;
+    }
+
     return xRetParam;
 }
 

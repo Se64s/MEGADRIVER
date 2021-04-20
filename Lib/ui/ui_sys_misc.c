@@ -76,7 +76,7 @@ void vUI_MISC_EncoderAction(ui_menu_t * pxMenu, void * pvEventData)
             /* Check no element is selected on screen */
             if (!pxScreen->bElementSelection)
             {
-                if (CHECK_SIGNAL(*p32Event, UI_SIGNAL_ENC_UPDATE_CW))
+                if (RTOS_CHECK_SIGNAL(*p32Event, UI_SIGNAL_ENC_UPDATE_CW))
                 {
                     uint32_t enc_count = 0;
                     ENCODER_getCount(ENCODER_ID_0, &enc_count);
@@ -100,7 +100,7 @@ void vUI_MISC_EncoderAction(ui_menu_t * pxMenu, void * pvEventData)
                         pxScreen->u32ElementRenderIndex = u32RenderIndex;
                     }
                 }
-                else if (CHECK_SIGNAL(*p32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+                else if (RTOS_CHECK_SIGNAL(*p32Event, UI_SIGNAL_ENC_UPDATE_CCW))
                 {
                     uint32_t enc_count = 0;
                     ENCODER_getCount(ENCODER_ID_0, &enc_count);

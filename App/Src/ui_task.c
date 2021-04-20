@@ -9,10 +9,6 @@
 #include "ui_task.h"
 #include "cli_task.h"
 
-#include "FreeRTOS.h"
-#include "task.h"
-#include "timers.h"
-
 #include "encoder_driver.h"
 #include "display_driver.h"
 
@@ -28,19 +24,23 @@
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
-/** Update rate in ms */
-#define UI_DISPLAY_UPDATE_RATE_MS   (40U)
-
-/** Idle period definition in ms */
-#define UI_DISPLAY_IDLE_MS          (5000U)
-
-/** Time to clear cc window */
-#define UI_DISPLAY_CC_RESTORE       (1000U)
+/* Timeout definition */
+#define UI_DISPLAY_UPDATE_RATE_MS           ( pdMS_TO_TICKS(40U) )
+#define UI_DISPLAY_IDLE_MS                  ( pdMS_TO_TICKS(5000U) )
+#define UI_DISPLAY_CC_RESTORE_MS            ( pdMS_TO_TICKS(1000U) )
+#define UI_DISPLAY_INIT_DELAY_MS            ( pdMS_TO_TICKS(500U) )
+#define UI_DISPLAY_FIRST_MSG_DELAY_MS       ( pdMS_TO_TICKS(2000U) )
 
 /* Private macro -------------------------------------------------------------*/
 
 /* Display initial msg  */
-#define DISPLAY_INIT_MSG   "MEGADRIVER"
+#define DISPLAY_INIT_MSG                "MEGADRIVER"
+
+/* Event queue size */
+#define UI_CMD_QUEUE_SIZE               ( 5U )
+
+/* Event queue item size */
+#define UI_CMD_QUEUE_ELEMENT_SIZE       ( sizeof(UiCmd_t) )
 
 /* Private variables ---------------------------------------------------------*/
 
@@ -55,6 +55,9 @@ TimerHandle_t xIdleTimer = NULL;
 
 /* Timer to handle CC idle message */
 TimerHandle_t xCcCmdTimer = NULL;
+
+/* Queue event handler */
+QueueHandle_t xUiCmdQueueHandle = NULL;
 
 /* Pointer to display lib handler */
 static u8g2_t xDisplayHandler = {0};
@@ -187,8 +190,8 @@ static void vScreenInitMsg( u8g2_t * pxDisplayHandler)
 static void __ui_main( void *pvParameters )
 {
     /* Init delay to for pow stabilization */
-    vTaskDelay(pdMS_TO_TICKS(UI_TASK_INIT_DELAY));
-    
+    vTaskDelay(UI_DISPLAY_INIT_DELAY_MS);
+
     /* Init encoder */
     ENCODER_init(ENCODER_ID_0, encoder_cb);
 
@@ -213,7 +216,7 @@ static void __ui_main( void *pvParameters )
     vScreenInitMsg(&xDisplayHandler);
 
     /* Update display for first time */
-    vTaskDelay(pdMS_TO_TICKS(2000U));
+    vTaskDelay(UI_DISPLAY_FIRST_MSG_DELAY_MS);
 
     /* Init timers */
     xTimerStart(xUpdateTimer, 0U);
@@ -223,11 +226,34 @@ static void __ui_main( void *pvParameters )
     {
         uint32_t u32TmpEvent = 0U;
 
-        BaseType_t xEventWait = xTaskNotifyWait(0, UI_SIGNAL_ALL, &u32TmpEvent, portMAX_DELAY);
+        BaseType_t xEventWait = xTaskNotifyWait(0U, UI_SIGNAL_ALL, &u32TmpEvent, portMAX_DELAY);
 
         if (xEventWait == pdPASS)
         {
-            /* Events to feed to ui screens */
+            /* --- Handle UI commands --- */
+
+            if ( RTOS_CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_CMD) )
+            {
+                UiCmd_t xUiCmd;
+
+                while ( xQueueReceive(xUiCmdQueueHandle, &xUiCmd, 0U) == pdPASS )
+                {
+                    switch (xUiCmd.eCmd)
+                    {
+                        case UI_CMD_CC_UPDATE:
+                            /* Notify change of CC var in system */
+                            vUI_screen_idle_set_cc_data(xUiCmd.uPayload.xCcUpdate.u8CcId, xUiCmd.uPayload.xCcUpdate.u8Data);
+                            bUiTaskNotify(UI_SIGNAL_MIDI_CC);
+                            break;
+
+                        default:
+                            vCliPrintf(UI_TASK_NAME, "Not defined UI cmd: x%02X", xUiCmd.eCmd);
+                            break;
+                    }
+                }
+            }
+
+            /* --- Events to feed to ui screens --- */
 
             if (u32TmpEvent & ( UI_SIGNAL_ENC_UPDATE_CW | 
                                 UI_SIGNAL_ENC_UPDATE_CCW | 
@@ -241,13 +267,13 @@ static void __ui_main( void *pvParameters )
             /* Handle timer events */
 
             /* Setup timer for restoring idle */
-            if ( CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_ENC_UPDATE_CCW) )
+            if ( RTOS_CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_ENC_UPDATE_CCW) )
             {
                 xTimerStart(xIdleTimer, 0U);
             }
 
             /* If CC event, start timer for restoring idle main screen */
-            if (CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_MIDI_CC))
+            if (RTOS_CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_MIDI_CC))
             {
                 /* If active screen is idle, kick cc restore timer */
                 if (xUiMenuHandler.u32ScreenSelectionIndex == MENU_IDLE_SCREEN_POSITION)
@@ -257,7 +283,7 @@ static void __ui_main( void *pvParameters )
             }
 
             /* If idle event, set IDLE screen */
-            if (CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_IDLE))
+            if (RTOS_CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_IDLE))
             {
                 vCliPrintf(UI_TASK_NAME, "IDLE event");
 
@@ -274,7 +300,7 @@ static void __ui_main( void *pvParameters )
             }
 
             /* Restore menu screen in case of restore from idle screen */
-            if (CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_RESTORE_IDLE))
+            if (RTOS_CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_RESTORE_IDLE))
             {
                 if (u32ReturnScreen < MENU_LAST_SCREEN_POSITION)
                 {
@@ -284,7 +310,7 @@ static void __ui_main( void *pvParameters )
             }
 
             /* Periodic render signal */
-            if (CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_SCREEN_UPDATE))
+            if (RTOS_CHECK_SIGNAL(u32TmpEvent, UI_SIGNAL_SCREEN_UPDATE))
             {
                 UI_render(&xDisplayHandler, &xUiMenuHandler);
             }
@@ -294,51 +320,71 @@ static void __ui_main( void *pvParameters )
 
 /* Public fuctions -----------------------------------------------------------*/
 
-bool bUiTaskInit(void)
+void vUiTaskInit(void)
 {
-    bool retval = false;
-
     /* Create task */
     xTaskCreate(__ui_main, UI_TASK_NAME, UI_TASK_STACK, NULL, UI_TASK_PRIO, &ui_task_handle);
+    ERR_ASSERT(ui_task_handle);
 
     /* Create timer resources */
-    xUpdateTimer = xTimerCreate("ScreenUpdateTimer", 
-                                pdMS_TO_TICKS(UI_DISPLAY_UPDATE_RATE_MS), 
-                                pdTRUE, 
-                                (void *)0U, 
+    xUpdateTimer = xTimerCreate("ScreenUpdateTimer",
+                                UI_DISPLAY_UPDATE_RATE_MS,
+                                pdTRUE,
+                                (void *)0U,
                                 vScreenUpdateCallback);
+    ERR_ASSERT(xUpdateTimer);
 
     xIdleTimer = xTimerCreate("ScreenIdleTimer", 
-                                pdMS_TO_TICKS(UI_DISPLAY_IDLE_MS), 
-                                pdFALSE, 
-                                (void *)0U, 
+                                UI_DISPLAY_IDLE_MS,
+                                pdFALSE,
+                                (void *)0U,
                                 vScreenIdleCallback);
+    ERR_ASSERT(xIdleTimer);
 
     xCcCmdTimer = xTimerCreate("ScreenCcRestoreTimer", 
-                                pdMS_TO_TICKS(UI_DISPLAY_CC_RESTORE), 
-                                pdFALSE, 
-                                (void *)0U, 
+                                UI_DISPLAY_CC_RESTORE_MS,
+                                pdFALSE,
+                                (void *)0U,
                                 vScreenCcCmdTimeoutCallback);
+    ERR_ASSERT(xCcCmdTimer);
 
-    /* Check resources */
-    if ((ui_task_handle != NULL) && (xUpdateTimer != NULL) && (xIdleTimer != NULL) && (xCcCmdTimer != NULL))
-    {
-        retval = true;
-    }
-
-    return(retval);
+    /* Create queue */
+    xUiCmdQueueHandle = xQueueCreate(UI_CMD_QUEUE_SIZE, UI_CMD_QUEUE_ELEMENT_SIZE);
+    ERR_ASSERT(xUiCmdQueueHandle);
 }
 
 bool bUiTaskNotify(uint32_t u32Event)
 {
     bool bRetval = false;
+
     /* Check if task has been init */
     if (ui_task_handle != NULL)
     {
       xTaskNotify(ui_task_handle, u32Event, eSetBits);
       bRetval = true;
     }
+
     return bRetval;
 }
 
-/*****END OF FILE****/
+bool bUiSendCmd(UiCmd_t xUiTaskCmd)
+{
+    bool bRetval = false;
+
+    if ( (xUiCmdQueueHandle != NULL) && (ui_task_handle != NULL) )
+    {
+        if ( xQueueSend(xUiCmdQueueHandle, &xUiTaskCmd, 0U) == pdPASS )
+        {
+            xTaskNotify(ui_task_handle, UI_SIGNAL_CMD, eSetBits);
+            bRetval = true;
+        }
+        else
+        {
+            vCliPrintf(UI_TASK_NAME, "CMD: Queue Error");
+        }
+    }
+
+    return bRetval;
+}
+
+/* EOF */

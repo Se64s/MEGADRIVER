@@ -32,6 +32,13 @@ extern "C"
 */
 ui_status_t UI_screen_idle_init(ui_screen_t * pxScreenHandler);
 
+/**
+ * @brief Set cc data to display
+ * @param u8ccId 
+ * @param u8CcData 
+ */
+void vUI_screen_idle_set_cc_data(uint8_t u8ccId, uint8_t u8CcData);
+
 #ifdef __cplusplus
 }
 #endif

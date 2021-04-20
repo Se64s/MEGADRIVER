@@ -258,7 +258,7 @@ static void vHandleCmdSetPreset(MidiCmdTaskPayloadSetPreset_t * pxCmdPayload)
     uint8_t u8NewProgram = pxCmdPayload->u8Program;
     bool bLoadResult = false;
 
-    if ( (u8NewBank != xMidiHandler.u8Bank) && (u8NewProgram != xMidiHandler.u8Program) )
+    if ( (u8NewBank != xMidiHandler.u8Bank) || (u8NewProgram != xMidiHandler.u8Program) )
     {
         switch ( u8NewBank )
         {
@@ -320,10 +320,9 @@ static void vHandleCmdSetPreset(MidiCmdTaskPayloadSetPreset_t * pxCmdPayload)
 
 void vHandleCmdSaveMidiCfg(void)
 {
-    if ( LFS_write_midi_data(&xMidiHandler) == LFS_OK)
+    if ( LFS_write_midi_data(&xMidiHandler) == LFS_OK )
     {
         vCliPrintf(MIDI_TASK_NAME, "FLASH: Save Midi CFG OK");
-        ERR_ASSERT(0U);
     }
     else
     {
@@ -538,6 +537,9 @@ static void vMidiMain(void *pvParameters)
 
     /* Init MIDI library */
     (void)midi_init(vMidiCmdSysExCallBack, vMidiCmd1CallBack, vMidiCmd2CallBack, vMidiCmdRtCallBack);
+
+    /* Reset midi control structure */
+    vResetMidiCfg();
 
     /* Init flash data */
     vRestoreMidiCfg();

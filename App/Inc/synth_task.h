@@ -130,6 +130,18 @@ typedef enum
     SYNTH_VOICE_STATE_NO_DEF = 0xFFU,
 } SynthVoiceState_t;
 
+/** Synth voice modes */
+typedef enum
+{
+    SYNTH_PARAM_VOICE_0_NOTE = 0x00U,
+    SYNTH_PARAM_VOICE_1_NOTE,
+    SYNTH_PARAM_VOICE_2_NOTE,
+    SYNTH_PARAM_VOICE_3_NOTE,
+    SYNTH_PARAM_VOICE_4_NOTE,
+    SYNTH_PARAM_VOICE_5_NOTE,
+    SYNTH_PARAM_NOT_DEF = 0xFFU,
+} SynthParamId_t;
+
 /** Synth parameter definition */
 typedef struct
 {
