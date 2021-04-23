@@ -183,7 +183,7 @@ static void vElementNameRender(void * pvDisplay, void * pvScreen, void * pvEleme
 
         if ((u32IndY < u8g2_GetDisplayHeight(pxDisplayHandler)) && (u32IndY > UI_OFFSET_ELEMENT_Y))
         {
-            if (u8SelectionBank == MIDI_APP_BANK_USER)
+            if (u8SelectionBank == LFS_MIDI_BANK_FLASH)
             {
                 lfs_ym_data_t xYmData = { 0U };
                 LFS_read_ym_data(u8SelectionProgram, &xYmData);
@@ -271,7 +271,7 @@ static void vScreenPresetAction(void * pvMenu, void * pvEventData)
             ui_element_t * pxElement = &pxScreen->pxElementList[pxScreen->u32ElementSelectionIndex];
 
             /* Handle encoder events */
-            if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+            if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
             {
                 vUI_MISC_EncoderAction(pxMenu, pvEventData);
             }
@@ -294,19 +294,19 @@ static void vElementBankAction(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
-                if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+                if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
                 {
-                    if (u8SelectionBank < (MIDI_APP_MAX_BANK - 1U))
+                    if (u8SelectionBank < (LFS_MIDI_BANK_MAX_NUM - 1U))
                     {
                         u8SelectionBank++;
                         u8SelectionProgram = 0;
                     }
                 }
-                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+                else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
                 {
                     if (u8SelectionBank != 0)
                     {
@@ -317,7 +317,7 @@ static void vElementBankAction(void * pvMenu, void * pvEventData)
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -333,20 +333,20 @@ static void vElementProgramAction(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
-                if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+                if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
                 {
-                    if (u8SelectionBank == MIDI_APP_BANK_DEFAULT)
+                    if (u8SelectionBank == LFS_MIDI_BANK_ROM)
                     {
                         if (u8SelectionProgram < (SYNTH_APP_DATA_CONST_MAX_NUM_ELEMENTS - 1U))
                         {
                             u8SelectionProgram++;
                         }
                     }
-                    else if (u8SelectionBank == MIDI_APP_BANK_USER)
+                    else if (u8SelectionBank == LFS_MIDI_BANK_FLASH)
                     {
                         if (u8SelectionProgram < (LFS_YM_SLOT_NUM - 1U))
                         {
@@ -358,7 +358,7 @@ static void vElementProgramAction(void * pvMenu, void * pvEventData)
                         /* Nothing to do */
                     }
                 }
-                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+                else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
                 {
                     if (u8SelectionProgram != 0U)
                     {
@@ -369,7 +369,7 @@ static void vElementProgramAction(void * pvMenu, void * pvEventData)
         }
 
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -389,21 +389,21 @@ static void vElementSelectAction(void * pvMenu, void * pvEventData)
         uint32_t * pu32Event = pvEventData;
         (void)pvMenu;
 
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             vCliPrintf(UI_TASK_NAME, "Preset selection");
             bool bRetVal = false;
 
-            if (u8SelectionBank < MIDI_APP_MAX_BANK)
+            if (u8SelectionBank < LFS_MIDI_BANK_MAX_NUM)
             {
-                if (u8SelectionBank == MIDI_APP_BANK_DEFAULT)
+                if (u8SelectionBank == LFS_MIDI_BANK_ROM)
                 {
                     if (u8SelectionProgram < SYNTH_APP_DATA_CONST_MAX_NUM_ELEMENTS)
                     {
                         bRetVal = true;
                     }
                 }
-                else if (u8SelectionBank == MIDI_APP_BANK_USER)
+                else if (u8SelectionBank == LFS_MIDI_BANK_FLASH)
                 {
                     if (u8SelectionProgram < LFS_YM_SLOT_NUM)
                     {
@@ -429,12 +429,19 @@ static void vElementSelectAction(void * pvMenu, void * pvEventData)
                 sprintf(pcPresetSlectionAuxName, "ERR");
             }
 
-            (void)bMidiTaskSetBank(u8SelectionBank);
-            (void)bMidiTaskSetProgram(u8SelectionProgram);
+            // TODO: Set preset here
+
+            MidiTaskCmd_t xMidiCmd = { 0U };
+
+            xMidiCmd.eCmd = MIDI_CMD_SET_PRESET;
+            xMidiCmd.uPayload.xSetPreset.u8Bank = u8SelectionBank;
+            xMidiCmd.uPayload.xSetPreset.u8Program = u8SelectionProgram;
+
+            (void)bMidiSendCmd(xMidiCmd);
         }
 
         /* Handle encoder events */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             /* Clear aux string */
             sprintf(pcPresetSlectionAuxName, "");
@@ -449,7 +456,7 @@ static void vElementReturnAction(void * pvMenu, void * pvEventData)
         ui_menu_t * pxMenu = pvMenu;
         uint32_t * pu32EventData = pvEventData;
 
-        if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        if (RTOS_CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             /* Set midi screen */
             vCliPrintf(UI_TASK_NAME, "Event Return");

@@ -29,6 +29,10 @@ extern "C"
 
 /* Exported defines ---------------------------------------------------------*/
 /* Exported macro -----------------------------------------------------------*/
+
+/* RTOS check signal */
+#define RTOS_CHECK_SIGNAL(VAR, SIG)     (((VAR) & (SIG)) == (SIG))
+
 /* Exported functions prototypes --------------------------------------------*/
 
 #ifdef __cplusplus

@@ -18,137 +18,140 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "FreeRTOS.h"
-#include "task.h"
-#include "queue.h"
-
-#include "midi_lib.h"
+#include "sys_rtos.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private defines -----------------------------------------------------------*/
 
-/* Midi app parameter */
-#define MIDI_APP_MAX_BANK               ((uint8_t)SYNTH_PRESET_SOURCE_MAX)
-#define MIDI_APP_BANK_DEFAULT           ((uint8_t)SYNTH_PRESET_SOURCE_DEFAULT)
-#define MIDI_APP_BANK_USER              ((uint8_t)SYNTH_PRESET_SOURCE_USER)
-
 /* Task parameters */
 #define MIDI_TASK_NAME                  "MIDI"
-#define MIDI_TASK_STACK                 (512U)
-#define MIDI_TASK_PRIO                  (4U)
-#define MIDI_TASK_INIT_DELAY            (500U)
+#define MIDI_TASK_STACK                 ( 512U )
+#define MIDI_TASK_PRIO                  ( 4U )
+#define MIDI_TASK_INIT_DELAY            ( 500U )
 
 /* Midi msg parameter */
-#define MIDI_MSG_DATA_LEN               (4U)
+#define MIDI_MSG_DATA_LEN               ( 4U )
 
 /* Signal definition */
-#define MIDI_SIGNAL_RX_DATA             (1UL << 0)
-#define MIDI_SIGNAL_ERROR               (1UL << 2)
-#define MIDI_SIGNAL_CHANGE_MODE_POLY    (1UL << 3)
-#define MIDI_SIGNAL_CHANGE_MODE_MONO    (1UL << 4)
-#define MIDI_SIGNAL_ALL                 (0xFFFFFFFFU)
+#define MIDI_SIGNAL_RX_DATA             ( 1UL << 0 )
+#define MIDI_SIGNAL_ERROR               ( 1UL << 2 )
+#define MIDI_SIGNAL_CMD_IN              ( 1UL << 3 )
+#define MIDI_SIGNAL_ALL                 ( 0xFFFFFFFFU )
 
 /* Extended debug output */
-// #define MIDI_DBG_VERBOSE
 // #define MIDI_DBG_STATS
+// #define MIDI_DBG_VERBOSE
 
 /* Exported types ------------------------------------------------------------*/
 
-/* Midi message type definition */
+/** Midi Cmd Type definition */
 typedef enum
 {
-  MIDI_TYPE_CMD = 0x00U,
-  MIDI_TYPE_RT,
-  MIDI_TYPE_SYSEX,
-  MIDI_TYPE_NO_DEF = 0xFFU
-} MidiMsgType_t;
+    MIDI_CMD_SET_MODE = 0x00U,
+    MIDI_CMD_SET_CH,
+    MIDI_CMD_SET_PRESET,
+    MIDI_CMD_SAVE_MIDI_CFG,
+    MIDI_CMF_NOT_DEF = 0xFFU,
+} MidiCmdType_t;
+
+/** SysEx defined cmd */
+typedef enum
+{
+    MIDI_SYSEX_CMD_SAVE_PRESET = 0x00U,
+    MIDI_SYSEX_CMD_LOAD_PRESET = 0x01U,
+    MIDI_SYSEX_CMD_NO_DEF = 0x1FU
+} MidiSysExCmdDef_t;
+
+/* Command payload definition*/
+
+typedef struct MidiCmdTaskPayloadSetMode
+{
+    uint8_t u8Mode;
+} MidiCmdTaskPayloadSetMode_t;
+
+typedef struct MidiCmdTaskPayloadSetCh
+{
+    uint8_t u8Channel;
+} MidiCmdTaskPayloadSetCh_t;
+
+typedef struct MidiCmdTaskPayloadSetPreset
+{
+    uint8_t u8Bank;
+    uint8_t u8Program;
+} MidiCmdTaskPayloadSetPreset_t;
+
+/** Union definitions with all event payload */
+typedef union MidiCmdTaskPayload
+{
+    MidiCmdTaskPayloadSetMode_t xSetMode;
+    MidiCmdTaskPayloadSetCh_t xSetCh;
+    MidiCmdTaskPayloadSetPreset_t xSetPreset;
+} MidiCmdTaskPayload_t;
+
+/** Midi taks cmd definition */
+typedef struct MidiTaskCmd
+{
+    MidiCmdType_t eCmd;
+    MidiCmdTaskPayload_t uPayload;
+} MidiTaskCmd_t;
+
+/** Midi param id definition */
+typedef enum MidiParamType
+{
+    MIDI_PARAM_MODE = 0x00U,
+    MIDI_PARAM_CHANNEL,
+    MIDI_PARAM_BANK,
+    MIDI_PARAM_PROGRAM,
+    MIDI_PARAM_NOT_DEF = 0xFFU,
+} MidiParamType_t;
+
+/** Midi param data definition */
+typedef union MidiParamData
+{
+    uint8_t u8Mode;
+    uint8_t u8Channel;
+    uint8_t u8Bank;
+    uint8_t u8Program;
+} MidiParamData_t;
+
+/** Midi parameter definition */
+typedef struct MidiParam
+{
+    MidiParamType_t eParam;
+    MidiParamData_t uData;
+} MidiParam_t;
 
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions prototypes ---------------------------------------------*/
 
 /**
-  * @brief Get current midi note set on output channel.
-  * @param u8Channel channel number to read.
-  * @retval midi note in channel or 0xff if input channel not valid.
-  */
-uint8_t xMidiTaskGetNote(uint8_t u8Channel);
+ * @brief Init resources for MIDI tasks
+ * @retval None.
+ */
+void vMidiTaskInit(void);
 
 /**
-  * @brief Get parameter from midi conf
-  * @retval requested parameter
-  */
-midiMode_t xMidiTaskGetMode(void);
-
-/**
-  * @brief Get parameter from midi conf
-  * @retval requested parameter
-  */
-uint8_t u8MidiTaskGetChannel(void);
-
-/**
-  * @brief Get parameter from midi conf
-  * @retval requested parameter
-  */
-uint8_t u8MidiTaskGetBank(void);
-
-/**
-  * @brief Get parameter from midi conf
-  * @retval requested parameter
-  */
-uint8_t u8MidiTaskGetProgram(void);
-
-/**
-  * @brief Send note off to all channels
-  */
-void vMidiPanic(void);
-
-/**
-  * @brief Set parameter from midi conf
-  * @param xNewMode new value to set.
-  * @retval operation result
-  */
-bool bMidiTaskSetMode(midiMode_t xNewMode);
-
-/**
-  * @brief Set parameter from midi conf
-  * @param u8NewChannel new value to set.
-  * @retval operation result
-  */
-bool bMidiTaskSetChannel(uint8_t u8NewChannel);
-
-/**
-  * @brief Set parameter from midi conf
-  * @param u8NewBank new value to set.
-  * @retval operation result
-  */
-bool bMidiTaskSetBank(uint8_t u8NewBank);
-
-/**
-  * @brief Set parameter from midi conf
-  * @param u8NewBank new value to set.
-  * @retval operation result
-  */
-bool bMidiTaskSetProgram(uint8_t u8NewProgram);
-
-/**
-  * @brief Save current setup into flash
-  * @retval operation result
-  */
-bool bMidiTaskSaveCfg(void);
-
-/**
-  * @brief Init resources for MIDI tasks
-  * @retval operation result, true for correct creation, false for error
-  */
-bool bMidiTaskInit(void);
-
-/**
-  * @brief Notify event to a task.
-  * @param u32Event event to notify.
-  * @retval operation result, true for correct read, false for error
-  */
+ * @brief Notify event to a task.
+ * @param u32Event event to notify.
+ * @retval operation result, true for correct read, false for error
+ */
 bool bMidiTaskNotify(uint32_t u32Event);
+
+/**
+  * @brief Send a command to midi task.
+  * @param xMidiTaskCmd Command to send.
+  * @return true cmd queue.
+  * @return false cmd not queue.
+  */
+bool bMidiSendCmd(MidiTaskCmd_t xMidiTaskCmd);
+
+/**
+ * @brief Get internal midi task parameter.
+ * @param ePatamId: Id of parameter to get.
+ * @return MidiParam_t: structure with requested parameter data.
+ */
+MidiParam_t xMidiGetParam(MidiParamType_t ePatamId);
 
 #ifdef __cplusplus
 }

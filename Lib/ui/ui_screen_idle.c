@@ -96,6 +96,9 @@ char pcNameDataCh4[MAX_LEN_NAME] = {0};
 char pcNameDataCh5[MAX_LEN_NAME] = {0};
 char pcNameCmdCc[MAX_LEN_NAME] = {0};
 
+uint8_t u8IdleCcId = 0xFFU;
+uint8_t u8IdleCcData = 0xFFU;
+
 /* Private function prototypes -----------------------------------------------*/
 
 /* Render functions */
@@ -166,9 +169,10 @@ static void vElementRenderDataCh(void * pvDisplay, void * pvScreen, void * pvEle
         }
 
         /* Get current note */
-        uint8_t u8MidiNote = xMidiTaskGetNote(pxElement->u32Index);
+        SynthParam_t xSynthParam = xSynthGetParam(pxElement->u32Index);
+        uint8_t u8MidiNote = (uint32_t)xSynthParam.u32ParamValue;
 
-        if (u8MidiNote != MIDI_DATA_NOT_VALID)
+        if (xSynthParam.u32ParamValue != MIDI_DATA_NOT_VALID)
         {
             uint8_t u8Note = u8MidiNote % MAX_NOTES_OCTAVE;
             uint8_t u8Octave = u8MidiNote / MAX_NOTES_OCTAVE;
@@ -205,15 +209,12 @@ static void vElementRenderCmdCc(void * pvDisplay, void * pvScreen, void * pvElem
         u8g2_DrawBox(pxDisplayHandler, u8OffsetX, u8OffsetY, u8BoxWidth, u8BoxHeight);
         u8g2_SetDrawColor(pxDisplayHandler, 1U);
 
-        /* Get CC data here */
-        SynthCcMap_t xCcData = xSynthGetLastCc();
-
         u8OffsetY += u8g2_GetMaxCharHeight(pxDisplayHandler) + 10U;
-        snprintf(pxElement->pcName, MAX_LEN_NAME, NAME_FORMAT_CMD_CC_0, xCcData.u8Cmd, xCcData.u8CcData);
+        snprintf(pxElement->pcName, MAX_LEN_NAME, NAME_FORMAT_CMD_CC_0, u8IdleCcId, u8IdleCcData);
         u8g2_DrawStr(pxDisplayHandler, u8OffsetX, u8OffsetY, pxElement->pcName);
 
         u8OffsetY += u8g2_GetMaxCharHeight(pxDisplayHandler) + 10U;
-        snprintf(pxElement->pcName, MAX_LEN_NAME, NAME_FORMAT_CMD_CC_1, xCcData.pcParamName, xCcData.u8Data);
+        snprintf(pxElement->pcName, MAX_LEN_NAME, NAME_FORMAT_CMD_CC_1, "CC Cmd", u8IdleCcData);
         u8g2_DrawStr(pxDisplayHandler, u8OffsetX, u8OffsetY, pxElement->pcName);
     }
 }
@@ -235,20 +236,21 @@ static void vScreenActionIdle(void * pvMenu, void * pvEventData)
         ui_element_t * pxElement = &pxScreen->pxElementList[pxScreen->u32ElementSelectionIndex];
 
         /* Handle encoder events */
-        if ( CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || 
-                CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW) )
+        if ( RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW) )
         {
             bUiTaskNotify(UI_SIGNAL_RESTORE_IDLE);
         }
-        else if ( CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET) )
+        else if ( RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET) )
         {
-            vMidiPanic();
+            SynthCmd_t xSynthCmd = { .eCmd = SYNTH_CMD_VOICE_MUTE };
+
+            (void)bSynthSendCmd(xSynthCmd);
         }
-        else if ( CHECK_SIGNAL(*pu32Event, UI_SIGNAL_MIDI_CC) )
+        else if ( RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_MIDI_CC) )
         {
             pxScreen->bElementSelection = true;
         }
-        else if ( CHECK_SIGNAL(*pu32Event, UI_SIGNAL_RESTORE_CC) )
+        else if ( RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_RESTORE_CC) )
         {
             pxScreen->bElementSelection = false;
         }
@@ -319,6 +321,12 @@ ui_status_t UI_screen_idle_init(ui_screen_t * pxScreenHandler)
     }
 
     return retval;
+}
+
+void vUI_screen_idle_set_cc_data(uint8_t u8ccId, uint8_t u8CcData)
+{
+    u8IdleCcId = u8ccId;
+    u8IdleCcData = u8CcData;
 }
 
 /*****END OF FILE****/

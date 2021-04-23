@@ -19,10 +19,6 @@ extern "C" {
 #include <stdbool.h>
 #include <string.h>
 
-#include "FreeRTOS.h"
-#include "task.h"
-#include "queue.h"
-
 #include "YM2612_driver.h"
 
 #include "app_lfs.h"
@@ -33,34 +29,18 @@ extern "C" {
 
 /* Task parameters */
 #define SYNTH_TASK_NAME                     "SYNTH"
-#define SYNTH_TASK_STACK                    (1024U)
-#define SYNTH_TASK_PRIO                     (4U)
-#define SYNTH_TASK_INIT_DELAY               (500U)
-
-/* SysEx CMD parameters */
-#define SYNTH_LEN_VENDOR_ID                 (3U)
-#define SYNTH_LEN_PRESET_NAME               (LFS_YM_CF_NAME_MAX_LEN)
-#define SYNTH_LEN_PRESET_CODED_NAME         (30U)
-#define SYNTH_LEN_MIN_SYSEX_CMD             (4U)
-#define SYNTH_LEN_SET_REG_CMD               (300U)
-#define SYNTH_LEN_SAVE_PRESET_CMD           (331U)
-#define SYNTH_LEN_LOAD_PRESET_CMD           (5U)
-#define SYNTH_LEN_LOAD_DEFAULT_PRESET_CMD   (5U)
+#define SYNTH_TASK_STACK                    ( 1024U )
+#define SYNTH_TASK_PRIO                     ( 4U )
+#define SYNTH_TASK_INIT_DELAY               ( 500U )
 
 /* Synth internal queue send timeout */
-#define SYNTH_QUEUE_TIMEOUT                 (100U)
-
-/* Synth message parameters */
-#define SYNTH_LEN_MIDI_MSG                  (3U)
+#define SYNTH_QUEUE_TIMEOUT                 ( 100U )
 
 /* Maximun number of voices */
-#define SYNTH_MAX_NUM_VOICE                 (YM2612_NUM_CHANNEL)
+#define SYNTH_MAX_NUM_VOICE                 ( YM2612_NUM_CHANNEL )
 
 /* Maximun number of user presets */
-#define SYNTH_MAX_NUM_USER_PRESET           (LFS_YM_SLOT_NUM)
-
-/* Define Max param name */
-#define SYNTH_MAX_PARAM_NAME_LEN            (12U)
+#define SYNTH_MAX_NUM_USER_PRESET           ( LFS_YM_SLOT_NUM )
 
 /* Enable extended DBG */
 // #define SYNTH_DBG_VERBOSE
@@ -70,187 +50,129 @@ extern "C" {
 /** Synth commands */
 typedef enum
 {
-    SYNTH_CMD_NOTE_ON = 0x00U,
-    SYNTH_CMD_NOTE_OFF,
-    SYNTH_CMD_NOTE_OFF_ALL,
-    SYNTH_CMD_CC_MAP,
+    SYNTH_CMD_VOICE_UPDATE_MONO = 0x00U,
+    SYNTH_CMD_VOICE_UPDATE_POLY,
+    SYNTH_CMD_PARAM_UPDATE,
+    SYNTH_CMD_PRESET_UPDATE,
+    SYNTH_CMD_VOICE_MUTE,
     SYNTH_CMD_NO_DEF = 0xFFU
-} SynthMsgType_t;
+} SynthCmdType_t;
 
-/** SysEx defined cmd */
-typedef enum
-{
-  SYNTH_SYSEX_CMD_SET_PRESET = 0x00U,
-  SYNTH_SYSEX_CMD_SAVE_PRESET = 0x01U,
-  SYNTH_SYSEX_CMD_LOAD_PRESET = 0x02U,
-  SYNTH_SYSEX_CMD_LOAD_DEFAULT_PRESET = 0x03U,
-  SYNTH_SYSEX_CMD_NO_DEF = 0x1FU
-} SynthSysExCmdDef_t;
-
-/** SysEx defined cmd */
-typedef enum
-{
-  SYNTH_PRESET_SOURCE_DEFAULT = 0U,
-  SYNTH_PRESET_SOURCE_USER,
-  SYNTH_PRESET_SOURCE_MAX
-} SynthPresetSource_t;
-
-/** Synth task defined events */
-typedef enum
-{
-  SYNTH_EVENT_MIDI_MSG = 0U,
-  SYNTH_EVENT_MIDI_SYSEX_MSG,
-  SYNTH_EVENT_NOTE_ON_OFF,
-  SYNTH_EVENT_CHANGE_NOTE,
-  SYNTH_EVENT_MOD_PARAM,
-  SYNTH_EVENT_UPDATE_PRESET,
-  SYNTH_EVENT_NOT_DEF = 0xFFU
-} SynthEventType_t;
-
-/** Payload for MIDI msg event */
+/** Payload for voice update */
 typedef struct
 {
-  SynthMsgType_t xType;
-  uint8_t u8Data[SYNTH_LEN_MIDI_MSG];
-} SynthEventPayloadMidi_t;
+    uint8_t u8VoiceDst;
+    uint8_t u8VoiceState;
+    uint8_t u8Note;
+    uint8_t u8Velocity;
+} SynthCmdPayloadVoiceUpdateMono_t;
 
-/** Payload for SYSEX MIDI msg event */
+/** Payload for voice update */
 typedef struct
 {
-  SynthMsgType_t xType;
-  uint32_t u32Len;
-  uint8_t * pu8Data;
-} SynthEventPayloadMidiSysEx_t;
+    uint8_t u8VoiceState;
+    uint8_t u8Note;
+    uint8_t u8Velocity;
+} SynthCmdPayloadVoiceUpdatePoly_t;
 
-/** Payload for Note On Off */
+/** Payload for parameter update command */
 typedef struct
 {
-  uint8_t u8VoiceId;
-  bool bGateState;
-} SynthEventPayloadNoteOnOff_t;
+    uint8_t u8Id;
+    uint8_t u8Data;
+} SynthCmdPayloadParamUpdate_t;
 
-/** Payload for Change Note */
+/** Payload definition for preset update command */
 typedef struct
 {
-  uint8_t u8VoiceId;
-  uint8_t u8Note;
-} SynthEventPayloadChangeNote_t;
-
-/** Payload definition for change parameter event */
-typedef struct
-{
-  uint8_t u8VoiceId;
-  uint8_t u8operatorId;
-  uint8_t u8ParameterId;
-  uint8_t u8Value;
-} SynthEventPayloadChangeParameter_t;
-
-/** Payload definition for update preset event */
-typedef struct
-{
-  xFmDevice_t * pxPreset;
-}SynthEventPayloadUpdatePreset_t;
+    uint8_t u8Action;
+    uint8_t u8Bank;
+    uint8_t u8Program;
+} SynthCmdPayloadPresetUpdate_t;
 
 /** Union definitions with all event payload */
 typedef union
 {
-  SynthEventPayloadMidi_t xMidi;
-  SynthEventPayloadMidiSysEx_t xMidiSysEx;
-  SynthEventPayloadNoteOnOff_t xNoteOnOff;
-  SynthEventPayloadChangeNote_t xChangeNote;
-  SynthEventPayloadChangeParameter_t xChangeParameter;
-  SynthEventPayloadUpdatePreset_t xUpdatePreset;
-} SynthPayload_t;
+    SynthCmdPayloadVoiceUpdateMono_t    xVoiceUpdateMono;
+    SynthCmdPayloadVoiceUpdatePoly_t    xVoiceUpdatePoly;
+    SynthCmdPayloadParamUpdate_t        xParamUpdate;
+    SynthCmdPayloadPresetUpdate_t       xPresetUpdate;
+} SynthCmdPayload_t;
 
-/** SysEx command format */
-typedef struct 
+/** Synth command definition */
+typedef struct SynthCmd
 {
-  uint8_t pu8VendorId[SYNTH_LEN_VENDOR_ID];
-  SynthSysExCmdDef_t xSysExCmd;
-  uint8_t * pu8CmdData;
-} SynthSysExCmd_t;
+    SynthCmdType_t eCmd;
+    SynthCmdPayload_t uPayload;
+} SynthCmd_t;
 
-/* Payload format for save preset cmd*/
-typedef struct 
+/** Synth voice cfg modes */
+typedef enum
 {
-  uint8_t u8Position;
-  uint8_t u8CodedName[SYNTH_LEN_PRESET_CODED_NAME];
-  xFmDevice_t xRegData;
-} SynthSysExCmdSavePreset_t;
+    SYNTH_VOICE_CFG_MONO = 0x00U,
+    SYNTH_VOICE_CFG_POLY,
+    SYNTH_VOICE_CFG_NUM
+} SynthVoiceCfgMode_t;
 
-/* Payload format for load preset cmd*/
-typedef struct 
+/** Synth preset actions */
+typedef enum
 {
-  uint8_t u8Position;
-} SynthSysExCmdLoadPreset_t;
+    SYNTH_PRESET_ACTION_SAVE = 0x00U,
+    SYNTH_PRESET_ACTION_LOAD,
+    SYNTH_PRESET_ACTION_NO_DEF = 0xFFU,
+} SynthPresetAction_t;
 
-/** Synth Event definition */
+/** Synth voice modes */
+typedef enum
+{
+    SYNTH_VOICE_STATE_ON = 0x00U,
+    SYNTH_VOICE_STATE_OFF,
+    SYNTH_VOICE_STATE_NO_DEF = 0xFFU,
+} SynthVoiceState_t;
+
+/** Synth voice modes */
+typedef enum
+{
+    SYNTH_PARAM_VOICE_0_NOTE = 0x00U,
+    SYNTH_PARAM_VOICE_1_NOTE,
+    SYNTH_PARAM_VOICE_2_NOTE,
+    SYNTH_PARAM_VOICE_3_NOTE,
+    SYNTH_PARAM_VOICE_4_NOTE,
+    SYNTH_PARAM_VOICE_5_NOTE,
+    SYNTH_PARAM_NOT_DEF = 0xFFU,
+} SynthParamId_t;
+
+/** Synth parameter definition */
 typedef struct
 {
-  SynthEventType_t eType;
-  SynthPayload_t uPayload;
-} SynthEvent_t;
-
-/** Defined structure to track last cc command used */
-typedef struct synth_cc_map
-{
-    uint8_t u8Cmd;
-    uint8_t u8CcData;
-    uint8_t u8Data;
-    char pcParamName[SYNTH_MAX_PARAM_NAME_LEN];
-} SynthCcMap_t;
+    uint8_t u8ParamId;
+    uint32_t u32ParamValue;
+} SynthParam_t;
 
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions prototypes ---------------------------------------------*/
 
 /**
-  * @brief Load flahs stored preset
-  * @param u8PresetSource preset source, default or user
-  * @param u8PresetId preset id.
-  * @retval operation result, true for correct load, false for error
-  */
-bool bSynthLoadPreset(SynthPresetSource_t u8PresetSource, uint8_t u8PresetId);
-
-/**
-  * @brief Save user preset
-  * @param pxPreset pointer to preset to save.
-  * @param u8PresetId preset position id.
-  * @retval operation result, true for correct save action, false for error.
-  */
-bool bSynthSaveUserPreset(xFmDevice_t * pxPreset, uint8_t u8PresetId);
-
-/**
-  * @brief Set preset into device now.
-  * @param pxPreset pointer to preset to save.
-  * @retval operation result, true for correct save action, false for error.
-  */
-bool bSynthSetPreset(xFmDevice_t * pxPreset);
-
-/**
-  * @brief Get last CC command executed.
-  * @retval Copy of last CC cmd executed.
-  */
-SynthCcMap_t xSynthGetLastCc(void);
-
-/**
   * @brief Init resources for SYNTH tasks
-  * @retval operation result, true for correct creation, false for error
+  * @retval None.
   */
-bool bSynthTaskInit(void);
+void vSynthTaskInit(void);
 
 /**
-  * @brief Notify event to a task.
-  * @param u32Event event to notify.
-  * @retval operation result, true for correct read, false for error
+  * @brief Send a command to synthj task.
+  * @param xSynthCmd Command to send.
+  * @return true cmd queue.
+  * @return false cmd not queue.
   */
-bool bSynthTaskNotify(uint32_t u32Event);
+bool bSynthSendCmd(SynthCmd_t xSynthCmd);
 
 /**
-  * @brief Get task event queue handler.
-  * @retval Queue handler in case of queue init, NULL in other case.
-  */
-QueueHandle_t pxSynthTaskGetQueue(void);
+ * @brief Get internal synth task paramter.
+ * @param u8ParamId: Id of parameter to get.
+ * @return SynthParam_t: structure with requested parameter data.
+ */
+SynthParam_t xSynthGetParam(uint8_t u8ParamId);
 
 #ifdef __cplusplus
 }
@@ -258,4 +180,4 @@ QueueHandle_t pxSynthTaskGetQueue(void);
 
 #endif /* __SYNTH_TASK_H */
 
-/*****END OF FILE****/
+/* EOF */

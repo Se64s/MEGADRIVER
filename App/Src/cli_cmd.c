@@ -10,7 +10,10 @@
 #include "cli_cmd.h"
 #include "FreeRTOS.h"
 #include "FreeRTOS_CLI.h"
+
 #include "cli_task.h"
+#include "synth_task.h"
+#include "midi_task.h"
 
 #include <stdlib.h>
 #include "printf.h"
@@ -69,41 +72,73 @@ static BaseType_t showVersion(char *pcWriteBuffer, size_t xWriteBufferLen, const
  */
 static BaseType_t userHardFault(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString);
 
+/**
+ * @brief  Force midi cc parameter.
+ * @param  pcWriteBuffer
+ * @param  xWriteBufferLen
+ * @param  pcCommandString
+ * @retval pdFALSE, pdTRUE
+ */
+static BaseType_t midiCc(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString);
+
+/**
+ * @brief  Force midi cc parameter.
+ * @param  pcWriteBuffer
+ * @param  xWriteBufferLen
+ * @param  pcCommandString
+ * @retval pdFALSE, pdTRUE
+ */
+static BaseType_t midiChangeMode(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString);
+
 /* Private variables ---------------------------------------------------------*/
 
 static const CLI_Command_Definition_t xDevReset = {
     "reset",
-    "reset: Force device reset",
+    "reset:\tForce device reset",
     devReset,
-    0
+    0U
 };
 
 static const CLI_Command_Definition_t xWriteReg = {
     "writeReg",
-    "writeReg: Write register into YM2612, use: writeReg <addr 0-255> <data 0-255> <bank 0-1>",
+    "writeReg:\tWrite register into YM2612, use: writeReg <addr 0-255> <data 0-255> <bank 0-1>",
     YM2612Write,
-    3
+    3U
 };
 
 static const CLI_Command_Definition_t xUserAssert = {
     "assert",
-    "assert: Force assert error",
+    "assert:\tForce assert error",
     userAssert,
-    0
+    0U
 };
 
 static const CLI_Command_Definition_t xUserFault = {
     "fault",
     "fault:\tForce hardfaul",
     userHardFault,
-    0
+    0U
 };
 
 static const CLI_Command_Definition_t xVersion = {
     "version",
-    "version: Show app version",
+    "version:\tShow app version",
     showVersion,
-    0
+    0U
+};
+
+static const CLI_Command_Definition_t xMidiCc = {
+    "midiCc",
+    "midiCc:\tSimulate midi CC command, use: midiCc <cc 0-127> <data 0-127>",
+    midiCc,
+    2U
+};
+
+static const CLI_Command_Definition_t xMidiChangeMode = {
+    "midiMode",
+    "midiMode:\tChange Midi mode to MONO or POLY, use: midiMode <0 Mono,1 Poly>",
+    midiChangeMode,
+    1U
 };
 
 /* Callbacks -----------------------------------------------------------------*/
@@ -113,7 +148,7 @@ static BaseType_t devReset(char *pcWriteBuffer,
         size_t xWriteBufferLen,
         const char *pcCommandString)
 {
-    vCliPrintf("CLI", "OK");
+    vCliPrintf(CLI_TASK_NAME, "OK");
     (void)HAL_NVIC_SystemReset();
     return pdFALSE;
 }
@@ -175,11 +210,89 @@ static BaseType_t userHardFault(char *pcWriteBuffer,
     return pdFALSE;
 }
 
+static BaseType_t midiCc(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString)
+{
+    uint8_t u8MidiCc;
+    uint8_t u8MidiData;
+    char *pcParameter1;
+    char *pcParameter2;
+    BaseType_t xParameter1StringLength;
+    BaseType_t xParameter2StringLength;
+
+    /* Get cmd parameters */
+    pcParameter1 = (char *)FreeRTOS_CLIGetParameter(pcCommandString, 1U, &xParameter1StringLength);
+    pcParameter2 = (char *)FreeRTOS_CLIGetParameter(pcCommandString, 2U, &xParameter2StringLength);
+    pcParameter1[xParameter1StringLength] = 0U;
+    pcParameter2[xParameter2StringLength] = 0U;
+    u8MidiCc = (uint8_t)atoi(pcParameter1);
+    u8MidiData = (uint8_t)atoi(pcParameter2);
+
+    SynthCmd_t xSynthCmd = { 0U };
+    xSynthCmd.eCmd = SYNTH_CMD_PARAM_UPDATE;
+    xSynthCmd.uPayload.xParamUpdate.u8Id = u8MidiCc;
+    xSynthCmd.uPayload.xParamUpdate.u8Data = u8MidiData;
+
+    if ( bSynthSendCmd(xSynthCmd) )
+    {
+        (void)snprintf(pcWriteBuffer, xWriteBufferLen, "OK");
+    }
+    else
+    {
+        (void)snprintf(pcWriteBuffer, xWriteBufferLen, "ERROR: Synth queue full");
+    }
+
+    return pdFALSE;
+}
+
+static BaseType_t midiChangeMode(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString)
+{
+    uint8_t u8MidiMode;
+    char *pcParameter1;
+    BaseType_t xParameter1StringLength;
+
+    /* Get cmd parameters */
+    pcParameter1 = (char *)FreeRTOS_CLIGetParameter(pcCommandString, 1U, &xParameter1StringLength);
+    pcParameter1[xParameter1StringLength] = 0U;
+    u8MidiMode = (uint8_t)atoi(pcParameter1);
+
+    MidiTaskCmd_t xMidiCmd = { 0U };
+    xMidiCmd.eCmd = MIDI_CMD_SET_MODE;
+
+    if ( u8MidiMode == 0U )  // MONO
+    {
+        vCliPrintf(CLI_TASK_NAME, "MONO");
+        xMidiCmd.uPayload.xSetMode.u8Mode = (uint8_t)MidiMode4;
+    }
+    else if ( u8MidiMode == 1U ) // POLY
+    {
+        vCliPrintf(CLI_TASK_NAME, "POLY");
+        xMidiCmd.uPayload.xSetMode.u8Mode = (uint8_t)MidiMode3;
+    }
+
+    if ( xMidiCmd.uPayload.xSetMode.u8Mode != 0U )
+    {
+        if ( bMidiSendCmd(xMidiCmd) )
+        {
+            (void)snprintf(pcWriteBuffer, xWriteBufferLen, "OK");
+        }
+        else
+        {
+            (void)snprintf(pcWriteBuffer, xWriteBufferLen, "ERROR: Midi queue full");
+        }
+    }
+    else
+    {
+        (void)snprintf(pcWriteBuffer, xWriteBufferLen, "ERROR: Not valid Mode");
+    }
+
+    return pdFALSE;
+}
+
 static BaseType_t showVersion(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString)
 {
-    vCliPrintf("CLI", "APP %s", MAIN_APP_VERSION);
-    vCliPrintf("CLI", "rev %s", GIT_REVISION);
-    vCliPrintf("CLI", "OK");
+    vCliPrintf(CLI_TASK_NAME, "APP %s", MAIN_APP_VERSION);
+    vCliPrintf(CLI_TASK_NAME, "rev %s", GIT_REVISION);
+    vCliPrintf(CLI_TASK_NAME, "OK");
     return pdFALSE;
 }
 
@@ -192,6 +305,8 @@ void cli_cmd_init(void)
     (void)FreeRTOS_CLIRegisterCommand(&xUserAssert);
     (void)FreeRTOS_CLIRegisterCommand(&xUserFault);
     (void)FreeRTOS_CLIRegisterCommand(&xVersion);
+    (void)FreeRTOS_CLIRegisterCommand(&xMidiCc);
+    (void)FreeRTOS_CLIRegisterCommand(&xMidiChangeMode);
 }
 
 /* EOF */

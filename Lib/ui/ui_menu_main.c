@@ -8,12 +8,6 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "ui_menu_main.h"
-#include "ui_screen_main.h"
-#include "ui_screen_midi.h"
-#include "ui_screen_preset.h"
-#include "ui_screen_fm.h"
-#include "ui_screen_mapping.h"
-#include "ui_screen_idle.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/

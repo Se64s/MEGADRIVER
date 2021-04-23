@@ -29,13 +29,18 @@ extern "C"
 /* Private defines -----------------------------------------------------------*/
 
 /** Max size for register configuration name */
-#define LFS_YM_CF_NAME_MAX_LEN              (16U)
+#define LFS_YM_CF_NAME_MAX_LEN              ( 16U )
 
 /** Midi cfg default values */
-#define LFS_MIDI_CFG_DEFAULT_MODE           (MidiMode3)
-#define LFS_MIDI_CFG_DEFAULT_CH             (0U)
-#define LFS_MIDI_CFG_DEFAULT_BANK           (0U)
-#define LFS_MIDI_CFG_DEFAULT_PROG           (0U)
+#define LFS_MIDI_CFG_DEFAULT_MODE           ( MidiMode3 )
+#define LFS_MIDI_CFG_DEFAULT_CH             ( 0U )
+#define LFS_MIDI_CFG_DEFAULT_BANK           ( LFS_MIDI_BANK_ROM )
+#define LFS_MIDI_CFG_DEFAULT_PROG           ( 0U )
+
+#define LFS_MIDI_CFG_MAX_BANK               ( LFS_MIDI_BANK_MAX_NUM )
+#define LFS_MIDI_CFG_MAX_PROG_BANK_FIX      ( SYNTH_APP_DATA_CONST_MAX_NUM_ELEMENTS )
+#define LFS_MIDI_CFG_MAX_PROG_BANK_FLASH    ( LFS_YM_SLOT_NUM )
+#define LFS_MIDI_CFG_MAX_PROG_BANK_SD       ( 255U )
 
 /* Exported types ------------------------------------------------------------*/
 
@@ -46,6 +51,15 @@ typedef enum
     LFS_ERROR = 1U,
     LFS_NOT_DEF = 255U,
 } lfs_status_t;
+
+/** Number of slots for user configs */
+typedef enum
+{
+    LFS_MIDI_BANK_ROM = 0U,
+    LFS_MIDI_BANK_FLASH,
+    // LFS_MIDI_BANK_SD,
+    LFS_MIDI_BANK_MAX_NUM,
+} lfs_midi_bank_t;
 
 /** Number of slots for user configs */
 typedef enum

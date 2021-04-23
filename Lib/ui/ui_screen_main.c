@@ -68,7 +68,7 @@ static void vScreenMainAction(void * pvMenu, void * pvEventData);
 static void vElementMidiAction(void * pvMenu, void * pvEventData);
 static void vElementPresetAction(void * pvMenu, void * pvEventData);
 static void vElementFmAction(void * pvMenu, void * pvEventData);
-static void vElementMappingAction(void * pvMenu, void * pvEventData);
+// static void vElementMappingAction(void * pvMenu, void * pvEventData);
 
 /* Render functions ----------------------------------------------------------*/
 
@@ -221,7 +221,7 @@ static void vScreenMainAction(void * pvMenu, void * pvEventData)
             ui_element_t * pxElement = &pxScreen->pxElementList[pxScreen->u32ElementSelectionIndex];
 
             /* Handle encoder events */
-            if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+            if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
             {
                 vUI_MISC_EncoderAction(pxMenu, pvEventData);
             }
@@ -242,7 +242,7 @@ static void vElementMidiAction(void * pvMenu, void * pvEventData)
         ui_menu_t * pxMenu = pvMenu;
         uint32_t * pu32EventData = pvEventData;
 
-        if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        if (RTOS_CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             /* Set midi screen */
             vCliPrintf(UI_TASK_NAME, "Enter in MIDI screen");
@@ -258,7 +258,7 @@ static void vElementPresetAction(void * pvMenu, void * pvEventData)
         ui_menu_t * pxMenu = pvMenu;
         uint32_t * pu32EventData = pvEventData;
 
-        if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        if (RTOS_CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             /* Set midi screen */
             vCliPrintf(UI_TASK_NAME, "Enter in PRESET screen");
@@ -274,7 +274,7 @@ static void vElementFmAction(void * pvMenu, void * pvEventData)
         ui_menu_t * pxMenu = pvMenu;
         uint32_t * pu32EventData = pvEventData;
 
-        if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        if (RTOS_CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             /* Set midi screen */
             vCliPrintf(UI_TASK_NAME, "Enter in FM screen");
@@ -290,7 +290,7 @@ static void vElementMappingAction(void * pvMenu, void * pvEventData)
         ui_menu_t * pxMenu = pvMenu;
         uint32_t * pu32EventData = pvEventData;
 
-        if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        if (RTOS_CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             /* Set midi screen */
             vCliPrintf(UI_TASK_NAME, "Enter in MAPPING screen");

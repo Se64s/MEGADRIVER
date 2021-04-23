@@ -14,10 +14,10 @@
 #include "sys_rtos.h"
 
 /* Tasks */
+#include "midi_task.h"
 #include "cli_task.h"
 #include "synth_task.h"
 #include "ui_task.h"
-#include "midi_task.h"
 #include "mapping_task.h"
 
 /* Main app ------------------------------------------------------------------*/
@@ -34,11 +34,11 @@ int main(void)
     SYS_Init();
 
     /* Task creation */
-    (void)bMidiTaskInit();
-    (void)bCliTaskInit();
-    (void)bSynthTaskInit();
-    (void)bUiTaskInit();
-    (void)bMapTaskInit();
+    vMidiTaskInit();
+    vCliTaskInit();
+    vSynthTaskInit();
+    vUiTaskInit();
+    vMapTaskInit();
 
     /* Start the scheduler so the tasks start executing. */
     vTaskStartScheduler();
