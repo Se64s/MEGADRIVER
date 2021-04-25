@@ -46,27 +46,27 @@ static void BSP_Serial0Init(void)
     LL_GPIO_InitTypeDef GPIO_InitStruct = {0U};
 
     /* Peripheral clock enable */
-    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_USART2);
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_USART4);
     LL_IOP_GRP1_EnableClock(LL_IOP_GRP1_PERIPH_GPIOA);
 
-    /**USART2 GPIO Configuration  
-     PA2   ------> USART2_TX
-    PA3   ------> USART2_RX 
+    /**USART4 GPIO Configuration  
+    PA0   ------> USART4_TX
+    PA1   ------> USART4_RX 
     */
-    GPIO_InitStruct.Pin = LL_GPIO_PIN_2;
+    GPIO_InitStruct.Pin = LL_GPIO_PIN_0;
     GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
     GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
     GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
     GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-    GPIO_InitStruct.Alternate = LL_GPIO_AF_1;
+    GPIO_InitStruct.Alternate = LL_GPIO_AF_4;
     LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    GPIO_InitStruct.Pin = LL_GPIO_PIN_3;
+    GPIO_InitStruct.Pin = LL_GPIO_PIN_1;
     GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
     GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
     GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
     GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-    GPIO_InitStruct.Alternate = LL_GPIO_AF_1;
+    GPIO_InitStruct.Alternate = LL_GPIO_AF_4;
     LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     USART_InitStruct.PrescalerValue = LL_USART_PRESCALER_DIV1;
@@ -77,16 +77,19 @@ static void BSP_Serial0Init(void)
     USART_InitStruct.TransferDirection = LL_USART_DIRECTION_TX_RX;
     USART_InitStruct.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
     USART_InitStruct.OverSampling = LL_USART_OVERSAMPLING_16;
-    LL_USART_Init(USART2, &USART_InitStruct);
-    LL_USART_SetTXFIFOThreshold(USART2, LL_USART_FIFOTHRESHOLD_1_8);
-    LL_USART_SetRXFIFOThreshold(USART2, LL_USART_FIFOTHRESHOLD_1_8);
-    LL_USART_DisableFIFO(USART2);
-    LL_USART_ConfigAsyncMode(USART2);
+    LL_USART_Init(USART4, &USART_InitStruct);
 
-    LL_USART_Enable(USART2);
+    LL_USART_SetTXFIFOThreshold(USART4, LL_USART_FIFOTHRESHOLD_1_8);
+    LL_USART_SetRXFIFOThreshold(USART4, LL_USART_FIFOTHRESHOLD_1_8);
 
-    /* Polling USART2 initialisation */
-    while((!(LL_USART_IsActiveFlag_TEACK(USART2))) || (!(LL_USART_IsActiveFlag_REACK(USART2))))
+    LL_USART_DisableFIFO(USART4);
+
+    LL_USART_ConfigAsyncMode(USART4);
+
+    LL_USART_Enable(USART4);
+
+    /* Polling USART4 initialisation */
+    while( ( !( LL_USART_IsActiveFlag_TEACK(USART4) ) ) || ( !( LL_USART_IsActiveFlag_REACK(USART4) ) ) )
     {
     }
 }
@@ -97,25 +100,25 @@ static void BSP_Serial0Send(uint8_t* buf, uint8_t len)
     while (l < len)
     {
         /* Wait for TXE flag to be raised */
-        while (!LL_USART_IsActiveFlag_TXE(USART2))
+        while (!LL_USART_IsActiveFlag_TXE(USART4))
         {
         }
 
         /* If last char to be sent, clear TC flag */
         if (l == (len - 1U))
         {
-            LL_USART_ClearFlag_TC(USART2);
+            LL_USART_ClearFlag_TC(USART4);
         }
 
         /* Write character in Transmit Data register.
         TXE flag is cleared by writing data in TDR register */
-        LL_USART_TransmitData8(USART2, buf[l]);
+        LL_USART_TransmitData8(USART4, buf[l]);
 
         l++;
     }
 
     /* Wait for TC flag to be raised for last char */
-    while (!LL_USART_IsActiveFlag_TC(USART2))
+    while (!LL_USART_IsActiveFlag_TC(USART4))
     {
     }
 }

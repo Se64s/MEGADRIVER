@@ -31,12 +31,12 @@ typedef struct SerialDevHandler
 /* Private variables ---------------------------------------------------------*/
 
 /* Serial 0 resources */
-UART_HandleTypeDef huart3;
-DMA_HandleTypeDef hdma_usart3_rx;
-static uint8_t rx_buf_uart3[SERIAL_0_RX_SIZE] = {0};
-static uint8_t rx_cbuf_uart3[SERIAL_0_CBUF_SIZE] = {0};
-static circular_buf_t cbuff_uart3 = {
-    .buffer = rx_cbuf_uart3,
+UART_HandleTypeDef huart2;
+DMA_HandleTypeDef hdma_usart2_rx;
+static uint8_t rx_buf_uart2[SERIAL_0_RX_SIZE] = {0};
+static uint8_t rx_cbuf_uart2[SERIAL_0_CBUF_SIZE] = {0};
+static circular_buf_t cbuff_uart2 = {
+    .buffer = rx_cbuf_uart2,
     .head = 0U,
     .tail = 0U,
     .max = SERIAL_0_CBUF_SIZE,
@@ -45,21 +45,21 @@ static circular_buf_t cbuff_uart3 = {
 
 static SerialDevHandler_t xSerial0Handler = {
     .xSerialId = SERIAL_0,
-    .pxHalPeriphHandler = &huart3,
-    .pxAppCircularBuffer = &cbuff_uart3,
-    .pu8LowLevelBuffer = rx_buf_uart3,
+    .pxHalPeriphHandler = &huart2,
+    .pxAppCircularBuffer = &cbuff_uart2,
+    .pu8LowLevelBuffer = rx_buf_uart2,
     .u32LowLevelBufferSize = SERIAL_0_RX_SIZE,
     .pxEventCb = NULL
 };
 
 /* Serial 1 resources */
-UART_HandleTypeDef huart2;
-DMA_HandleTypeDef hdma_usart2_tx;
-DMA_HandleTypeDef hdma_usart2_rx;
-static uint8_t rx_buf_uart2[SERIAL_1_RX_SIZE] = {0};
-static uint8_t rx_cbuf_uart2[SERIAL_1_CBUF_SIZE] = {0};
-static circular_buf_t cbuff_uart2 = {
-    .buffer = rx_cbuf_uart2,
+UART_HandleTypeDef huart4;
+DMA_HandleTypeDef hdma_usart4_tx;
+DMA_HandleTypeDef hdma_usart4_rx;
+static uint8_t rx_buf_uart4[SERIAL_1_RX_SIZE] = {0};
+static uint8_t rx_cbuf_uart4[SERIAL_1_CBUF_SIZE] = {0};
+static circular_buf_t cbuff_uart4 = {
+    .buffer = rx_cbuf_uart4,
     .head = 0U,
     .tail = 0U,
     .max = SERIAL_1_CBUF_SIZE,
@@ -68,9 +68,9 @@ static circular_buf_t cbuff_uart2 = {
 
 static SerialDevHandler_t xSerial1Handler = {
     .xSerialId = SERIAL_1,
-    .pxHalPeriphHandler = &huart2,
-    .pxAppCircularBuffer = &cbuff_uart2,
-    .pu8LowLevelBuffer = rx_buf_uart2,
+    .pxHalPeriphHandler = &huart4,
+    .pxAppCircularBuffer = &cbuff_uart4,
+    .pu8LowLevelBuffer = rx_buf_uart4,
     .u32LowLevelBufferSize = SERIAL_1_RX_SIZE,
     .pxEventCb = NULL
 };
@@ -101,40 +101,40 @@ extern void HAL_UART_HandleRxEvent(UART_HandleTypeDef *huart);
   */
 static void BSP_Init_Serial_1(void)
 {
-    huart2.Instance = USART2;
-    huart2.Init.BaudRate = 115200;
-    huart2.Init.WordLength = UART_WORDLENGTH_8B;
-    huart2.Init.StopBits = UART_STOPBITS_1;
-    huart2.Init.Parity = UART_PARITY_NONE;
-    huart2.Init.Mode = UART_MODE_TX_RX;
-    huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-    huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-    huart2.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-    huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+    huart4.Instance = USART4;
+    huart4.Init.BaudRate = 115200;
+    huart4.Init.WordLength = UART_WORDLENGTH_8B;
+    huart4.Init.StopBits = UART_STOPBITS_1;
+    huart4.Init.Parity = UART_PARITY_NONE;
+    huart4.Init.Mode = UART_MODE_TX_RX;
+    huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+    huart4.Init.OverSampling = UART_OVERSAMPLING_16;
+    huart4.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+    huart4.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+    huart4.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
 
-    if (HAL_UART_Init(&huart2) != HAL_OK)
+    if (HAL_UART_Init(&huart4) != HAL_OK)
     {
         ERR_ASSERT(0U);
     }
-    if (HAL_UARTEx_SetTxFifoThreshold(&huart2, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
+    if (HAL_UARTEx_SetTxFifoThreshold(&huart4, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
     {
         ERR_ASSERT(0U);
     }
-    if (HAL_UARTEx_SetRxFifoThreshold(&huart2, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
+    if (HAL_UARTEx_SetRxFifoThreshold(&huart4, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
     {
         ERR_ASSERT(0U);
     }
-    if (HAL_UARTEx_DisableFifoMode(&huart2) != HAL_OK)
+    if (HAL_UARTEx_DisableFifoMode(&huart4) != HAL_OK)
     {
         ERR_ASSERT(0U);
     }
 
     /* Init additional resurces */
-    circular_buf_init(&cbuff_uart2, rx_cbuf_uart2, SERIAL_1_CBUF_SIZE);
+    circular_buf_init(&cbuff_uart4, rx_cbuf_uart4, SERIAL_1_CBUF_SIZE);
 
     /* Enable idle irq */
-    __HAL_UART_ENABLE_IT(&huart2, UART_IT_IDLE);
+    __HAL_UART_ENABLE_IT(&huart4, UART_IT_IDLE);
 }
 
 /**
@@ -143,6 +143,47 @@ static void BSP_Init_Serial_1(void)
   * @retval None
   */
 static void BSP_DeInit_Serial_1(void)
+{
+    /* Deinit peripheral */
+    if (HAL_UART_DeInit(&huart4) != HAL_OK)
+    {
+        ERR_ASSERT(0U);
+    }
+
+    /* Init additional resurces */
+    circular_buf_free(&cbuff_uart4);
+
+    /* Disable idle irq */
+    __HAL_UART_DISABLE_IT(&huart4, UART_IT_IDLE);
+}
+
+static void BSP_Init_Serial_0(void)
+{
+    huart2.Instance = USART2;
+    huart2.Init.BaudRate = 31250;
+    huart2.Init.WordLength = UART_WORDLENGTH_8B;
+    huart2.Init.StopBits = UART_STOPBITS_1;
+    huart2.Init.Parity = UART_PARITY_NONE;
+    huart2.Init.Mode = UART_MODE_RX;
+    huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+    huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+    huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_ENABLE;
+    huart2.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+    huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_RXOVERRUNDISABLE_INIT;
+
+    if (HAL_UART_Init(&huart2) != HAL_OK)
+    {
+        ERR_ASSERT(0U);
+    }
+
+    /* Init additional resurces */
+    circular_buf_init(&cbuff_uart2, rx_cbuf_uart2, SERIAL_0_CBUF_SIZE);
+
+    /* Enable idle irq */
+    __HAL_UART_ENABLE_IT(&huart2, UART_IT_IDLE);
+}
+
+static void BSP_DeInit_Serial_0(void)
 {
     /* Deinit peripheral */
     if (HAL_UART_DeInit(&huart2) != HAL_OK)
@@ -155,47 +196,6 @@ static void BSP_DeInit_Serial_1(void)
 
     /* Disable idle irq */
     __HAL_UART_DISABLE_IT(&huart2, UART_IT_IDLE);
-}
-
-static void BSP_Init_Serial_0(void)
-{
-    huart3.Instance = USART3;
-    huart3.Init.BaudRate = 31250;
-    huart3.Init.WordLength = UART_WORDLENGTH_8B;
-    huart3.Init.StopBits = UART_STOPBITS_1;
-    huart3.Init.Parity = UART_PARITY_NONE;
-    huart3.Init.Mode = UART_MODE_RX;
-    huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    huart3.Init.OverSampling = UART_OVERSAMPLING_16;
-    huart3.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_ENABLE;
-    huart3.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-    huart3.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_RXOVERRUNDISABLE_INIT;
-
-    if (HAL_UART_Init(&huart3) != HAL_OK)
-    {
-        ERR_ASSERT(0U);
-    }
-
-    /* Init additional resurces */
-    circular_buf_init(&cbuff_uart3, rx_cbuf_uart3, SERIAL_0_CBUF_SIZE);
-
-    /* Enable idle irq */
-    __HAL_UART_ENABLE_IT(&huart3, UART_IT_IDLE);
-}
-
-static void BSP_DeInit_Serial_0(void)
-{
-    /* Deinit peripheral */
-    if (HAL_UART_DeInit(&huart3) != HAL_OK)
-    {
-        ERR_ASSERT(0U);
-    }
-
-    /* Init additional resurces */
-    circular_buf_free(&cbuff_uart3);
-
-    /* Disable idle irq */
-    __HAL_UART_DISABLE_IT(&huart3, UART_IT_IDLE);
 }
 
 /* Callback ------------------------------------------------------------------*/

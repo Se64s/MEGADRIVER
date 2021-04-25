@@ -482,6 +482,7 @@ YM2612_status_t xYM2612_init(void)
 {
     YM2612_status_t retval = YM2612_STATUS_OK;
 
+#if 0U  // START - Deactivate YM driver during HW port
     _low_level_init();
 
 #ifdef YM2612_GEN_CLOCK
@@ -512,6 +513,7 @@ YM2612_status_t xYM2612_init(void)
 #ifdef YM2612_USE_RTOS
     taskEXIT_CRITICAL();
 #endif
+#endif // END - Deactivate YM driver during HW port
 
     return (retval);
 }
@@ -527,8 +529,10 @@ YM2612_status_t xYM2612_deinit(void)
 
 void vYM2612_write_reg(uint8_t u8RegAddr, uint8_t u8RegData, YM2612_bank_t xBank)
 {
+#if 0U  // START - Deactivate YM driver during HW port
     /* Wrapper for low level abstraction */
     _low_level_writeRegister(u8RegAddr, u8RegData, xBank);
+#endif  // END - Deactivate YM driver during HW port
 }
 
 void vYM2612_set_reg_preset(xFmDevice_t * pxRegPreset)

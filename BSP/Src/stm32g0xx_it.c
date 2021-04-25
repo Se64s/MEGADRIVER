@@ -35,12 +35,12 @@
 extern DMA_HandleTypeDef hdma_i2c1_rx;
 extern DMA_HandleTypeDef hdma_i2c1_tx;
 extern DMA_HandleTypeDef hdma_usart2_rx;
-extern DMA_HandleTypeDef hdma_usart2_tx;
-extern DMA_HandleTypeDef hdma_usart3_rx;
+extern DMA_HandleTypeDef hdma_usart4_tx;
+extern DMA_HandleTypeDef hdma_usart4_rx;
 extern DMA_HandleTypeDef hdma_adc1;
 extern I2C_HandleTypeDef hi2c1;
 extern UART_HandleTypeDef huart2;
-extern UART_HandleTypeDef huart3;
+extern UART_HandleTypeDef huart4;
 extern TIM_HandleTypeDef htim3;
 extern ADC_HandleTypeDef hadc1;
 
@@ -80,7 +80,7 @@ void HardFault_Handler(void)
   */
 void DMA1_Channel1_IRQHandler(void)
 {
-  HAL_DMA_IRQHandler(&hdma_usart3_rx);
+  HAL_DMA_IRQHandler(&hdma_usart2_rx);
 }
 
 /**
@@ -97,8 +97,8 @@ void DMA1_Channel2_3_IRQHandler(void)
   */
 void DMA1_Ch4_7_DMAMUX1_OVR_IRQHandler(void)
 {
-  HAL_DMA_IRQHandler(&hdma_usart2_tx);
-  HAL_DMA_IRQHandler(&hdma_usart2_rx);
+  HAL_DMA_IRQHandler(&hdma_usart4_tx);
+  HAL_DMA_IRQHandler(&hdma_usart4_rx);
   HAL_DMA_IRQHandler(&hdma_adc1);
 }
 
@@ -131,14 +131,14 @@ void USART2_IRQHandler(void)
   */
 void USART3_4_IRQHandler(void)
 {
-  HAL_UART_IRQHandler(&huart3);
+  HAL_UART_IRQHandler(&huart4);
 
   /* Handle idle event on usart */
-  if (__HAL_UART_GET_IT(&huart3, UART_IT_IDLE))
+  if (__HAL_UART_GET_IT(&huart4, UART_IT_IDLE))
   {
-    __HAL_UART_CLEAR_IT(&huart3, UART_CLEAR_IDLEF);
+    __HAL_UART_CLEAR_IT(&huart4, UART_CLEAR_IDLEF);
 
-    HAL_UART_HandleRxEvent(&huart3);
+    HAL_UART_HandleRxEvent(&huart4);
   }
 }
 
@@ -171,7 +171,7 @@ void TIM3_IRQHandler(void)
 /**
   * @brief This function handles exti interrupt.
   */
-void EXTI4_15_IRQHandler(void)
+void EXTI2_3_IRQHandler(void)
 {
   HAL_GPIO_EXTI_IRQHandler(ENCODER_0_SW_GPIO_PIN);
 }
