@@ -35,6 +35,9 @@ extern DMA_HandleTypeDef hdma_usart2_rx;
 extern DMA_HandleTypeDef hdma_i2c1_rx;
 extern DMA_HandleTypeDef hdma_i2c1_tx;
 
+/* spi resources */
+extern DMA_HandleTypeDef hdma_spi2_tx;
+
 /* ADC resources */
 extern DMA_HandleTypeDef hdma_adc1;
 
@@ -421,6 +424,101 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* hi2c)
 
         HAL_NVIC_DisableIRQ(DMA1_Channel2_3_IRQn);
         HAL_NVIC_DisableIRQ(I2C1_IRQn);
+    }
+}
+
+/**
+  * @brief  Initialize the SPI MSP.
+  * @param  hspi pointer to a SPI_HandleTypeDef structure that contains
+  *               the configuration information for SPI module.
+  * @retval None
+  */
+void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
+{
+    GPIO_InitTypeDef GPIO_InitStruct = { 0U };
+
+    if ( hspi->Instance == SPI1 )
+    {
+    }
+    if ( hspi->Instance == SPI2 )
+    {
+        /* Enable periph clocks */
+        __HAL_RCC_SPI2_CLK_ENABLE();
+        __HAL_RCC_DMA1_CLK_ENABLE();
+        __HAL_RCC_GPIOB_CLK_ENABLE();
+
+        /** SPI2 GPIO Configuration
+        PB11  ------> SPI2_MOSI
+        PB12  ------> SPI2_CS
+        PB13  ------> SPI2_CLK
+        */
+        GPIO_InitStruct.Pin = GPIO_PIN_11 | GPIO_PIN_12 | GPIO_PIN_13;
+        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+        GPIO_InitStruct.Alternate = GPIO_AF0_SPI2;
+        HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+        /* Setup DMA */
+        hdma_spi2_tx.Instance = DMA1_Channel7;
+        hdma_spi2_tx.Init.Request = DMA_REQUEST_SPI2_TX;
+        hdma_spi2_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
+        hdma_spi2_tx.Init.PeriphInc = DMA_PINC_DISABLE;
+        hdma_spi2_tx.Init.MemInc = DMA_MINC_ENABLE;
+        hdma_spi2_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+        hdma_spi2_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+        hdma_spi2_tx.Init.Mode = DMA_NORMAL;
+        hdma_spi2_tx.Init.Priority = DMA_PRIORITY_LOW;
+
+        if (HAL_DMA_Init(&hdma_spi2_tx) != HAL_OK)
+        {
+            ERR_ASSERT(0U);
+        }
+
+        __HAL_LINKDMA(hspi, hdmatx, hdma_spi2_tx);
+
+        /* Setup IRQ */
+        HAL_NVIC_SetPriority(DMA1_Ch4_7_DMAMUX1_OVR_IRQn, 3U, 0U);
+        HAL_NVIC_EnableIRQ(DMA1_Ch4_7_DMAMUX1_OVR_IRQn);
+
+        HAL_NVIC_SetPriority(SPI2_IRQn, 3U, 0U);
+        HAL_NVIC_EnableIRQ(SPI2_IRQn);
+    }
+    else
+    {
+        // None
+    }
+}
+
+/**
+  * @brief  De-Initialize the SPI MSP.
+  * @param  hspi pointer to a SPI_HandleTypeDef structure that contains
+  *               the configuration information for SPI module.
+  * @retval None
+  */
+void HAL_SPI_MspDeinit(SPI_HandleTypeDef *hspi)
+{
+    if ( hspi->Instance == SPI1 )
+    {
+    }
+    if ( hspi->Instance == SPI2 )
+    {
+        /* Enable periph clocks */
+        __HAL_RCC_SPI2_CLK_DISABLE();
+
+        /** SPI2 GPIO Configuration
+        PB11  ------> SPI2_MOSI
+        PB12  ------> SPI2_CS
+        PB13  ------> SPI2_CLK
+        */
+        HAL_GPIO_DeInit(GPIOB, GPIO_PIN_11 | GPIO_PIN_12 | GPIO_PIN_13);
+
+        /* Setup IRQ */
+        HAL_NVIC_DisableIRQ(SPI2_IRQn);
+    }
+    else
+    {
+        // None
     }
 }
 

@@ -38,9 +38,12 @@ extern DMA_HandleTypeDef hdma_usart2_rx;
 extern DMA_HandleTypeDef hdma_usart4_tx;
 extern DMA_HandleTypeDef hdma_usart4_rx;
 extern DMA_HandleTypeDef hdma_adc1;
+extern DMA_HandleTypeDef hdma_spi2_tx;
 extern I2C_HandleTypeDef hi2c1;
 extern UART_HandleTypeDef huart2;
 extern UART_HandleTypeDef huart4;
+extern SPI_HandleTypeDef hspi1;
+extern SPI_HandleTypeDef hspi2;
 extern TIM_HandleTypeDef htim3;
 extern ADC_HandleTypeDef hadc1;
 
@@ -100,6 +103,7 @@ void DMA1_Ch4_7_DMAMUX1_OVR_IRQHandler(void)
   HAL_DMA_IRQHandler(&hdma_usart4_tx);
   HAL_DMA_IRQHandler(&hdma_usart4_rx);
   HAL_DMA_IRQHandler(&hdma_adc1);
+  HAL_DMA_IRQHandler(&hdma_spi2_tx);
 }
 
 /**
@@ -174,6 +178,22 @@ void TIM3_IRQHandler(void)
 void EXTI2_3_IRQHandler(void)
 {
   HAL_GPIO_EXTI_IRQHandler(ENCODER_0_SW_GPIO_PIN);
+}
+
+/**
+  * @brief This function handles SPI1 interrupt.
+  */
+void SPI1_IRQHandler(void)
+{
+    HAL_SPI_IRQHandler(&hspi1);
+}
+
+/**
+  * @brief This function handles SPI2 interrupt.
+  */
+void SPI2_IRQHandler(void)
+{
+    HAL_SPI_IRQHandler(&hspi2);
 }
 
 /**
