@@ -452,11 +452,17 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
         PB12  ------> SPI2_CS
         PB13  ------> SPI2_CLK
         */
-        GPIO_InitStruct.Pin = GPIO_PIN_11 | GPIO_PIN_12 | GPIO_PIN_13;
+        GPIO_InitStruct.Pin = GPIO_PIN_11 | GPIO_PIN_13;
         GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
         GPIO_InitStruct.Pull = GPIO_NOPULL;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
         GPIO_InitStruct.Alternate = GPIO_AF0_SPI2;
+        HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+        GPIO_InitStruct.Pin = GPIO_PIN_12;
+        GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
         HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
         /* Setup DMA */

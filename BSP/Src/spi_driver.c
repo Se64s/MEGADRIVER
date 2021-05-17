@@ -123,14 +123,14 @@ static void BSP_SPI1_Init(void)
     xSpi1Handler.pxHalPeriphHandler->Init.DataSize = SPI_DATASIZE_16BIT;
     xSpi1Handler.pxHalPeriphHandler->Init.CLKPolarity = SPI_POLARITY_LOW;
     xSpi1Handler.pxHalPeriphHandler->Init.CLKPhase = SPI_PHASE_1EDGE;
-    xSpi1Handler.pxHalPeriphHandler->Init.NSS = SPI_NSS_HARD_OUTPUT;
-    xSpi1Handler.pxHalPeriphHandler->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
+    xSpi1Handler.pxHalPeriphHandler->Init.NSS = SPI_NSS_SOFT;
+    xSpi1Handler.pxHalPeriphHandler->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
     xSpi1Handler.pxHalPeriphHandler->Init.FirstBit = SPI_FIRSTBIT_MSB;
     xSpi1Handler.pxHalPeriphHandler->Init.TIMode = SPI_TIMODE_DISABLE;
     xSpi1Handler.pxHalPeriphHandler->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
     xSpi1Handler.pxHalPeriphHandler->Init.CRCPolynomial = 7;
     xSpi1Handler.pxHalPeriphHandler->Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
-    xSpi1Handler.pxHalPeriphHandler->Init.NSSPMode = SPI_NSS_PULSE_ENABLE;
+    xSpi1Handler.pxHalPeriphHandler->Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
 
     if ( HAL_SPI_Init( xSpi1Handler.pxHalPeriphHandler ) != HAL_OK )
     {
@@ -159,6 +159,7 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
     else if ( hspi->Instance == SPI2 )
     {
         pxSpiHandler = &xSpi1Handler;
+        SPI1_CS_FALL();
     }
     else
     {
@@ -185,6 +186,7 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
     else if ( hspi->Instance == SPI2 )
     {
         pxSpiHandler = &xSpi1Handler;
+        SPI1_CS_FALL();
     }
     else
     {
@@ -266,7 +268,7 @@ spi_status_t SPI_send(spi_port_t dev, uint8_t *pdata, uint16_t len)
     }
     else if (dev == SPI_1)
     {
-        if ( len < xSpi1Handler.u16BufferTxSize )
+        if ( len <= xSpi1Handler.u16BufferTxSize )
         {
             while ( HAL_SPI_GetState(xSpi1Handler.pxHalPeriphHandler) != HAL_SPI_STATE_READY );
 
@@ -274,6 +276,8 @@ spi_status_t SPI_send(spi_port_t dev, uint8_t *pdata, uint16_t len)
             {
                 xSpi1Handler.pu8BufferTx[u16i] = pdata[u16i];
             }
+
+            SPI1_CS_RISE();
 
             retval = ( HAL_SPI_Transmit_DMA(xSpi1Handler.pxHalPeriphHandler, xSpi1Handler.pu8BufferTx, len) == HAL_OK ) ? SPI_STATUS_OK : SPI_STATUS_ERROR;
         }

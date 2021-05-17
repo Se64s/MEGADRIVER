@@ -22,10 +22,7 @@ extern "C"
 /* Private defines -----------------------------------------------------------*/
 
 /* Option defines */
-#define YM2612_USE_RTOS
-// #define YM2612_GEN_CLOCK
 // #define YM2612_DEBUG
-// #define YM2612_TEST_GPIO
 
 /** Number of channels by device */
 #define YM2612_NUM_CHANNEL      (YM2612_NUM_CH)
@@ -35,6 +32,15 @@ extern "C"
 
 /** Number of total parameters */
 #define YM2612_NUM_PARAMETERS   (FM_VAR_SIZE_NUMBER)
+
+/* Bit position in shift reg */
+#define YM_POS_Dx               (0U)
+#define YM_POS_REG              (8U)
+#define YM_POS_CS               (9U)
+#define YM_POS_WR               (10U)
+#define YM_POS_RD               (11U)
+#define YM_POS_A0               (12U)
+#define YM_POS_A1               (13U)
 
 /* Max and min values of FM parameters */
 #define MAX_VALUE_LFO_ON        (2U)
@@ -55,72 +61,6 @@ extern "C"
 #define MAX_VALUE_SUSTAIN_LEVEL (16U)
 #define MAX_VALUE_RELEASE_RATE  (16U)
 #define MAX_VALUE_SSG_ENVELOPE  (8U)
-
-/* GPIO definitions */
-#define YM2612_Dx_GPIO_PIN      (YM2612_D0_GPIO_PIN | YM2612_D1_GPIO_PIN | YM2612_D2_GPIO_PIN | YM2612_D3_GPIO_PIN | YM2612_D4_GPIO_PIN | YM2612_D5_GPIO_PIN | YM2612_D6_GPIO_PIN | YM2612_D7_GPIO_PIN)
-#define YM2612_Dx_GPIO_PORT     GPIOB
-#define YM2612_Dx_GPIO_CLK      __HAL_RCC_GPIOB_CLK_ENABLE
-
-#define YM2612_D0_GPIO_PIN      GPIO_PIN_0
-#define YM2612_D0_GPIO_PORT     GPIOB
-#define YM2612_D0_GPIO_CLK      __HAL_RCC_GPIOB_CLK_ENABLE
-
-#define YM2612_D1_GPIO_PIN      GPIO_PIN_1
-#define YM2612_D1_GPIO_PORT     GPIOB
-#define YM2612_D1_GPIO_CLK      __HAL_RCC_GPIOB_CLK_ENABLE
-
-#define YM2612_D2_GPIO_PIN      GPIO_PIN_2
-#define YM2612_D2_GPIO_PORT     GPIOB
-#define YM2612_D2_GPIO_CLK      __HAL_RCC_GPIOB_CLK_ENABLE
-
-#define YM2612_D3_GPIO_PIN      GPIO_PIN_3
-#define YM2612_D3_GPIO_PORT     GPIOB
-#define YM2612_D3_GPIO_CLK      __HAL_RCC_GPIOB_CLK_ENABLE
-
-#define YM2612_D4_GPIO_PIN      GPIO_PIN_4
-#define YM2612_D4_GPIO_PORT     GPIOB
-#define YM2612_D4_GPIO_CLK      __HAL_RCC_GPIOB_CLK_ENABLE
-
-#define YM2612_D5_GPIO_PIN      GPIO_PIN_5
-#define YM2612_D5_GPIO_PORT     GPIOB
-#define YM2612_D5_GPIO_CLK      __HAL_RCC_GPIOB_CLK_ENABLE
-
-#define YM2612_D6_GPIO_PIN      GPIO_PIN_6
-#define YM2612_D6_GPIO_PORT     GPIOB
-#define YM2612_D6_GPIO_CLK      __HAL_RCC_GPIOB_CLK_ENABLE
-
-#define YM2612_D7_GPIO_PIN      GPIO_PIN_7
-#define YM2612_D7_GPIO_PORT     GPIOB
-#define YM2612_D7_GPIO_CLK      __HAL_RCC_GPIOB_CLK_ENABLE
-
-#define YM2612_REG_GPIO_PIN     GPIO_PIN_8
-#define YM2612_REG_GPIO_PORT    GPIOB
-#define YM2612_REG_GPIO_CLK     __HAL_RCC_GPIOB_CLK_ENABLE
-
-#define YM2612_A1_GPIO_PIN      GPIO_PIN_15
-#define YM2612_A1_GPIO_PORT     GPIOC
-#define YM2612_A1_GPIO_CLK      __HAL_RCC_GPIOC_CLK_ENABLE
-
-#define YM2612_A0_GPIO_PIN      GPIO_PIN_1
-#define YM2612_A0_GPIO_PORT     GPIOF
-#define YM2612_A0_GPIO_CLK      __HAL_RCC_GPIOF_CLK_ENABLE
-
-#define YM2612_RD_GPIO_PIN      GPIO_PIN_14
-#define YM2612_RD_GPIO_PORT     GPIOC
-#define YM2612_RD_GPIO_CLK      __HAL_RCC_GPIOC_CLK_ENABLE
-
-#define YM2612_WR_GPIO_PIN      GPIO_PIN_13
-#define YM2612_WR_GPIO_PORT     GPIOC
-#define YM2612_WR_GPIO_CLK      __HAL_RCC_GPIOC_CLK_ENABLE
-
-#define YM2612_CS_GPIO_PIN      GPIO_PIN_9
-#define YM2612_CS_GPIO_PORT     GPIOB
-#define YM2612_CS_GPIO_CLK      __HAL_RCC_GPIOB_CLK_ENABLE
-
-#define YM2612_CLK_GPIO_PIN     GPIO_PIN_0
-#define YM2612_CLK_GPIO_PORT    GPIOF
-#define YM2612_CLK_GPIO_CLK     __HAL_RCC_GPIOF_CLK_ENABLE
-#define YM2612_CLK_GPIO_AF      GPIO_AF2_TIM14
 
 /* Exported types ------------------------------------------------------------*/
 
