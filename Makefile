@@ -60,6 +60,7 @@ BSP/Src/stm32g0xx_hal_msp.c \
 BSP/Src/sys_ll_serial.c \
 BSP/Src/serial_driver.c \
 BSP/Src/i2c_driver.c \
+BSP/Src/spi_driver.c \
 BSP/Src/adc_driver.c \
 BSP/Src/YM2612_driver.c \
 BSP/Src/encoder_driver.c \

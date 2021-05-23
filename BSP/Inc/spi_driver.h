@@ -25,6 +25,7 @@ extern "C"
 typedef enum
 {
     SPI_0 = 0U,
+    SPI_1,
     SPI_NOTDEF = 0xFFU,
 } spi_port_t;
 
@@ -41,6 +42,8 @@ typedef enum
 typedef enum
 {
     SPI_EVENT_TX_DONE = 0U,
+    SPI_EVENT_RX_DONE,
+    SPI_EVENT_TX_RX_DONE,
     SPI_EVENT_ERROR,
     SPI_EVENT_NOTDEF = 0xFF,
 } spi_event_t;

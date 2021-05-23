@@ -10,16 +10,12 @@
 #include "YM2612_driver.h"
 #include "user_error.h"
 
-#ifdef YM2612_USE_RTOS
-#include "FreeRTOS.h"
-#include "task.h"
 #ifdef YM2612_DEBUG
 #include "cli_task.h"
 #endif
-#endif
 
 /* External hardware */
-#include "stm32g0xx_hal.h"
+#include "spi_driver.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -37,11 +33,16 @@
 /* Max block range */
 #define MAX_BLOCK           (8U)
 
+/* Internal peripheral assignation */
+#define YM2612_SPI          ( SPI_1 )
+
 /* Private macro -------------------------------------------------------------*/
 
-/* Bit handling macro */
-#define YM_SET_BIT(PORT, BITS)    ((PORT)->BSRR = (uint32_t)(BITS))
-#define YM_RESET_BIT(PORT, BITS)  ((PORT)->BRR = (uint32_t)(BITS))
+/** Bit control macro - set bit */
+#define YM_SET_BIT(reg, pos)    ( (reg) |= (uint16_t)( 1U << (pos) ) )
+
+/** Bit control macro - reset bit */
+#define YM_RESET_BIT(reg, pos)  ( (reg) &= (uint16_t)( ~( 1U << (pos) ) ) )
 
 /* Private variables ---------------------------------------------------------*/
 
@@ -51,11 +52,6 @@ const static uint16_t u16OctaveBaseValues[] = {
     778, 824, 873, 925,
     980, 1038, 1100, 1165
 };
-
-#ifdef YM2612_GEN_CLOCK
-/* Timer hanlder */
-TIM_HandleTypeDef htim14;
-#endif
 
 /* Chip control structure */
 static xFmDevice_t xYmDevice = {0};
@@ -89,22 +85,7 @@ static bool _get_channel_register_value(xFmChannel_t * pxChannel, uint8_t u8RegA
 */
 static bool _get_operator_register_value(xFmOperator_t * pxOperator, uint8_t u8RegAddr, uint8_t * pu8RegData);
 
-/**
-  * @brief  Software delay
-  * @param  microsec number of usecs to wait
-  * @retval Operation status
-*/
-static void _us_delay(uint32_t microsec);
-
 /* Low level implementation  -------------------------------------------------*/
-
-#ifdef YM2612_TEST_GPIO
-/**
-  * @brief  Test output on each gpio out
-  * @retval None
-*/
-static void _low_level_test(void);
-#endif
 
 /**
   * @brief  Init low level resources
@@ -127,19 +108,18 @@ static void _low_level_deinit(void);
 */
 static void _low_level_writeRegister(uint8_t u8RegAddr, uint8_t u8RegData, YM2612_bank_t xBank);
 
-#ifdef YM2612_GEN_CLOCK
 /**
-  * @brief  Low level function to start clock line.
-  * @retval Operation result, true ok, false, error.
-*/
-static bool _low_level_startClock(void);
+ * @brief YM 2612 hardware reset.
+ * @retval None.
+ */
+static void _low_level_resetDevice(void);
 
 /**
-  * @brief  Low level function to stop clock line.
-  * @retval Operation result, true ok, false, error.
-*/
-static bool _low_level_stopClock(void);
-#endif
+ * @brief ll set Dx.
+ * @param  u16DxData data to set.
+ * @retval None.
+ */
+static void _low_level_SetRegData(uint16_t u16DxData);
 
 /* Private user code ---------------------------------------------------------*/
 
@@ -241,163 +221,14 @@ static bool _get_operator_register_value(xFmOperator_t * pxOperator, uint8_t u8R
     return bRetVal;
 }
 
-static void _us_delay(uint32_t microsec)
-{
-    uint32_t tick_count = TICKS_USEC * microsec;
-    while (tick_count-- != 0)
-    {
-        __NOP();
-    }
-}
-
-#ifdef YM2612_TEST_GPIO
-static void _low_level_test(void)
-{
-    YM_SET_BIT(YM2612_Dx_GPIO_PORT, YM2612_Dx_GPIO_PIN);
-    YM_SET_BIT(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
-    YM_SET_BIT(YM2612_A1_GPIO_PORT, YM2612_A1_GPIO_PIN);
-    YM_SET_BIT(YM2612_A0_GPIO_PORT, YM2612_A0_GPIO_PIN);
-    YM_SET_BIT(YM2612_RD_GPIO_PORT, YM2612_RD_GPIO_PIN);
-    YM_SET_BIT(YM2612_WR_GPIO_PORT, YM2612_WR_GPIO_PIN);
-    YM_SET_BIT(YM2612_CS_GPIO_PORT, YM2612_CS_GPIO_PIN);
-    _us_delay(10);
-
-    YM_RESET_BIT(YM2612_Dx_GPIO_PORT, YM2612_Dx_GPIO_PIN);
-    YM_RESET_BIT(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
-    YM_RESET_BIT(YM2612_A1_GPIO_PORT, YM2612_A1_GPIO_PIN);
-    YM_RESET_BIT(YM2612_A0_GPIO_PORT, YM2612_A0_GPIO_PIN);
-    YM_RESET_BIT(YM2612_RD_GPIO_PORT, YM2612_RD_GPIO_PIN);
-    YM_RESET_BIT(YM2612_WR_GPIO_PORT, YM2612_WR_GPIO_PIN);
-    YM_RESET_BIT(YM2612_CS_GPIO_PORT, YM2612_CS_GPIO_PIN);
-    _us_delay(10);
-}
-#endif
-
 static void _low_level_init(void)
 {
-    GPIO_InitTypeDef GPIO_InitStruct;
-
-    /* GPIO init -------------------------------------------------------------*/
-
-    YM2612_Dx_GPIO_CLK();
-    GPIO_InitStruct.Pin =   YM2612_Dx_GPIO_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(YM2612_Dx_GPIO_PORT, &GPIO_InitStruct);
-
-    YM2612_REG_GPIO_CLK();
-    GPIO_InitStruct.Pin = YM2612_REG_GPIO_PIN;
-    HAL_GPIO_Init(YM2612_REG_GPIO_PORT, &GPIO_InitStruct);
-
-    YM2612_A1_GPIO_CLK();
-    GPIO_InitStruct.Pin = YM2612_A1_GPIO_PIN;
-    HAL_GPIO_Init(YM2612_A1_GPIO_PORT, &GPIO_InitStruct);
-
-    YM2612_A0_GPIO_CLK();
-    GPIO_InitStruct.Pin = YM2612_A0_GPIO_PIN;
-    HAL_GPIO_Init(YM2612_A0_GPIO_PORT, &GPIO_InitStruct);
-
-    YM2612_RD_GPIO_CLK();
-    GPIO_InitStruct.Pin = YM2612_RD_GPIO_PIN;
-    HAL_GPIO_Init(YM2612_RD_GPIO_PORT, &GPIO_InitStruct);
-
-    YM2612_WR_GPIO_CLK();
-    GPIO_InitStruct.Pin = YM2612_WR_GPIO_PIN;
-    HAL_GPIO_Init(YM2612_WR_GPIO_PORT, &GPIO_InitStruct);
-    
-    YM2612_CS_GPIO_CLK();
-    GPIO_InitStruct.Pin = YM2612_CS_GPIO_PIN;
-    HAL_GPIO_Init(YM2612_CS_GPIO_PORT, &GPIO_InitStruct);
-
-#ifdef YM2612_TEST_GPIO
-    _low_level_test();
-#endif
-
-#ifdef YM2612_GEN_CLOCK
-    /* CLK_LINE -------------------------------------------------------------*/
-
-    /* Initialize TIMx peripheral as follows:
-    + Prescaler = (SystemCoreClock / 64000000) - 1
-    + Period = (4 - 1)
-    + ClockDivision = 0
-    + Counter direction = Up
-    */
-    uint32_t u32Prescaler = (uint32_t)((SystemCoreClock / 64000000) - 1);
-    uint32_t u32Period = (uint32_t)(4 - 1);
-    uint32_t u32Pulse1 = (uint32_t)(u32Period / 2);
-
-    TIM_OC_InitTypeDef sConfigOC = {0};
-
-    htim14.Instance = TIM14;
-    htim14.Init.Prescaler = u32Prescaler;
-    htim14.Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim14.Init.Period = u32Period;
-    htim14.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-    htim14.Init.RepetitionCounter = 0;
-    htim14.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-    if (HAL_TIM_OC_Init(&htim14) != HAL_OK)
-    {
-        ERR_ASSERT(0U);
-    }
-    sConfigOC.OCMode = TIM_OCMODE_TOGGLE;
-    sConfigOC.Pulse = u32Pulse1;
-    sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
-    sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
-    sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-    sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
-    sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-    if (HAL_TIM_OC_ConfigChannel(&htim14, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-    {
-        ERR_ASSERT(0U);
-    }
-
-    /* Setup gpio for CLK line */
-
-    __HAL_RCC_GPIOF_CLK_ENABLE();
-    
-    /** TIM14 GPIO Configuration    
-    PF0     ------> TIM14_CH1
-    */
-    GPIO_InitStruct.Pin = YM2612_CLK_GPIO_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    GPIO_InitStruct.Alternate = YM2612_CLK_GPIO_AF;
-    HAL_GPIO_Init(YM2612_CLK_GPIO_PORT, &GPIO_InitStruct);
-#else
-    /** TIM14 GPIO Configuration as floating
-    PF0     ------> input floating
-    */
-    GPIO_InitStruct.Pin = YM2612_CLK_GPIO_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(YM2612_CLK_GPIO_PORT, &GPIO_InitStruct);
-#endif
+    (void)SPI_init(YM2612_SPI, NULL);
 }
 
 static void _low_level_deinit(void)
 {
-    /* Disable used gpio */
-    HAL_GPIO_DeInit(YM2612_Dx_GPIO_PORT, YM2612_Dx_GPIO_PIN);
-    HAL_GPIO_DeInit(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
-    HAL_GPIO_DeInit(YM2612_A1_GPIO_PORT, YM2612_A1_GPIO_PIN);
-    HAL_GPIO_DeInit(YM2612_A0_GPIO_PORT, YM2612_A0_GPIO_PIN);
-    HAL_GPIO_DeInit(YM2612_RD_GPIO_PORT, YM2612_RD_GPIO_PIN);
-    HAL_GPIO_DeInit(YM2612_WR_GPIO_PORT, YM2612_WR_GPIO_PIN);
-    HAL_GPIO_DeInit(YM2612_CS_GPIO_PORT, YM2612_CS_GPIO_PIN);
-
-#ifdef YM2612_GEN_CLOCK
-    /* Timer clock deinit */
-    /* Stop clock line */
-    (void)_low_level_stopClock();
-    /* Peripheral clock disable */
-    HAL_TIM_OC_DeInit(&htim14);
-    __HAL_RCC_TIM14_CLK_DISABLE();
-    /* Deinit gpios */
-    HAL_GPIO_DeInit(YM2612_CLK_GPIO_PORT, YM2612_CLK_GPIO_PIN);
-#endif
+    (void)SPI_deinit(YM2612_SPI);
 }
 
 static void _low_level_writeRegister(uint8_t u8RegAddr, uint8_t u8RegData, YM2612_bank_t xBank)
@@ -405,75 +236,89 @@ static void _low_level_writeRegister(uint8_t u8RegAddr, uint8_t u8RegData, YM261
 #ifdef YM2612_DEBUG
     vCliPrintf("DBG", "WR REG: %02X-%02X-%02X", u8RegAddr, u8RegData, xBank);
 #endif
-#ifdef YM2612_USE_RTOS
-    taskENTER_CRITICAL();
-#endif
 
-    /* Write address */
+    uint16_t u16ShiftRegData = 0U;
+
+    /* Set reset bit */
+    YM_SET_BIT(u16ShiftRegData, YM_POS_RD);
+    YM_SET_BIT(u16ShiftRegData, YM_POS_REG);
+
+    /* Select address config */
     if (xBank == YM2612_BANK_0)
     {
-        YM_RESET_BIT(YM2612_A1_GPIO_PORT, YM2612_A1_GPIO_PIN);
+        YM_RESET_BIT(u16ShiftRegData, YM_POS_A1);
     }
     else
     {
-        YM_SET_BIT(YM2612_A1_GPIO_PORT, YM2612_A1_GPIO_PIN);
+        YM_SET_BIT(u16ShiftRegData, YM_POS_A1);
     }
-    YM_RESET_BIT(YM2612_A0_GPIO_PORT, YM2612_A0_GPIO_PIN);
-    YM_RESET_BIT(YM2612_CS_GPIO_PORT, YM2612_CS_GPIO_PIN);
-    YM_SET_BIT(YM2612_Dx_GPIO_PORT, (u8RegAddr & 0xFF));
-    YM_RESET_BIT(YM2612_Dx_GPIO_PORT, ((~u8RegAddr) & 0xFF));
-    YM_RESET_BIT(YM2612_WR_GPIO_PORT, YM2612_WR_GPIO_PIN);
+    YM_RESET_BIT(u16ShiftRegData, YM_POS_A0);
+    YM_SET_BIT(u16ShiftRegData, YM_POS_WR);
+    YM_SET_BIT(u16ShiftRegData, YM_POS_CS);
+    _low_level_SetRegData(u16ShiftRegData);
 
-    /* Operation delay */
-    _us_delay(1);
+    YM_RESET_BIT(u16ShiftRegData, YM_POS_CS);
+    _low_level_SetRegData(u16ShiftRegData);
+
+    u16ShiftRegData |= (uint16_t)u8RegAddr;
+    YM_RESET_BIT(u16ShiftRegData, YM_POS_WR);
+    _low_level_SetRegData(u16ShiftRegData);
 
     /* Clear bus */
-    YM_SET_BIT(YM2612_WR_GPIO_PORT, YM2612_WR_GPIO_PIN);
-    YM_SET_BIT(YM2612_CS_GPIO_PORT, YM2612_CS_GPIO_PIN);
-    YM_SET_BIT(YM2612_A0_GPIO_PORT, YM2612_A0_GPIO_PIN);
+    YM_SET_BIT(u16ShiftRegData, YM_POS_WR);
+    YM_SET_BIT(u16ShiftRegData, YM_POS_CS);
+    YM_SET_BIT(u16ShiftRegData, YM_POS_A0);
+    _low_level_SetRegData(u16ShiftRegData);
+
+    YM_RESET_BIT(u16ShiftRegData, YM_POS_CS);
+    _low_level_SetRegData(u16ShiftRegData);
 
     /* Write data */
-    YM_RESET_BIT(YM2612_CS_GPIO_PORT, YM2612_CS_GPIO_PIN);
-    YM_SET_BIT(YM2612_Dx_GPIO_PORT, (u8RegData & 0xFF));
-    YM_RESET_BIT(YM2612_Dx_GPIO_PORT, ((~u8RegData) & 0xFF));
-    YM_RESET_BIT(YM2612_WR_GPIO_PORT, YM2612_WR_GPIO_PIN);
-
-    /* Operation delay */
-    _us_delay(1);
+    u16ShiftRegData &= 0xFF00;
+    u16ShiftRegData |= (uint16_t)u8RegData;
+    YM_RESET_BIT(u16ShiftRegData, YM_POS_WR);
+    _low_level_SetRegData(u16ShiftRegData);
 
     /* Clear resources */
-    YM_SET_BIT(YM2612_WR_GPIO_PORT, YM2612_WR_GPIO_PIN);
-    YM_SET_BIT(YM2612_CS_GPIO_PORT, YM2612_CS_GPIO_PIN);
-    YM_RESET_BIT(YM2612_A1_GPIO_PORT, YM2612_A1_GPIO_PIN);
-    YM_RESET_BIT(YM2612_A0_GPIO_PORT, YM2612_A0_GPIO_PIN);
-    _us_delay(5);
-
-#ifdef YM2612_USE_RTOS
-    taskEXIT_CRITICAL();
-#endif
+    YM_SET_BIT(u16ShiftRegData, YM_POS_WR);
+    YM_SET_BIT(u16ShiftRegData, YM_POS_CS);
+    YM_RESET_BIT(u16ShiftRegData, YM_POS_A1);
+    YM_RESET_BIT(u16ShiftRegData, YM_POS_A0);
+    _low_level_SetRegData(u16ShiftRegData);
 }
 
-#ifdef YM2612_GEN_CLOCK
-static bool _low_level_startClock(void)
+static void _low_level_resetDevice(void)
 {
-    bool bRetval = false;
-    if (HAL_TIM_OC_Start(&htim14, TIM_CHANNEL_1) == HAL_OK)
-    {
-        bRetval = true;
-    }
-    return bRetval;
+    uint16_t u16ShiftRegData = 0U;
+
+    /* Reset register values */
+    YM_SET_BIT(u16ShiftRegData, YM_POS_RD);
+    YM_SET_BIT(u16ShiftRegData, YM_POS_REG);
+    _low_level_SetRegData(u16ShiftRegData);
+
+    YM_RESET_BIT(u16ShiftRegData, YM_POS_REG);
+    _low_level_SetRegData(u16ShiftRegData);
+
+    YM_SET_BIT(u16ShiftRegData, YM_POS_REG);
+    _low_level_SetRegData(u16ShiftRegData);
+
+    /* Set default state */
+    YM_SET_BIT(u16ShiftRegData, YM_POS_WR);
+    YM_SET_BIT(u16ShiftRegData, YM_POS_CS);
+    YM_RESET_BIT(u16ShiftRegData, YM_POS_A1);
+    YM_RESET_BIT(u16ShiftRegData, YM_POS_A0);
+    _low_level_SetRegData(u16ShiftRegData);
 }
 
-static bool _low_level_stopClock(void)
+static void _low_level_SetRegData(uint16_t u16DxData)
 {
-    bool bRetval = false;
-    if (HAL_TIM_OC_Stop(&htim14, TIM_CHANNEL_1) == HAL_OK)
-    {
-        bRetval = true;
-    }
-    return bRetval;
+    uint8_t pu8RegData[2U] = { 0U };
+
+    pu8RegData[0U] = u16DxData & 0xFF;
+    pu8RegData[1U] = (u16DxData >> 8U) & 0xFF;
+
+    (void)SPI_send(YM2612_SPI, pu8RegData, 2U);
 }
-#endif
 
 /* Callback ------------------------------------------------------------------*/
 /* Public user code ----------------------------------------------------------*/
@@ -484,34 +329,7 @@ YM2612_status_t xYM2612_init(void)
 
     _low_level_init();
 
-#ifdef YM2612_GEN_CLOCK
-    /* Init clock */
-    if (_low_level_startClock())
-    {
-        retval = YM2612_STATUS_OK;
-    }
-    else
-    {
-        retval = YM2612_STATUS_ERROR;
-    }
-#endif
-
-#ifdef YM2612_USE_RTOS
-    taskENTER_CRITICAL();
-#endif
-
-    /* Reset register values */
-    YM_SET_BIT(YM2612_RD_GPIO_PORT, YM2612_RD_GPIO_PIN);
-    YM_SET_BIT(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
-    _us_delay(10);
-    YM_RESET_BIT(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
-    _us_delay(10);
-    YM_SET_BIT(YM2612_REG_GPIO_PORT, YM2612_REG_GPIO_PIN);
-    _us_delay(100);
-
-#ifdef YM2612_USE_RTOS
-    taskEXIT_CRITICAL();
-#endif
+    _low_level_resetDevice();
 
     return (retval);
 }

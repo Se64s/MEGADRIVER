@@ -21,28 +21,28 @@ extern "C"
 /* Private defines -----------------------------------------------------------*/
 
 /* GPIO definitions */
-#define ENCODER_0_ENC_GPIO_PIN        (GPIO_PIN_6 | GPIO_PIN_7)
-#define ENCODER_0_ENC_GPIO_PORT       GPIOC
-#define ENCODER_0_ENC_GPIO_CLK        __HAL_RCC_GPIOC_CLK_ENABLE
+#define ENCODER_0_ENC_GPIO_PIN        ( GPIO_PIN_4 | GPIO_PIN_5 )
+#define ENCODER_0_ENC_GPIO_PORT       GPIOB
+#define ENCODER_0_ENC_GPIO_CLK        __HAL_RCC_GPIOB_CLK_ENABLE
 
-#define ENCODER_0_SW_GPIO_PIN         GPIO_PIN_11
-#define ENCODER_0_SW_GPIO_PORT        GPIOA
-#define ENCODER_0_SW_GPIO_CLK         __HAL_RCC_GPIOA_CLK_ENABLE
+#define ENCODER_0_SW_GPIO_PIN         ( GPIO_PIN_3 )
+#define ENCODER_0_SW_GPIO_PORT        GPIOB
+#define ENCODER_0_SW_GPIO_CLK         __HAL_RCC_GPIOB_CLK_ENABLE
 
 /* Range defines */
-#define ENCODER_0_RANGE               (65535U)
-#define ENCODER_0_CNT_MIN             (10U)
-#define ENCODER_0_CNT_MAX             (65525U)
-#define ENCODER_0_REF_VALUE           (32767U)
+#define ENCODER_0_RANGE               ( 65535U )
+#define ENCODER_0_CNT_MIN             ( 10U )
+#define ENCODER_0_CNT_MAX             ( 65525U )
+#define ENCODER_0_REF_VALUE           ( 32767U )
 
 /* Encoder events defines */
-#define ENCODER_0_VALUE_CW            (1U)
-#define ENCODER_0_VALUE_CCW           (0U)
-#define ENCODER_0_VALUE_NONE          (255U)
+#define ENCODER_0_VALUE_CW            ( 1U )
+#define ENCODER_0_VALUE_CCW           ( 0U )
+#define ENCODER_0_VALUE_NONE          ( 255U )
 
 /* Encoder tick guard */
-#define ENCODER_0_TICK_CNT_GUARD_EC   (45U)
-#define ENCODER_0_TICK_CNT_GUARD_SW   (500U)
+#define ENCODER_0_TICK_CNT_GUARD_EC   ( 40U )
+#define ENCODER_0_TICK_CNT_GUARD_SW   ( 500U )
 
 /* Exported types ------------------------------------------------------------*/
 

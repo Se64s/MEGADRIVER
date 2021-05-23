@@ -565,10 +565,14 @@ static void vMidiMain(void *pvParameters)
             if ( RTOS_CHECK_SIGNAL(u32Event, MIDI_SIGNAL_RX_DATA) )
             {
                 /* Process all buffered bytes */
-                uint8_t u8RxData = 0;
+                uint8_t u8RxData = 0U;
 
-                while (SERIAL_read(MIDI_SERIAL, &u8RxData, 1) != 0)
+                while ( SERIAL_read(MIDI_SERIAL, &u8RxData, 1U ) != 0U )
                 {
+#ifdef MIDI_DBG_VERBOSE
+                    vCliPrintf(MIDI_TASK_NAME, "SERIAL IN: 0x%02X", u8RxData);
+#endif
+
 #ifdef MIDI_DBG_STATS
                     if (u8RxData != 254U)
                     {

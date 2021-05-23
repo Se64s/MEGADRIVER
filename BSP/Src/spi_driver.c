@@ -12,78 +12,137 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
+
+/** SPI port handler */
+typedef struct SpiHandler
+{
+    spi_port_t ePort;
+    SPI_HandleTypeDef *pxHalPeriphHandler;
+    uint8_t *pu8BufferTx;
+    uint16_t u16BufferTxSize;
+    uint8_t *pu8BufferRx;
+    uint16_t u16BufferRxSize;
+    spi_event_cb pxEventCb;
+} SpiHandler_t;
+
 /* Private define ------------------------------------------------------------*/
+
+#define SPI1_TX_LEN         ( 16U )
+#define SPI1_RX_LEN         ( 16U )
+
+#define SPI2_TX_LEN         ( 2U )
+#define SPI2_RX_LEN         ( 0U )
+
 /* Private macro -------------------------------------------------------------*/
 
-#define SPI1_CS_RISE()      (GPIOA->BSRR = (uint32_t)GPIO_PIN_4)
-#define SPI1_CS_FALL()      (GPIOA->BRR = (uint32_t)GPIO_PIN_4)
+#define SPI0_CS_RISE()      ( GPIOA->BSRR = (uint32_t)GPIO_PIN_4 )
+#define SPI0_CS_FALL()      ( GPIOA->BRR = (uint32_t)GPIO_PIN_4 )
+
+#define SPI1_CS_RISE()      ( GPIOB->BSRR = (uint32_t)GPIO_PIN_12 )
+#define SPI1_CS_FALL()      ( GPIOB->BRR = (uint32_t)GPIO_PIN_12 )
 
 /* Private variables ---------------------------------------------------------*/
 
 /* HAL peripheral handlers */
-SPI_HandleTypeDef hspi1;
-DMA_HandleTypeDef hdma_spi1_tx;
 
-/* Event callback handler */
-static spi_event_cb spi1_event_cb = NULL;
+/* SPI1 Handler */
+SPI_HandleTypeDef hspi1;
+uint8_t u8Spi1BufferTx[SPI1_TX_LEN] = { 0U };
+uint8_t u8Spi1BufferRx[SPI1_RX_LEN] = { 0U };
+
+SpiHandler_t xSpi0Handler = {
+    .ePort = SPI_0,
+    .pxHalPeriphHandler = &hspi1,
+    .pu8BufferTx = u8Spi1BufferTx,
+    .u16BufferTxSize = SPI1_TX_LEN,
+    .pu8BufferRx = u8Spi1BufferRx,
+    .u16BufferRxSize = SPI1_RX_LEN,
+    .pxEventCb = NULL,
+};
+
+/* SPI2 Handler */
+SPI_HandleTypeDef hspi2;
+DMA_HandleTypeDef hdma_spi2_tx;
+uint8_t u8Spi2BufferTx[SPI2_TX_LEN] = { 0U };
+
+SpiHandler_t xSpi1Handler = {
+    .ePort = SPI_1,
+    .pxHalPeriphHandler = &hspi2,
+    .pu8BufferTx = u8Spi2BufferTx,
+    .u16BufferTxSize = SPI2_TX_LEN,
+    .pu8BufferRx = NULL,
+    .u16BufferRxSize = 0U,
+    .pxEventCb = NULL,
+};
 
 /* Private function prototypes -----------------------------------------------*/
 
 /**
-  * @brief SPI1 Initialization Function
+  * @brief SPI0 BSP init
   * @param None
   * @retval None
   */
-static void MX_SPI1_Init(void);
+static void BSP_SPI0_Init(void);
 
 /**
-  * @brief SPI1 Deinitialization Function
+  * @brief SPI0 BSP deinit
   * @param None
   * @retval None
   */
-static void MX_SPI1_Deinit(void);
+static void BSP_SPI0_Deinit(void);
+
+/**
+  * @brief SPI1 BSP init
+  * @param None
+  * @retval None
+  */
+static void BSP_SPI1_Init(void);
+
+/**
+  * @brief SPI1 BSP deinit
+  * @param None
+  * @retval None
+  */
+static void BSP_SPI1_Deinit(void);
 
 /* Private user code ---------------------------------------------------------*/
 
-static void MX_SPI1_Init(void)
+static void BSP_SPI0_Init(void)
 {
-    /* SPI1 parameter configuration*/
-    hspi1.Instance = SPI1;
-    hspi1.Init.Mode = SPI_MODE_MASTER;
-    hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-    hspi1.Init.DataSize = SPI_DATASIZE_16BIT;
-    hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
-    hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
-    hspi1.Init.NSS = SPI_NSS_HARD_OUTPUT;
-    hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
-    hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
-    hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
-    hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-    hspi1.Init.CRCPolynomial = 7;
-    hspi1.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
-    hspi1.Init.NSSPMode = SPI_NSS_PULSE_ENABLE;
-    if (HAL_SPI_Init(&hspi1) != HAL_OK)
+}
+
+static void BSP_SPI0_Deinit(void)
+{
+}
+
+static void BSP_SPI1_Init(void)
+{
+    xSpi1Handler.pxHalPeriphHandler->Instance = SPI2;
+    xSpi1Handler.pxHalPeriphHandler->Init.Mode = SPI_MODE_MASTER;
+    xSpi1Handler.pxHalPeriphHandler->Init.Direction = SPI_DIRECTION_2LINES;
+    xSpi1Handler.pxHalPeriphHandler->Init.DataSize = SPI_DATASIZE_16BIT;
+    xSpi1Handler.pxHalPeriphHandler->Init.CLKPolarity = SPI_POLARITY_LOW;
+    xSpi1Handler.pxHalPeriphHandler->Init.CLKPhase = SPI_PHASE_1EDGE;
+    xSpi1Handler.pxHalPeriphHandler->Init.NSS = SPI_NSS_SOFT;
+    xSpi1Handler.pxHalPeriphHandler->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
+    xSpi1Handler.pxHalPeriphHandler->Init.FirstBit = SPI_FIRSTBIT_MSB;
+    xSpi1Handler.pxHalPeriphHandler->Init.TIMode = SPI_TIMODE_DISABLE;
+    xSpi1Handler.pxHalPeriphHandler->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+    xSpi1Handler.pxHalPeriphHandler->Init.CRCPolynomial = 7;
+    xSpi1Handler.pxHalPeriphHandler->Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
+    xSpi1Handler.pxHalPeriphHandler->Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
+
+    if ( HAL_SPI_Init( xSpi1Handler.pxHalPeriphHandler ) != HAL_OK )
     {
         ERR_ASSERT(0U);
     }
-
-    /* DMA1_Ch4_7_DMAMUX1_OVR_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(DMA1_Ch4_7_DMAMUX1_OVR_IRQn, 1, 0);
-    HAL_NVIC_EnableIRQ(DMA1_Ch4_7_DMAMUX1_OVR_IRQn);
-
-    /* SPI1 interrupt Init */
-    HAL_NVIC_SetPriority(SPI1_IRQn, 1, 0);
-    HAL_NVIC_EnableIRQ(SPI1_IRQn);
 }
 
-static void MX_SPI1_Deinit(void)
+static void BSP_SPI1_Deinit(void)
 {
-    /* SPI1 interrupt DeInit */
-    HAL_NVIC_DisableIRQ(SPI1_IRQn);
-
-    if (HAL_SPI_DeInit(&hspi1) != HAL_OK)
+    if ( HAL_SPI_DeInit( xSpi1Handler.pxHalPeriphHandler ) != HAL_OK )
     {
-        ERR_ASSERT(0U);;
+        ERR_ASSERT(0U);
     }
 }
 
@@ -91,22 +150,54 @@ static void MX_SPI1_Deinit(void)
 
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 {
-    if (hspi->Instance == SPI1)
+    SpiHandler_t *pxSpiHandler = NULL;
+
+    if ( hspi->Instance == SPI1 )
     {
-        if (spi1_event_cb != NULL)
+        pxSpiHandler = &xSpi0Handler;
+    }
+    else if ( hspi->Instance == SPI2 )
+    {
+        pxSpiHandler = &xSpi1Handler;
+        SPI1_CS_FALL();
+    }
+    else
+    {
+        /* Not valid value */
+    }
+
+    if ( pxSpiHandler != NULL )
+    {
+        if ( pxSpiHandler->pxEventCb != NULL )
         {
-            spi1_event_cb(SPI_EVENT_ERROR);
+            pxSpiHandler->pxEventCb( SPI_EVENT_TX_DONE );
         }
     }
 }
 
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
 {
-    if (hspi->Instance == SPI1)
+    SpiHandler_t *pxSpiHandler = NULL;
+
+    if ( hspi->Instance == SPI1 )
     {
-        if (spi1_event_cb != NULL)
+        pxSpiHandler = &xSpi0Handler;
+    }
+    else if ( hspi->Instance == SPI2 )
+    {
+        pxSpiHandler = &xSpi1Handler;
+        SPI1_CS_FALL();
+    }
+    else
+    {
+        /* Not valid value */
+    }
+
+    if ( pxSpiHandler != NULL )
+    {
+        if ( pxSpiHandler->pxEventCb != NULL )
         {
-            spi1_event_cb(SPI_EVENT_ERROR);
+            pxSpiHandler->pxEventCb( SPI_EVENT_ERROR );
         }
     }
 }
@@ -119,11 +210,22 @@ spi_status_t SPI_init(spi_port_t dev, spi_event_cb event_cb)
     
     if (dev == SPI_0)
     {
-        MX_SPI1_Init();
+        BSP_SPI0_Init();
 
-        if (event_cb != NULL)
+        if ( event_cb != NULL )
         {
-            spi1_event_cb = event_cb;
+            xSpi0Handler.pxEventCb = event_cb;
+        }
+
+        retval = SPI_STATUS_OK;
+    }
+    else if (dev == SPI_1)
+    {
+        BSP_SPI1_Init();
+
+        if ( event_cb != NULL )
+        {
+            xSpi1Handler.pxEventCb = event_cb;
         }
 
         retval = SPI_STATUS_OK;
@@ -138,11 +240,21 @@ spi_status_t SPI_deinit(spi_port_t dev)
     
     if (dev == SPI_0)
     {
-        MX_SPI1_Deinit();
-        spi1_event_cb = NULL;
+        BSP_SPI0_Deinit();
+
+        xSpi0Handler.pxEventCb = NULL;
+
         retval = SPI_STATUS_OK;
     }
-    
+    else if (dev == SPI_1)
+    {
+        BSP_SPI1_Deinit();
+
+        xSpi1Handler.pxEventCb = NULL;
+
+        retval = SPI_STATUS_OK;
+    }
+
     return(retval);
 }
 
@@ -152,24 +264,26 @@ spi_status_t SPI_send(spi_port_t dev, uint8_t *pdata, uint16_t len)
 
     if (dev == SPI_0)
     {
-        HAL_StatusTypeDef op_status;
-        
-        /* Wait until periph ready */
-        while (HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY);
-
-        op_status = HAL_SPI_Transmit_DMA(&hspi1, pdata, len);
-
-        if (op_status == HAL_OK)
+        // None
+    }
+    else if (dev == SPI_1)
+    {
+        if ( len <= xSpi1Handler.u16BufferTxSize )
         {
-            retval = SPI_STATUS_OK;
-        }
-        else
-        {
-            retval = SPI_STATUS_ERROR;
+            while ( HAL_SPI_GetState(xSpi1Handler.pxHalPeriphHandler) != HAL_SPI_STATE_READY );
+
+            for ( uint16_t u16i = 0U; u16i < len; u16i++ )
+            {
+                xSpi1Handler.pu8BufferTx[u16i] = pdata[u16i];
+            }
+
+            SPI1_CS_RISE();
+
+            retval = ( HAL_SPI_Transmit_DMA(xSpi1Handler.pxHalPeriphHandler, xSpi1Handler.pu8BufferTx, len) == HAL_OK ) ? SPI_STATUS_OK : SPI_STATUS_ERROR;
         }
     }
 
     return(retval);
 }
 
-/*****END OF FILE****/
+/* EOF */
