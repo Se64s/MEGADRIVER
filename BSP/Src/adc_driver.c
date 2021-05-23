@@ -24,7 +24,7 @@ DMA_HandleTypeDef hdma_adc1;
 static adc_event_cb adc_0_event_cb = NULL;
 
 /* ADC group regular conversion data (array of data) */
-volatile uint16_t pu16AdcConvertedData[ADC_CH_NUM] = {0};
+volatile uint16_t pu16AdcConvertedData[ADC_CH_NUM] = { 0U };
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -85,23 +85,15 @@ static void __adc_0_low_level_init(void)
 
     /** Configure Regular Channel 
      */
-    sConfig.Channel = ADC_CHANNEL_4;
-    sConfig.Rank = ADC_REGULAR_RANK_4;
+    sConfig.Channel = ADC_CHANNEL_8;
+    sConfig.Rank = ADC_REGULAR_RANK_1;
     sConfig.SamplingTime = ADC_SAMPLINGTIME_COMMON_1;
     if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
     {
         __adc_error_handler();
     }
 
-    sConfig.Channel = ADC_CHANNEL_5;
-    sConfig.Rank = ADC_REGULAR_RANK_3;
-    sConfig.SamplingTime = ADC_SAMPLINGTIME_COMMON_1;
-    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-    {
-        __adc_error_handler();
-    }
-
-    sConfig.Channel = ADC_CHANNEL_6;
+    sConfig.Channel = ADC_CHANNEL_9;
     sConfig.Rank = ADC_REGULAR_RANK_2;
     sConfig.SamplingTime = ADC_SAMPLINGTIME_COMMON_1;
     if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
@@ -109,8 +101,16 @@ static void __adc_0_low_level_init(void)
         __adc_error_handler();
     }
 
-    sConfig.Channel = ADC_CHANNEL_7;
-    sConfig.Rank = ADC_REGULAR_RANK_1;
+    sConfig.Channel = ADC_CHANNEL_10;
+    sConfig.Rank = ADC_REGULAR_RANK_3;
+    sConfig.SamplingTime = ADC_SAMPLINGTIME_COMMON_1;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        __adc_error_handler();
+    }
+
+    sConfig.Channel = ADC_CHANNEL_11;
+    sConfig.Rank = ADC_REGULAR_RANK_4;
     sConfig.SamplingTime = ADC_SAMPLINGTIME_COMMON_1;
     if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
     {

@@ -30,9 +30,6 @@
 /** Send event timeout */
 #define MAP_SEND_EVENT_TIMEOUT              ( 100U )
 
-/** Number of ADC steps by V_OCT note */
-#define ADC_STEPS_BY_NOTE                   ( 34U )    // (1000mV / 12notes) / (adc_range_mV / adc_num_steps)
-
 /** Minimal value to set gate */
 #define ADC_STEPS_GATE_ON                   ( 900U )   // aprox 3V
 
@@ -43,9 +40,6 @@
 #define ADC_ZERO_VOLT                       ( 2048U ) // ADC_FULL_RANGE / 2
 
 /* Private macro -------------------------------------------------------------*/
-
-/** Note from ADC count */
-#define NOTE_FROM_ADC(C_ADC)                ( (uint8_t) ( (C_ADC) / ADC_STEPS_BY_NOTE ) )
 
 /** Get gate status ADC count */
 #define GATE_FROM_ADC(C_ADC)                ( (bool) ( ( C_ADC ) < ADC_STEPS_GATE_ON ) )
@@ -64,7 +58,18 @@ TimerHandle_t xMappingUpdateTimer = NULL;
 /** Mutex to protect mapping cfg access */
 SemaphoreHandle_t xMappingCfgMutex = NULL;
 
+/** List of values to set via gate mapping */
+uint8_t u8TmpNotes[SYNTH_MAX_NUM_VOICE] = { 0U };
+
 /* Private function prototypes -----------------------------------------------*/
+
+/**
+ * @brief Cast value from ADC to midi note.
+ * 
+ * @param u16AdcValue adc value.
+ * @return uint8_t midi note number.
+ */
+static uint8_t u8GetNoteFromDac(uint16_t u16AdcValue);
 
 /**
   * @brief Handler for mode CV_OCT.
@@ -120,6 +125,27 @@ static void vMapMain(void *pvParameters);
 
 /* Private fuctions ----------------------------------------------------------*/
 
+static uint8_t u8GetNoteFromDac(uint16_t u16AdcValue)
+{
+    uint8_t u8Note = 0U;
+
+    if ( u16AdcValue <= ADC_ZERO_VOLT )
+    {
+        uint16_t u16TmpNote = 60U - (15U * u16AdcValue) / 512U;
+
+        /* Check remainder */
+        uint16_t u16Remainder = (15U * u16AdcValue) % 512U;
+        if ( u16Remainder < 256U )
+        {
+            u16TmpNote++;
+        }
+
+        u8Note = (uint8_t)u16TmpNote;
+    }
+
+    return u8Note;
+}
+
 static void vMappingModeVoctHandler(uint8_t u8MapChannel, MapElement_t * pxMapChannelCfg)
 {
     ERR_ASSERT(pxMapChannelCfg != NULL);
@@ -131,31 +157,17 @@ static void vMappingModeVoctHandler(uint8_t u8MapChannel, MapElement_t * pxMapCh
     {
         if ( u16NewVoltage < ADC_ZERO_VOLT )
         {
-            uint8_t u8NewNote = NOTE_FROM_ADC(ADC_ZERO_VOLT - u16NewVoltage);
-            uint8_t u8OldNote = NOTE_FROM_ADC(ADC_ZERO_VOLT - pxMapChannelCfg->u16Value);
+            uint8_t u8NewNote = u8GetNoteFromDac(u16NewVoltage);
+            uint8_t u8OldNote = u8GetNoteFromDac(pxMapChannelCfg->u16Value);
 
             // Update new note value to synth task
             if ( u8NewNote != u8OldNote )
             {
-                SynthCmd_t xSynthCmd = {
-                    .eCmd = SYNTH_CMD_VOICE_UPDATE_MONO,
-                    .uPayload.xVoiceUpdateMono.u8Note = u8NewNote,
-                    .uPayload.xVoiceUpdateMono.u8Velocity = 127U,
-                    .uPayload.xVoiceUpdateMono.u8VoiceDst = pxMapChannelCfg->u8Voice,
-                    .uPayload.xVoiceUpdateMono.u8VoiceState = (uint8_t)SYNTH_VOICE_STATE_ON,
-                };
-
-                if ( bSynthSendCmd(xSynthCmd) == true )
-                {
 #ifdef MAP_DEBUG
-                    vCliPrintf(MAP_TASK_NAME, "CMD: V_OCT");
+                vCliPrintf(MAP_TASK_NAME, "MAP: V_OCT UPDATE: CH: %d, Note: %d", u8MapChannel, u8NewNote);
 #endif
-                    pxMapChannelCfg->u16Value = u16NewVoltage;
-                }
-                else
-                {
-                    vCliPrintf(MAP_TASK_NAME, "CMD: Queue Error");
-                }
+                pxMapChannelCfg->u16Value = u16NewVoltage;
+                u8TmpNotes[pxMapChannelCfg->u8Voice] = u8NewNote;
             }
         }
     }
@@ -176,12 +188,9 @@ static void vMappingModeGateHandler(uint8_t u8MapChannel, MapElement_t * pxMapCh
         // Update new note value to synth task
         if ( bNewGateStatus != bOldGateStatus )
         {
-            // Get current voice note
-            SynthParam_t xVoiceData = xSynthGetParam(pxMapChannelCfg->u8Voice);
-
             SynthCmd_t xSynthCmd = {
                 .eCmd = SYNTH_CMD_VOICE_UPDATE_MONO,
-                .uPayload.xVoiceUpdateMono.u8Note = (uint8_t)xVoiceData.u32ParamValue,
+                .uPayload.xVoiceUpdateMono.u8Note = u8TmpNotes[pxMapChannelCfg->u8Voice],
                 .uPayload.xVoiceUpdateMono.u8Velocity = 127U,
                 .uPayload.xVoiceUpdateMono.u8VoiceDst = pxMapChannelCfg->u8Voice,
                 .uPayload.xVoiceUpdateMono.u8VoiceState = 0U,
