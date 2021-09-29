@@ -299,7 +299,7 @@ static void vHandleCmdParameterUpdate(SynthCmdPayloadParamUpdate_t * pxCmdData)
     case SYNTH_CC_REG_VOICE:
         if (u8RegData <= YM2612_NUM_CHANNEL)
         {
-            xSynthDevHandler.u8CcOperator = u8RegData;
+            xSynthDevHandler.u8CcVoice = u8RegData;
             bRegUpdate = true;
         }
         break;
