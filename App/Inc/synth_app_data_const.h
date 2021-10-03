@@ -22,7 +22,7 @@ extern "C"
 /* Exported defines ----------------------------------------------------------*/
 
 /** Maximun number of elements to get */
-#define SYNTH_APP_DATA_CONST_MAX_NUM_ELEMENTS   (7U)
+#define SYNTH_APP_DATA_CONST_MAX_NUM_ELEMENTS   (22U)
 
 /* Exported types  -----------------------------------------------------------*/
 /* Exported variables --------------------------------------------------------*/
