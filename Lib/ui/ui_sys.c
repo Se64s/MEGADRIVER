@@ -44,18 +44,20 @@ ui_status_t UI_render(u8g2_t * pxIniDisplayHandler, ui_menu_t * pxMenuHandler)
         pxScreen = &pxMenuHandler->pxScreenList[u32ScreenIndex];
 
         /* Update display data */
-        u8g2_FirstPage(pxIniDisplayHandler);
-        do {
-            /* Render screen marquee*/
-            pxScreen->render_cb(pxIniDisplayHandler, pxScreen);
+        u8g2_ClearBuffer(pxIniDisplayHandler);
 
-            /* Render screen elements */
-            for (uint32_t u32Index = 0; u32Index < pxScreen->u32ElementNumber; u32Index++)
-            {
-                ui_element_t * pxElement = &pxScreen->pxElementList[u32Index];
-                pxElement->render_cb(pxIniDisplayHandler, pxScreen, pxElement);
-            }
-        } while (u8g2_NextPage(pxIniDisplayHandler));
+        /* Render screen marquee*/
+        pxScreen->render_cb(pxIniDisplayHandler, pxScreen);
+
+        /* Render screen elements */
+        for (uint32_t u32Index = 0; u32Index < pxScreen->u32ElementNumber; u32Index++)
+        {
+            ui_element_t * pxElement = &pxScreen->pxElementList[u32Index];
+            pxElement->render_cb(pxIniDisplayHandler, pxScreen, pxElement);
+        }
+
+        /* Send data to display */
+        u8g2_SendBuffer(pxIniDisplayHandler);
 
         retval = UI_STATUS_OK;
     }

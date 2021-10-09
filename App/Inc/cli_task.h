@@ -17,16 +17,16 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 
 #include <stdbool.h>
-#include "FreeRTOS.h"
-#include "task.h"
-#include "semphr.h"
+
+#include "sys_rtos.h"
 
 /* Private defines -----------------------------------------------------------*/
 
 /* Task parameters */
-#define CLI_TASK_NAME   "CLI"
-#define CLI_TASK_STACK  256U
-#define CLI_TASK_PRIO   1U
+#define CLI_TASK_NAME         "CLI"
+#define CLI_TASK_STACK        ( 256U )
+#define CLI_TASK_PRIO         ( 1U )
+#define CLI_TASK_INIT_DELAY   ( 0U )
 
 /* Buffer sizes */
 #define CLI_OUTPUT_BUFFER_SIZE  configCOMMAND_INT_MAX_OUTPUT_SIZE
@@ -38,9 +38,9 @@ extern "C" {
 
 /**
   * @brief Init resources for CLI tasks
-  * @retval operation result, true for correct creation, false for error
+  * @retval None.
   */
-bool bCliTaskInit(void);
+void vCliTaskInit(void);
 
 /**
   * @brief Printf implementation using the cli task

@@ -9,7 +9,7 @@
 ######################################
 # target
 ######################################
-TARGET = FM_SYNTH
+TARGET = MEGADRIVER
 
 ######################################
 # building variables
@@ -22,9 +22,15 @@ OPT = -Og
 #######################################
 # User definitions
 #######################################
-
 # Application tag number
-APP_TAG = "1.1.0"
+APP_TAG := \"$(shell git describe --tags --abbrev=0 --always)\"
+
+# Get git revision
+GIT_REVISION := \"$(shell git describe --match ForceNone --abbrev=8 --always)\"
+
+# Add all defines
+DEFINES += GIT_REVISION=$(GIT_REVISION)
+DEFINES += MAIN_APP_VERSION=$(APP_TAG)
 
 #######################################
 # paths
@@ -39,18 +45,28 @@ BUILD_DIR = build
 C_SOURCES =  \
 App/Src/main.c \
 App/Src/midi_task.c \
-App/Src/midi_app_data.c \
-App/Src/ui_task.c \
 App/Src/synth_task.c \
-App/Src/synth_app_data.c \
+App/Src/ui_task.c \
+App/Src/mapping_task.c \
 App/Src/synth_app_data_const.c \
 App/Src/cli_task.c \
 App/Src/cli_cmd.c \
-App/Src/mapping_task.c \
-App/Src/stm32g0xx_it.c \
-App/Src/stm32g0xx_hal_msp.c \
-App/Src/system_stm32g0xx.c \
+App/Src/app_lfs.c \
+BSP/Src/sys_mcu.c \
+BSP/Src/sys_rtos.c \
+BSP/Src/system_stm32g0xx.c \
+BSP/Src/stm32g0xx_it.c \
+BSP/Src/stm32g0xx_hal_msp.c \
+BSP/Src/sys_ll_serial.c \
+BSP/Src/serial_driver.c \
+BSP/Src/i2c_driver.c \
+BSP/Src/spi_driver.c \
+BSP/Src/adc_driver.c \
+BSP/Src/YM2612_driver.c \
+BSP/Src/encoder_driver.c \
+BSP/Src/display_driver.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_gpio.c \
+Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_gpio.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_adc_ex.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_tim.c \
@@ -72,13 +88,7 @@ Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_pwr_ex.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_cortex.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal.c \
 Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_hal_exti.c \
-Drivers/User_Drivers/Src/serial_driver.c \
-Drivers/User_Drivers/Src/flash_driver.c \
-Drivers/User_Drivers/Src/i2c_driver.c \
-Drivers/User_Drivers/Src/adc_driver.c \
-Drivers/User_Drivers/Src/YM2612_driver.c \
-Drivers/User_Drivers/Src/encoder_driver.c \
-Drivers/User_Drivers/Src/display_driver.c \
+Drivers/STM32G0xx_HAL_Driver/Src/stm32g0xx_ll_usart.c \
 Lib/printf/printf.c \
 Lib/cbuf/circular_buffer.c \
 Lib/midi/midi_lib.c \
@@ -87,10 +97,10 @@ Lib/ui/ui_sys_misc.c \
 Lib/ui/ui_menu_main.c \
 Lib/ui/ui_screen_main.c \
 Lib/ui/ui_screen_midi.c \
+Lib/ui/ui_screen_preset.c \
 Lib/ui/ui_screen_fm.c \
-Lib/ui/ui_screen_mapping.c \
 Lib/ui/ui_screen_idle.c \
-Lib/app_data/app_data_handler.c \
+Lib/ui/ui_screen_mapping.c \
 Lib/u8g2/u8g2_bitmap.c \
 Lib/u8g2/u8g2_box.c \
 Lib/u8g2/u8g2_buffer.c \
@@ -129,7 +139,11 @@ Lib/u8g2/u8x8_setup.c \
 Lib/u8g2/u8x8_string.c \
 Lib/u8g2/u8x8_u8toa.c \
 Lib/u8g2/u8x8_u16toa.c \
-Lib/error_handler/error.c \
+Lib/littlefs/lfs_util.c \
+Lib/littlefs/lfs.c \
+Lib/UserError/user_error.c \
+Lib/CrashCatcher/Core/src/CrashCatcher.c \
+Lib/CrashCatcher/Usr/src/crash_hexdump.c \
 RTOS/FreeRTOS/Source/croutine.c \
 RTOS/FreeRTOS/Source/event_groups.c \
 RTOS/FreeRTOS/Source/list.c \
@@ -143,7 +157,8 @@ RTOS/FreeRTOS-Plus-CLI/FreeRTOS_CLI.c \
 
 # ASM sources
 ASM_SOURCES =  \
-startup_stm32g070xx.s
+startup_stm32g070xx.s \
+Lib/CrashCatcher/Core/src/CrashCatcher_armv6m.s \
 
 #######################################
 # binaries
@@ -192,7 +207,10 @@ AS_DEFS =
 # C defines
 C_DEFS =  \
 -DUSE_HAL_DRIVER \
--DSTM32G070xx
+-DSTM32G070xx \
+-DUSE_FULL_LL_DRIVER \
+-DUSE_USER_ASSERT \
+-DCUSTOM_HARD_FAULT \
 
 # AS includes
 AS_INCLUDES = 
@@ -200,14 +218,16 @@ AS_INCLUDES =
 # C includes
 C_INCLUDES =  \
 -IApp/Inc \
+-IBSP/Inc \
 -ILib/u8g2 \
 -ILib/ui \
 -ILib/cbuf \
 -ILib/printf \
 -ILib/midi \
--ILib/app_data \
--ILib/error_handler \
--IDrivers/User_Drivers/Inc \
+-ILib/littlefs \
+-ILib/UserError \
+-ILib/CrashCatcher/include \
+-ILib/CrashCatcher/Core/src \
 -IDrivers/STM32G0xx_HAL_Driver/Inc \
 -IDrivers/STM32G0xx_HAL_Driver/Inc/Legacy \
 -IDrivers/CMSIS/Device/ST/STM32G0xx/Include \
@@ -238,8 +258,8 @@ ifdef YM2612_TEST_GPIO
 C_DEFS += -DYM2612_TEST_GPIO
 endif
 
-# Add version number
-C_DEFS += -DMAIN_APP_VERSION=\"$(APP_TAG)\"
+# Add git version
+C_DEFS += $(foreach d,$(DEFINES),-D$(d))
 
 #######################################
 # LDFLAGS
@@ -282,7 +302,7 @@ $(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 	$(BIN) $< $@	
 	
 $(BUILD_DIR):
-	mkdir $@		
+	mkdir $@
 
 #######################################
 # clean up

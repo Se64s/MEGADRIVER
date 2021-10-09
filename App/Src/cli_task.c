@@ -13,17 +13,19 @@
 #include "cli_task.h"
 #include "serial_driver.h"
 #include "printf.h"
-#include "error.h"
+#include "user_error.h"
 
 #include "FreeRTOS_CLI.h"
 #include "cli_cmd.h"
+
+#include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
 /* Init message */
-#define CLI_INIT_MSG    "\r\n\r\n##################\r\n##\r\n## INIT SYNTH SYSTEM\r\n##\r\n##################\r\n"
+#define CLI_INIT_MSG    "\r\n\r\nMEGADRIVER: FM SYNTH\r\n%s\r\nrev: %s\r\n"
 
 /* End of line terminator */
 #define CLI_EOL         "\r\n"
@@ -92,14 +94,14 @@ void _cli_main( void *pvParameters )
     uint32_t i_rx_buff = 0;
     uint32_t tmp_event;
 
+    /* Init delay to for pow stabilization */
+    vTaskDelay(pdMS_TO_TICKS(CLI_TASK_INIT_DELAY));
+
     /* Register used functions */
     cli_cmd_init();
 
-    /* Init delay to for pow stabilization */
-    vTaskDelay(pdMS_TO_TICKS(500U));
-
     /* Start message */
-    vCliRawPrintf(CLI_INIT_MSG);
+    vCliRawPrintf(CLI_INIT_MSG, MAIN_APP_VERSION, GIT_REVISION);
 
     /* Show init msg */
     vCliPrintf(CLI_TASK_NAME, "Init");
@@ -159,25 +161,18 @@ void _cli_main( void *pvParameters )
 
 /* Public fuctions -----------------------------------------------------------*/
 
-bool bCliTaskInit(void)
+void vCliTaskInit(void)
 {
-    bool retval = false;
-
     /* Init HW resources */
     (void)SERIAL_init(SERIAL_1, _event_cb);
 
     /* Create mutex */
     cli_serial_mutex = xSemaphoreCreateMutex();
+    ERR_ASSERT( cli_serial_mutex );
 
     /* Create task */
     xTaskCreate(_cli_main, CLI_TASK_NAME, CLI_TASK_STACK, NULL, CLI_TASK_PRIO, &cli_task_handle);
-
-    /* Check resources */
-    if ((cli_serial_mutex != NULL) && (cli_task_handle != NULL))
-    {
-        retval = true;
-    }
-    return(retval);
+    ERR_ASSERT( cli_task_handle );
 }
 
 /* CLI printf implementation */

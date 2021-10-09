@@ -339,14 +339,14 @@ static void vActionVoiceElement(xFmDevice_t * pxDeviceCfg, eFmParameter_t eVarTy
         uint8_t u8ValueInit = u8GetVoiceVariable(pxDeviceCfg, u8TmpChannel, eVarType);
         uint8_t u8ValueTmp = u8ValueInit;
 
-        if (CHECK_SIGNAL(u32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(u32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (u8ValueTmp > 0U)
             {
                 u8ValueTmp--;
             }
         }
-        else if (CHECK_SIGNAL(u32Event, UI_SIGNAL_ENC_UPDATE_CW))
+        else if (RTOS_CHECK_SIGNAL(u32Event, UI_SIGNAL_ENC_UPDATE_CW))
         {
             if (u8ValueTmp < (u8MaxValue - 1))
             {
@@ -369,7 +369,7 @@ static void vActionVoiceElement(xFmDevice_t * pxDeviceCfg, eFmParameter_t eVarTy
             }
 
             /* Generate task event */
-            (void)bSynthSetPreset(pxDeviceCfg);
+            vYM2612_set_reg_preset(pxDeviceCfg);
         }
     }
 }
@@ -383,14 +383,14 @@ static void vActionOperatorElement(xFmDevice_t * pxDeviceCfg, eFmParameter_t eVa
         uint8_t u8TmpValue = u8GetOperatorVariable(pxDeviceCfg , u8TmpVoice, u8TmpOperator, eVarType);
         uint8_t u8TmpValueInit = u8TmpValue;
 
-        if (CHECK_SIGNAL(u32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(u32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (u8TmpValue > 0U)
             {
                 u8TmpValue--;
             }
         }
-        else if (CHECK_SIGNAL(u32Event, UI_SIGNAL_ENC_UPDATE_CW))
+        else if (RTOS_CHECK_SIGNAL(u32Event, UI_SIGNAL_ENC_UPDATE_CW))
         {
             if (u8TmpValue < (u8MaxValue - 1))
             {
@@ -422,8 +422,7 @@ static void vActionOperatorElement(xFmDevice_t * pxDeviceCfg, eFmParameter_t eVa
                 }
             }
 
-            /* Generate task event */
-            (void)bSynthSetPreset(pxDeviceCfg);
+            vYM2612_set_reg_preset(pxDeviceCfg);
         }
     }
 }
@@ -1320,7 +1319,7 @@ static void vScreenAction(void * pvMenu, void * pvEventData)
             ui_element_t * pxElement = &pxScreen->pxElementList[pxScreen->u32ElementSelectionIndex];
 
             /* Handle encoder events */
-            if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+            if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
             {
                 vUI_MISC_EncoderAction(pxMenu, pvEventData);
             }
@@ -1343,7 +1342,7 @@ static void vElementActionReturn(void * pvMenu, void * pvEventData)
         ui_menu_t * pxMenu = pvMenu;
         uint32_t * pu32EventData = pvEventData;
 
-        if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        if (RTOS_CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             /* Set midi screen */
             vCliPrintf(UI_TASK_NAME, "Event Return");
@@ -1361,21 +1360,21 @@ static void vElementActionLfoFreq(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
                 xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
                 uint8_t u8TmpValue = pxDeviceCfg->u8LfoFreq;
 
-                if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+                if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
                 {
                     if (pxDeviceCfg->u8LfoFreq > 0U)
                     {
                         pxDeviceCfg->u8LfoFreq--;
                     }
                 }
-                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+                else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
                 {
                     if (pxDeviceCfg->u8LfoFreq < (MAX_VALUE_LFO_FREQ - 1))
                     {
@@ -1385,12 +1384,12 @@ static void vElementActionLfoFreq(void * pvMenu, void * pvEventData)
 
                 if (pxDeviceCfg->u8LfoFreq != u8TmpValue)
                 {
-                    (void)bSynthSetPreset(pxDeviceCfg);
+                    vYM2612_set_reg_preset(pxDeviceCfg);
                 }
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1406,21 +1405,21 @@ static void vElementActionLfoEn(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
                 xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
                 uint8_t u8TmpValue = pxDeviceCfg->u8LfoOn;
 
-                if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+                if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
                 {
                     if (pxDeviceCfg->u8LfoOn == 0U)
                     {
                         pxDeviceCfg->u8LfoOn = 1U;
                     }
                 }
-                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+                else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
                 {
                     if (pxDeviceCfg->u8LfoOn == 1U)
                     {
@@ -1430,12 +1429,12 @@ static void vElementActionLfoEn(void * pvMenu, void * pvEventData)
 
                 if (pxDeviceCfg->u8LfoOn != u8TmpValue)
                 {
-                    (void)bSynthSetPreset(pxDeviceCfg);
+                    vYM2612_set_reg_preset(pxDeviceCfg);
                 }
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1451,25 +1450,25 @@ static void vElementActionVoice(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             if (pxScreen->bElementSelection)
             {
-                if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+                if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
                 {
                     if (u8VoiceIndex > 0U)
                     {
                         u8VoiceIndex--;
                     }
                 }
-                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+                else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
                 {
                     if (u8VoiceIndex < YM2612_NUM_CHANNEL)
                     {
                         u8VoiceIndex++;
                     }
                 }
-                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+                else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
                 {
                     if (u8VoiceIndex == YM2612_NUM_CHANNEL)
                     {
@@ -1482,13 +1481,13 @@ static void vElementActionVoice(void * pvMenu, void * pvEventData)
                         }
 
                         /* Apply changes to register */
-                        (void)bSynthSetPreset(pxDeviceCfg);
+                        vYM2612_set_reg_preset(pxDeviceCfg);
                     }
                 }
             }
         }
         /* Element selection action */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1504,7 +1503,7 @@ static void vElementActionVoiceFeedback(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
@@ -1514,7 +1513,7 @@ static void vElementActionVoiceFeedback(void * pvMenu, void * pvEventData)
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1530,7 +1529,7 @@ static void vElementActionVoiceAlgorithm(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
@@ -1540,7 +1539,7 @@ static void vElementActionVoiceAlgorithm(void * pvMenu, void * pvEventData)
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1556,7 +1555,7 @@ static void vElementActionVoiceOut(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
@@ -1566,7 +1565,7 @@ static void vElementActionVoiceOut(void * pvMenu, void * pvEventData)
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1582,7 +1581,7 @@ static void vElementActionVoiceAmpModSens(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
@@ -1592,7 +1591,7 @@ static void vElementActionVoiceAmpModSens(void * pvMenu, void * pvEventData)
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1608,7 +1607,7 @@ static void vElementActionVoicePhaModSens(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
@@ -1618,7 +1617,7 @@ static void vElementActionVoicePhaModSens(void * pvMenu, void * pvEventData)
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1634,25 +1633,25 @@ static void vElementActionOperator(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             if (pxScreen->bElementSelection)
             {
-                if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+                if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
                 {
                     if (u8OperatorIndex > 0U)
                     {
                         u8OperatorIndex--;
                     }
                 }
-                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
+                else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW))
                 {
                     if (u8OperatorIndex < YM2612_NUM_OP_CHANNEL)
                     {
                         u8OperatorIndex++;
                     }
                 }
-                else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+                else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
                 {
                     if (u8OperatorIndex == YM2612_NUM_OP_CHANNEL)
                     {
@@ -1676,13 +1675,13 @@ static void vElementActionOperator(void * pvMenu, void * pvEventData)
                         }
 
                         /* Apply changes to register */
-                        (void)bSynthSetPreset(pxDeviceCfg);
+                        vYM2612_set_reg_preset(pxDeviceCfg);
                     }
                 }
             }
         }
         /* Element selection action */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1698,7 +1697,7 @@ static void vElementActionOperatorDetune(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
@@ -1708,7 +1707,7 @@ static void vElementActionOperatorDetune(void * pvMenu, void * pvEventData)
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1724,7 +1723,7 @@ static void vElementActionOperatorMultiple(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
@@ -1734,7 +1733,7 @@ static void vElementActionOperatorMultiple(void * pvMenu, void * pvEventData)
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1750,7 +1749,7 @@ static void vElementActionOperatorTotalLevel(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
@@ -1760,7 +1759,7 @@ static void vElementActionOperatorTotalLevel(void * pvMenu, void * pvEventData)
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1776,7 +1775,7 @@ static void vElementActionOperatorKeyScale(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
@@ -1786,7 +1785,7 @@ static void vElementActionOperatorKeyScale(void * pvMenu, void * pvEventData)
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1802,7 +1801,7 @@ static void vElementActionOperatorAttackRate(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
@@ -1812,7 +1811,7 @@ static void vElementActionOperatorAttackRate(void * pvMenu, void * pvEventData)
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1828,7 +1827,7 @@ static void vElementActionOperatorAmpModEn(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
@@ -1838,7 +1837,7 @@ static void vElementActionOperatorAmpModEn(void * pvMenu, void * pvEventData)
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1854,7 +1853,7 @@ static void vElementActionOperatorDecayRate(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
@@ -1864,7 +1863,7 @@ static void vElementActionOperatorDecayRate(void * pvMenu, void * pvEventData)
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1880,7 +1879,7 @@ static void vElementActionOperatorSustainRate(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
@@ -1890,7 +1889,7 @@ static void vElementActionOperatorSustainRate(void * pvMenu, void * pvEventData)
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1906,7 +1905,7 @@ static void vElementActionOperatorSustainLevel(void * pvMenu, void * pvEventData
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
@@ -1916,7 +1915,7 @@ static void vElementActionOperatorSustainLevel(void * pvMenu, void * pvEventData
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1932,7 +1931,7 @@ static void vElementActionOperatorReleaseRate(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
@@ -1942,7 +1941,7 @@ static void vElementActionOperatorReleaseRate(void * pvMenu, void * pvEventData)
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1958,7 +1957,7 @@ static void vElementActionOperatorSsgEnvelope(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
 
         /* Handle encoder events */
-        if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
+        if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (pxScreen->bElementSelection)
             {
@@ -1968,7 +1967,7 @@ static void vElementActionOperatorSsgEnvelope(void * pvMenu, void * pvEventData)
             }
         }
         /* Element selection action */
-        else if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        else if (RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
@@ -1983,15 +1982,20 @@ static void vElementActionSave(void * pvMenu, void * pvEventData)
         ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
         uint32_t * pu32EventData = pvEventData;
 
-        if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
+        if (RTOS_CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_SW_SET))
         {
             if (pxScreen->bElementSelection)
             {
-                xFmDevice_t * pxDeviceCfg = pxYM2612_get_reg_preset();
-
                 vCliPrintf(UI_TASK_NAME, "FM Save User Preset");
 
-                if (bSynthSaveUserPreset(pxDeviceCfg, u8SavePresetSelector))
+                SynthCmd_t xSynthCmd = {
+                    .eCmd = SYNTH_CMD_PRESET_UPDATE,
+                    .uPayload.xPresetUpdate.u8Action = SYNTH_PRESET_ACTION_SAVE,
+                    .uPayload.xPresetUpdate.u8Bank = LFS_MIDI_BANK_FLASH,
+                    .uPayload.xPresetUpdate.u8Program = u8SavePresetSelector
+                };
+
+                if ( bSynthSendCmd(xSynthCmd) == true )
                 {
                     sprintf(pcFmSaveAuxName, "OK");
                 }
@@ -2007,7 +2011,7 @@ static void vElementActionSave(void * pvMenu, void * pvEventData)
 
             pxScreen->bElementSelection = !pxScreen->bElementSelection;
         }
-        else if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_CW))
+        else if (RTOS_CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_CW))
         {
             if (u8SavePresetSelector != 0U)
             {
@@ -2016,7 +2020,7 @@ static void vElementActionSave(void * pvMenu, void * pvEventData)
 
             sprintf(pcFmSaveAuxName, "%02d", u8SavePresetSelector);
         }
-        else if (CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_CCW))
+        else if (RTOS_CHECK_SIGNAL(*pu32EventData, UI_SIGNAL_ENC_UPDATE_CCW))
         {
             if (u8SavePresetSelector < (SYNTH_MAX_NUM_USER_PRESET - 1))
             {

@@ -8,13 +8,14 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "ui_screen_idle.h"
-#include "error.h"
+#include "user_error.h"
 
 #include "printf.h"
 #include "ui_menu_main.h"
 
 #include "ui_task.h"
 #include "midi_task.h"
+#include "synth_task.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -28,6 +29,7 @@ typedef enum
     IDLE_SCREEN_ELEMENT_DATA_CH_03,
     IDLE_SCREEN_ELEMENT_DATA_CH_04,
     IDLE_SCREEN_ELEMENT_DATA_CH_05,
+    IDLE_SCREEN_ELEMENT_CMD_CC,
     IDLE_SCREEN_ELEMENT_LAST
 } eIdleScreenElement_t;
 
@@ -43,7 +45,7 @@ typedef enum
 #define MAX_NOTES_OCTAVE            (12U)
 
 /** Number of voice channels */
-#define MAX_VOICE_CH                (IDLE_SCREEN_ELEMENT_LAST)
+#define MAX_VOICE_CH                (IDLE_SCREEN_ELEMENT_DATA_CH_05 + 1U)
 
 /** Return element string */
 #define NAME_FORMAT_DATA_CH_ON      "CH%d %s%d" // voice - note
@@ -51,8 +53,15 @@ typedef enum
 /** Msg note off */
 #define NAME_FORMAT_DATA_CH_OFF     "CH%d ---"
 
+/** Msg CC command */
+#define NAME_FORMAT_CMD_CC_0        "CC %03d %03d"
+#define NAME_FORMAT_CMD_CC_1        "%s %03d"
+
 /** Base offset coord x */
 #define BASE_OFFSET_X               (0U)
+
+/** Base offset coord y */
+#define BASE_OFFSET_Y               (30U)
 
 /** Base offset coord y */
 #define BASE_OFFSET_Y               (30U)
@@ -85,12 +94,17 @@ char pcNameDataCh2[MAX_LEN_NAME] = {0};
 char pcNameDataCh3[MAX_LEN_NAME] = {0};
 char pcNameDataCh4[MAX_LEN_NAME] = {0};
 char pcNameDataCh5[MAX_LEN_NAME] = {0};
+char pcNameCmdCc[MAX_LEN_NAME] = {0};
+
+uint8_t u8IdleCcId = 0xFFU;
+uint8_t u8IdleCcData = 0xFFU;
 
 /* Private function prototypes -----------------------------------------------*/
 
 /* Render functions */
 static void vScreenRenderIdle(void * pvDisplay, void * pvScreen);
 static void vElementRenderDataCh(void * pvDisplay, void * pvScreen, void * pvElement);
+static void vElementRenderCmdCc(void * pvDisplay, void * pvScreen, void * pvElement);
 
 /* Actions functions */
 static void vScreenActionIdle(void * pvMenu, void * pvEventData);
@@ -120,7 +134,15 @@ static void vScreenRenderIdle(void * pvDisplay, void * pvScreen)
     u8g2_SetFont(pxDisplayHandler, u8g2_font_amstrad_cpc_extended_8r);
 
     /* Draw actions on screen */
+#ifdef MIDI_DBG_STATS
+    static char pcTestStr[MAX_LEN_NAME] = {0};
+    extern volatile uint32_t u32MidiCmdCount;
+    sprintf(pcTestStr, "%s %d", pxScreen->pcName, u32MidiCmdCount);
+    u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pcTestStr);
+#else
     u8g2_DrawStr(pxDisplayHandler, (uint8_t)u32IndX, (uint8_t)u32IndY, pxScreen->pcName);
+#endif /* MIDI_DBG_STATS */
+
     u8g2_DrawHLine(pxDisplayHandler, u8LineX, u8LineY, u8LineWith);
 }
 
@@ -147,9 +169,10 @@ static void vElementRenderDataCh(void * pvDisplay, void * pvScreen, void * pvEle
         }
 
         /* Get current note */
-        uint8_t u8MidiNote = xMidiTaskGetNote(pxElement->u32Index);
+        SynthParam_t xSynthParam = xSynthGetParam(pxElement->u32Index);
+        uint8_t u8MidiNote = (uint32_t)xSynthParam.u32ParamValue;
 
-        if (u8MidiNote != MIDI_DATA_NOT_VALID)
+        if (xSynthParam.u32ParamValue != MIDI_DATA_NOT_VALID)
         {
             uint8_t u8Note = u8MidiNote % MAX_NOTES_OCTAVE;
             uint8_t u8Octave = u8MidiNote / MAX_NOTES_OCTAVE;
@@ -165,35 +188,77 @@ static void vElementRenderDataCh(void * pvDisplay, void * pvScreen, void * pvEle
     }
 }
 
+static void vElementRenderCmdCc(void * pvDisplay, void * pvScreen, void * pvElement)
+{
+    ERR_ASSERT(pvDisplay != NULL);
+    ERR_ASSERT(pvScreen != NULL);
+    ERR_ASSERT(pvElement != NULL);
+
+    u8g2_t * pxDisplayHandler = pvDisplay;
+    ui_screen_t * pxScreen = pvScreen;
+    ui_element_t * pxElement = pvElement;
+
+    if (pxScreen->bElementSelection)
+    {
+        uint8_t u8OffsetX = BASE_OFFSET_X;
+        uint8_t u8OffsetY = UI_OFFSET_SCREEN_Y + UI_OFFSET_LINE_SCREEN_Y + 1U;
+        uint8_t u8BoxWidth = u8g2_GetDisplayWidth(pxDisplayHandler);
+        uint8_t u8BoxHeight = u8g2_GetDisplayHeight(pxDisplayHandler);
+
+        u8g2_SetDrawColor(pxDisplayHandler, 0U);
+        u8g2_DrawBox(pxDisplayHandler, u8OffsetX, u8OffsetY, u8BoxWidth, u8BoxHeight);
+        u8g2_SetDrawColor(pxDisplayHandler, 1U);
+
+        u8OffsetY += u8g2_GetMaxCharHeight(pxDisplayHandler) + 10U;
+        snprintf(pxElement->pcName, MAX_LEN_NAME, NAME_FORMAT_CMD_CC_0, u8IdleCcId, u8IdleCcData);
+        u8g2_DrawStr(pxDisplayHandler, u8OffsetX, u8OffsetY, pxElement->pcName);
+
+        u8OffsetY += u8g2_GetMaxCharHeight(pxDisplayHandler) + 10U;
+        snprintf(pxElement->pcName, MAX_LEN_NAME, NAME_FORMAT_CMD_CC_1, "CC Cmd", u8IdleCcData);
+        u8g2_DrawStr(pxDisplayHandler, u8OffsetX, u8OffsetY, pxElement->pcName);
+    }
+}
+
 /* ACTION --------------------------------------------------------------------*/
 
 static void vScreenActionIdle(void * pvMenu, void * pvEventData)
 {
-    if ((pvMenu != NULL) && (pvEventData != NULL))
+    ERR_ASSERT(pvMenu != NULL);
+    ERR_ASSERT(pvEventData != NULL);
+
+    ui_menu_t * pxMenu = pvMenu;
+    ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
+
+    if (pxScreen != NULL)
     {
-        ui_menu_t * pxMenu = pvMenu;
-        ui_screen_t * pxScreen = &pxMenu->pxScreenList[pxMenu->u32ScreenSelectionIndex];
+        /* Check if is a general event */
+        uint32_t * pu32Event = pvEventData;
+        ui_element_t * pxElement = &pxScreen->pxElementList[pxScreen->u32ElementSelectionIndex];
 
-        if (pxScreen != NULL)
+        /* Handle encoder events */
+        if ( RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW) )
         {
-            /* Check if is a general event */
-            uint32_t * pu32Event = pvEventData;
-            ui_element_t * pxElement = &pxScreen->pxElementList[pxScreen->u32ElementSelectionIndex];
+            bUiTaskNotify(UI_SIGNAL_RESTORE_IDLE);
+        }
+        else if ( RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET) )
+        {
+            SynthCmd_t xSynthCmd = { .eCmd = SYNTH_CMD_VOICE_MUTE };
 
-            /* Handle encoder events */
-            if (CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CW) || 
-                CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_CCW) || 
-                CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_SET) || 
-                CHECK_SIGNAL(*pu32Event, UI_SIGNAL_ENC_UPDATE_SW_RESET))
-            {
-                bUiTaskNotify(UI_SIGNAL_RESTORE_IDLE);
-            }
+            (void)bSynthSendCmd(xSynthCmd);
+        }
+        else if ( RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_MIDI_CC) )
+        {
+            pxScreen->bElementSelection = true;
+        }
+        else if ( RTOS_CHECK_SIGNAL(*pu32Event, UI_SIGNAL_RESTORE_CC) )
+        {
+            pxScreen->bElementSelection = false;
+        }
 
-            /* Handle action for selected element */
-            if (pxElement->action_cb != NULL)
-            {
-                pxElement->action_cb(pxMenu, pvEventData);
-            }
+        /* Handle action for selected element */
+        if (pxElement->action_cb != NULL)
+        {
+            pxElement->action_cb(pxMenu, pvEventData);
         }
     }
 }
@@ -247,10 +312,21 @@ ui_status_t UI_screen_idle_init(ui_screen_t * pxScreenHandler)
         xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_05].render_cb = vElementRenderDataCh;
         xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_DATA_CH_05].action_cb = NULL;
 
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_CMD_CC].pcName = pcNameCmdCc;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_CMD_CC].u32Index = IDLE_SCREEN_ELEMENT_CMD_CC;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_CMD_CC].render_cb = vElementRenderCmdCc;
+        xElementIdleScreenElementList[IDLE_SCREEN_ELEMENT_CMD_CC].action_cb = NULL;
+
         retval = UI_STATUS_OK;
     }
 
     return retval;
+}
+
+void vUI_screen_idle_set_cc_data(uint8_t u8ccId, uint8_t u8CcData)
+{
+    u8IdleCcId = u8ccId;
+    u8IdleCcData = u8CcData;
 }
 
 /*****END OF FILE****/

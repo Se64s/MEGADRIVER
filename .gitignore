@@ -1,6 +1,7 @@
 # Ignored folders
 .vscode/
 build/
+test/
 # Tools test vgi instruments
 Tools/py_tools/vgi
 # Tools python cache
@@ -43,6 +44,8 @@ Tools/py_tools/__pycache__
 *.i*86
 *.x86_64
 *.hex
+# Crash analysis tool
+!Tools/CrashDebug/CrashDebug.exe
 
 # Debug files
 *.dSYM/

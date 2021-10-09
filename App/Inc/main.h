@@ -27,6 +27,10 @@ extern "C" {
 #define MAIN_APP_VERSION "X.Y.Z"
 #endif
 
+#ifndef GIT_REVISION
+#define GIT_REVISION "AABBCCDD"
+#endif
+
 #ifdef __cplusplus
 }
 #endif
